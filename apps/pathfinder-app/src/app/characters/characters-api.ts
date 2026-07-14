@@ -1,7 +1,7 @@
 import { inject, Service } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Character } from '@pathfinder/shared';
+import { Character, CharacterUpsert } from '@pathfinder/shared';
 
 @Service()
 export class CharactersApi {
@@ -12,8 +12,12 @@ export class CharactersApi {
     return this.http.get<Character[]>(this.baseUrl);
   }
 
-  create(data: { name: string; level: number }): Observable<Character> {
+  create(data: CharacterUpsert): Observable<Character> {
     return this.http.post<Character>(this.baseUrl, data);
+  }
+
+  update(id: string, data: Partial<CharacterUpsert>): Observable<Character> {
+    return this.http.patch<Character>(`${this.baseUrl}/${id}`, data);
   }
 
   remove(id: string): Observable<void> {

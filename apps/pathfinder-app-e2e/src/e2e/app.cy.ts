@@ -5,17 +5,48 @@ describe('pathfinder-app-e2e', () => {
     cy.get('h1').contains('Personajes');
   });
 
-  it('should create and delete a character', () => {
+  it('should create, view, edit and delete a character', () => {
     const name = `Cypress-${Date.now()}`;
 
+    // Alta con varios campos de ficha
     cy.get('input[name="name"]').type(name);
+    cy.get('input[name="jugador"]').type('Luis');
+    cy.get('input[name="clase"]').type('Pícaro');
+    cy.get('select[name="alineamiento"]').select('legal bueno');
+    cy.get('input[name="raza"]').type('Elfo');
     cy.get('input[name="level"]').clear();
     cy.get('input[name="level"]').type('7');
     cy.get('button[type="submit"]').click();
-
     cy.contains('li', name).should('contain', 'Nivel 7');
 
-    cy.contains('li', name).find('button').click();
+    // Recargamos: lo que se muestre ahora viene de PostgreSQL
+    cy.reload();
+    cy.contains('li', name).contains('button', 'Ver ficha').click();
+    cy.get('.characters__modal').should('contain', 'legal bueno');
+    cy.get('.characters__modal').should('contain', 'Elfo');
+
+    // Edición: cambiamos raza y nivel, el resto no se toca
+    cy.get('.characters__modal').contains('button', 'Editar').click();
+    cy.get('.characters__modal input[name="raza"]').clear();
+    cy.get('.characters__modal input[name="raza"]').type('Enano');
+    cy.get('.characters__modal input[name="level"]').clear();
+    cy.get('.characters__modal input[name="level"]').type('8');
+    cy.get('.characters__modal').contains('button', 'Guardar').click();
+
+    // Vuelve al modo vista con los datos nuevos
+    cy.get('.characters__modal').should('contain', 'Enano');
+    cy.get('.characters__modal').should('contain', 'Nivel 8');
+
+    // Tras recargar, el cambio persiste y los campos NO editados siguen ahí
+    cy.reload();
+    cy.contains('li', name).contains('button', 'Ver ficha').click();
+    cy.get('.characters__modal').should('contain', 'Enano');
+    cy.get('.characters__modal').should('contain', 'legal bueno');
+    cy.get('.characters__modal').should('contain', 'Luis');
+
+    // Cerrar modal y borrar
+    cy.get('.characters__modal header button').click();
+    cy.contains('li', name).contains('button', 'Borrar').click();
     cy.contains('li', name).should('not.exist');
   });
 });

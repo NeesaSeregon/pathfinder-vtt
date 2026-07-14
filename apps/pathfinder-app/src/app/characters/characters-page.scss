@@ -1,21 +1,12 @@
 .characters {
-  max-width: 40rem;
+  max-width: 48rem;
   margin: 2rem auto;
   padding: 0 1rem;
   font-family: system-ui, sans-serif;
 
-  &__form {
-    display: flex;
-    gap: 0.5rem;
+  app-character-form {
+    display: block;
     margin-bottom: 1.5rem;
-
-    input[name='name'] {
-      flex: 1;
-    }
-
-    input[name='level'] {
-      width: 5rem;
-    }
   }
 
   &__error {
@@ -40,7 +31,75 @@
     font-weight: 600;
   }
 
+  &__clase {
+    color: #444;
+    font-style: italic;
+  }
+
   &__level {
     color: #666;
+  }
+
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 10;
+  }
+
+  &__modal {
+    background: #fff;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    max-width: 42rem;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.3);
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+
+      h2 {
+        margin: 0;
+      }
+    }
+  }
+
+  &__modal-summary {
+    color: #555;
+    margin-top: 0;
+  }
+
+  &__modal-sheet {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: 0.25rem 1rem;
+    margin: 0 0 1rem;
+
+    div {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    dt {
+      font-weight: 600;
+      color: #555;
+
+      &::after {
+        content: ':';
+      }
+    }
+
+    dd {
+      margin: 0;
+    }
   }
 }

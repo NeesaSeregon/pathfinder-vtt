@@ -1,24 +1,7 @@
 <section class="characters">
   <h1>Personajes</h1>
 
-  <form class="characters__form" (ngSubmit)="create()">
-    <input
-      type="text"
-      name="name"
-      placeholder="Nombre"
-      required
-      maxlength="100"
-      [(ngModel)]="name"
-    />
-    <input
-      type="number"
-      name="level"
-      min="1"
-      max="20"
-      [(ngModel)]="level"
-    />
-    <button type="submit" [disabled]="!name().trim()">Crear</button>
-  </form>
+  <app-character-form #createForm (save)="create($event)" />
 
   @if (error()) {
     <p class="characters__error">{{ error() }}</p>
@@ -33,10 +16,60 @@
       @for (character of characters(); track character.id) {
         <li>
           <span class="characters__name">{{ character.name }}</span>
+          @if (character.sheetData.clase) {
+            <span class="characters__clase">{{ character.sheetData.clase }}</span>
+          }
           <span class="characters__level">Nivel {{ character.level }}</span>
+          <button type="button" (click)="openModal(character)">Ver ficha</button>
           <button type="button" (click)="remove(character)">Borrar</button>
         </li>
       }
     </ul>
+  }
+
+  @if (selected(); as character) {
+    <div
+      class="characters__overlay"
+      (click)="onOverlayClick($event)"
+      (keyup.escape)="closeModal()"
+      role="presentation"
+    >
+      <div class="characters__modal" role="dialog" aria-modal="true">
+        <header>
+          <h2>{{ character.name }}</h2>
+          <button type="button" aria-label="Cerrar" (click)="closeModal()">
+            ✕
+          </button>
+        </header>
+
+        @if (!editing()) {
+          <p class="characters__modal-summary">
+            Nivel {{ character.level }}
+            @if (character.sheetData.clase) {
+              · {{ character.sheetData.clase }}
+            }
+          </p>
+          @if (sheetEntries(character).length > 0) {
+            <dl class="characters__modal-sheet">
+              @for (entry of sheetEntries(character); track entry.label) {
+                <div>
+                  <dt>{{ entry.label }}</dt>
+                  <dd>{{ entry.value }}</dd>
+                </div>
+              }
+            </dl>
+          } @else {
+            <p>La ficha está vacía.</p>
+          }
+          <button type="button" (click)="editing.set(true)">Editar</button>
+        } @else {
+          <app-character-form
+            [initial]="character"
+            submitLabel="Guardar"
+            (save)="saveEdit($event)"
+          />
+        }
+      </div>
+    </div>
   }
 </section>

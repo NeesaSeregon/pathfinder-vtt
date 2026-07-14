@@ -1,0 +1,23 @@
+.character-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: #444;
+  }
+
+  input,
+  select {
+    padding: 0.35rem 0.5rem;
+  }
+
+  button {
+    padding: 0.45rem 1rem;
+  }
+}

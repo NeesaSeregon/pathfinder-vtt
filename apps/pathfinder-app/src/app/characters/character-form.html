@@ -1,0 +1,66 @@
+<form class="character-form" (ngSubmit)="submit()">
+  <label>
+    Nombre
+    <input type="text" name="name" required maxlength="100" [(ngModel)]="form.name" />
+  </label>
+  <label>
+    Jugador
+    <input type="text" name="jugador" maxlength="100" [(ngModel)]="form.jugador" />
+  </label>
+  <label>
+    Clase
+    <input type="text" name="clase" maxlength="50" [(ngModel)]="form.clase" />
+  </label>
+  <label>
+    Alineamiento
+    <select name="alineamiento" [(ngModel)]="form.alineamiento">
+      <option value="">—</option>
+      @for (alineamiento of alineamientos; track alineamiento) {
+        <option [value]="alineamiento">{{ alineamiento }}</option>
+      }
+    </select>
+  </label>
+  <label>
+    País natal
+    <input type="text" name="paisNatal" maxlength="100" [(ngModel)]="form.paisNatal" />
+  </label>
+  <label>
+    Dios
+    <input type="text" name="dios" maxlength="100" [(ngModel)]="form.dios" />
+  </label>
+  <label>
+    Raza
+    <input type="text" name="raza" maxlength="50" [(ngModel)]="form.raza" />
+  </label>
+  <label>
+    Tamaño
+    <input type="text" name="tamano" maxlength="50" [(ngModel)]="form.tamano" />
+  </label>
+  <label>
+    Edad
+    <input type="number" name="edad" min="0" [(ngModel)]="form.edad" />
+  </label>
+  <label>
+    Altura
+    <input type="text" name="altura" maxlength="20" [(ngModel)]="form.altura" />
+  </label>
+  <label>
+    Peso
+    <input type="text" name="peso" maxlength="20" [(ngModel)]="form.peso" />
+  </label>
+  <label>
+    Cabello
+    <input type="text" name="cabello" maxlength="50" [(ngModel)]="form.cabello" />
+  </label>
+  <label>
+    Ojos
+    <input type="text" name="ojos" maxlength="50" [(ngModel)]="form.ojos" />
+  </label>
+  <label>
+    Nivel
+    <input type="number" name="level" min="1" max="20" [(ngModel)]="form.level" />
+  </label>
+  <button type="submit" [disabled]="!form.name().trim()">
+    {{ submitLabel() }}
+  </button>
+</form>
