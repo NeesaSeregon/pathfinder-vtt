@@ -1,0 +1,42 @@
+<section class="characters">
+  <h1>Personajes</h1>
+
+  <form class="characters__form" (ngSubmit)="create()">
+    <input
+      type="text"
+      name="name"
+      placeholder="Nombre"
+      required
+      maxlength="100"
+      [(ngModel)]="name"
+    />
+    <input
+      type="number"
+      name="level"
+      min="1"
+      max="20"
+      [(ngModel)]="level"
+    />
+    <button type="submit" [disabled]="!name().trim()">Crear</button>
+  </form>
+
+  @if (error()) {
+    <p class="characters__error">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p>Cargando…</p>
+  } @else if (characters().length === 0) {
+    <p>No hay personajes todavía. ¡Crea el primero!</p>
+  } @else {
+    <ul class="characters__list">
+      @for (character of characters(); track character.id) {
+        <li>
+          <span class="characters__name">{{ character.name }}</span>
+          <span class="characters__level">Nivel {{ character.level }}</span>
+          <button type="button" (click)="remove(character)">Borrar</button>
+        </li>
+      }
+    </ul>
+  }
+</section>

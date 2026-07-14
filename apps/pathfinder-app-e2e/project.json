@@ -8,5 +8,10 @@
     "pathfinder-app"
   ],
   "// targets": "to see all targets run: nx show project pathfinder-app-e2e --web",
-  "targets": {}
+  "targets": {
+    "e2e": {
+      "// dependsOn": "Anula la dependencia continua en pathfinder-app:serve que infiere el plugin de Cypress: en Windows esos serves quedan bloqueados durante el run y Cypress nunca ve el servidor. Con esto es el propio preset de Cypress quien arranca (o reutiliza) el servidor.",
+      "dependsOn": []
+    }
+  }
 }

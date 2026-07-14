@@ -1,0 +1,46 @@
+.characters {
+  max-width: 40rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: system-ui, sans-serif;
+
+  &__form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+
+    input[name='name'] {
+      flex: 1;
+    }
+
+    input[name='level'] {
+      width: 5rem;
+    }
+  }
+
+  &__error {
+    color: #b00020;
+  }
+
+  &__list {
+    list-style: none;
+    padding: 0;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #ddd;
+    }
+  }
+
+  &__name {
+    flex: 1;
+    font-weight: 600;
+  }
+
+  &__level {
+    color: #666;
+  }
+}

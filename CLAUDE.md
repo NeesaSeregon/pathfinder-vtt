@@ -35,3 +35,6 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   synchronize: true (solo desarrollo; pasar a migraciones antes de producción).
 - Primer recurso CRUD: /api/characters (entidad Character con columna JSONB
   sheetData). Modelo compartido Character en libs/shared.
+- El front tiene una página de personajes (listar, crear, borrar) en la ruta
+  raíz, servida contra /api/characters vía proxy. E2E con Cypress verificando
+  el flujo completo (npx nx e2e pathfinder-app-e2e).

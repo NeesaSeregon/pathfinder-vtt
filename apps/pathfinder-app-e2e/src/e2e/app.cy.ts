@@ -1,13 +1,21 @@
-import { getGreeting } from '../support/app.po';
-
 describe('pathfinder-app-e2e', () => {
   beforeEach(() => cy.visit('/'));
 
-  it('should display welcome message', () => {
-    // Custom command example, see `../support/commands.ts` file
-    cy.login('my-email@something.com', 'myPassword');
+  it('should display the characters page', () => {
+    cy.get('h1').contains('Personajes');
+  });
 
-    // Function helper example, see `../support/app.po.ts` file
-    getGreeting().contains(/Welcome/);
+  it('should create and delete a character', () => {
+    const name = `Cypress-${Date.now()}`;
+
+    cy.get('input[name="name"]').type(name);
+    cy.get('input[name="level"]').clear();
+    cy.get('input[name="level"]').type('7');
+    cy.get('button[type="submit"]').click();
+
+    cy.contains('li', name).should('contain', 'Nivel 7');
+
+    cy.contains('li', name).find('button').click();
+    cy.contains('li', name).should('not.exist');
   });
 });
