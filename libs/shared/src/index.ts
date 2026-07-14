@@ -1,2 +1,2 @@
 export * from './lib/shared';
-export * from './lib/models/personaje';
+export * from './lib/models/character';

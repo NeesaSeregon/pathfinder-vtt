@@ -12,10 +12,15 @@ describe('AppController', () => {
     }).compile();
   });
 
-  describe('getData', () => {
-    it('should return "Hello API"', () => {
+  describe('getDemo', () => {
+    it('should return a demo character', () => {
       const appController = app.get<AppController>(AppController);
-      expect(appController.getData()).toEqual({ message: 'Hello API' });
+      expect(appController.getDemo()).toEqual({
+        id: '1',
+        name: 'Ezren',
+        level: 5,
+        sheetData: {},
+      });
     });
   });
 });
