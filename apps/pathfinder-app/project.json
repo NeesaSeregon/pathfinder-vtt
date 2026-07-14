@@ -8,9 +8,7 @@
   "targets": {
     "build": {
       "executor": "@angular/build:application",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
         "outputPath": "dist/apps/pathfinder-app",
@@ -23,9 +21,7 @@
             "input": "apps/pathfinder-app/public"
           }
         ],
-        "styles": [
-          "apps/pathfinder-app/src/styles.scss"
-        ]
+        "styles": ["apps/pathfinder-app/src/styles.scss"]
       },
       "configurations": {
         "production": {
@@ -61,6 +57,10 @@
         "development": {
           "buildTarget": "pathfinder-app:build:development"
         }
+      },
+      "dependsOn": ["api:serve"],
+      "options": {
+        "proxyConfig": "apps/pathfinder-app/proxy.conf.json"
       }
     },
     "lint": {
