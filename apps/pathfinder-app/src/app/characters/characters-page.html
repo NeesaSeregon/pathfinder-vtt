@@ -116,6 +116,12 @@
                 Aptitudes especiales: {{ aptitudes }}
               </p>
             }
+            @if (dineroResumen(character); as dinero) {
+              <p class="characters__modal-velocidad">Dinero: {{ dinero }}</p>
+            }
+            @if (experienciaResumen(character); as experiencia) {
+              <p class="characters__modal-velocidad">{{ experiencia }}</p>
+            }
           } @else if (pgResumen(character)) {
             <p class="characters__modal-combate">{{ pgResumen(character) }}</p>
           }

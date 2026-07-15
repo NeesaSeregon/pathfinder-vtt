@@ -6,8 +6,11 @@ import {
   capacidadDeCarga,
   cargaActual,
   dmc,
+  experienciaFaltante,
   HABILIDADES,
+  pesoMonedas,
   pesoTotal,
+  totalEnOro,
   totalObjetosCa,
   casillas,
   claseDeArmadura,
@@ -453,6 +456,35 @@ describe('pesoTotal y cargaActual', () => {
         ],
       }),
     ).toEqual({ bonif: 8, penalizador: -6, peso: 55 });
+  });
+});
+
+describe('dinero y experiencia', () => {
+  it('totalEnOro aplica el cambio de cada moneda', () => {
+    // 50 pc = 0,5 po; 30 pp = 3 po; 12 po; 2 ppr = 20 po → 35,5 po
+    expect(
+      totalEnOro({ dinero: { pc: 50, pp: 30, po: 12, ppr: 2 } }),
+    ).toBe(35.5);
+    expect(totalEnOro({})).toBe(0);
+  });
+
+  it('pesoMonedas: 50 monedas pesan 1 libra', () => {
+    expect(pesoMonedas({ dinero: { pc: 100, po: 50 } })).toBe(3);
+  });
+
+  it('experienciaFaltante resta actual del umbral', () => {
+    expect(
+      experienciaFaltante({
+        experiencia: { actual: 3400, siguienteNivel: 5000 },
+      }),
+    ).toBe(1600);
+    // Pasado el umbral no debe dar negativo
+    expect(
+      experienciaFaltante({
+        experiencia: { actual: 5200, siguienteNivel: 5000 },
+      }),
+    ).toBe(0);
+    expect(experienciaFaltante({ experiencia: { actual: 3400 } })).toBeNull();
   });
 });
 

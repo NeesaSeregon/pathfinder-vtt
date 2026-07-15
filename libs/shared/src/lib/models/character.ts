@@ -549,6 +549,52 @@ export function cargaActual(
   return 'sobrecargado';
 }
 
+/** Monedas: piezas de cobre, plata, oro y platino. */
+export interface DineroValores {
+  pc?: number;
+  pp?: number;
+  po?: number;
+  ppr?: number;
+}
+
+/** Valor total en oro: 1 po = 10 pp = 100 pc; 1 ppr = 10 po. */
+export function totalEnOro(sheet: CharacterSheetData): number {
+  const dinero = sheet.dinero ?? {};
+  return (
+    (dinero.pc ?? 0) / 100 +
+    (dinero.pp ?? 0) / 10 +
+    (dinero.po ?? 0) +
+    (dinero.ppr ?? 0) * 10
+  );
+}
+
+/** Regla del Core: 50 monedas (de cualquier metal) pesan 1 libra. */
+export function pesoMonedas(sheet: CharacterSheetData): number {
+  const dinero = sheet.dinero ?? {};
+  const monedas =
+    (dinero.pc ?? 0) + (dinero.pp ?? 0) + (dinero.po ?? 0) + (dinero.ppr ?? 0);
+  return monedas / 50;
+}
+
+export interface ExperienciaValores {
+  actual?: number;
+  /** Umbral del siguiente nivel: manual, depende de la velocidad de
+   *  progresión de la mesa (lenta/media/rápida). */
+  siguienteNivel?: number;
+}
+
+/** PX que faltan para subir, o null si falta algún dato. */
+export function experienciaFaltante(sheet: CharacterSheetData): number | null {
+  const experiencia = sheet.experiencia ?? {};
+  if (
+    experiencia.actual === undefined ||
+    experiencia.siguienteNivel === undefined
+  ) {
+    return null;
+  }
+  return Math.max(0, experiencia.siguienteNivel - experiencia.actual);
+}
+
 export const SALVACIONES = ['fortaleza', 'reflejos', 'voluntad'] as const;
 
 export type Salvacion = (typeof SALVACIONES)[number];
@@ -683,6 +729,8 @@ export interface CharacterSheetData {
   /** Una dote por línea, como en el papel. */
   dotes?: string;
   aptitudesEspeciales?: string;
+  dinero?: DineroValores;
+  experiencia?: ExperienciaValores;
   /** Caja "Modificadores condicionales" al pie de la tabla de habilidades. */
   habilidadesNotas?: string;
   idiomas?: string;

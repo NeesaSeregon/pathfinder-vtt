@@ -79,6 +79,20 @@ describe('pathfinder-app-e2e', () => {
     // Dotes
     cy.get('textarea[name="dotes"]').type('Soltura con el arma{enter}Esquiva');
 
+    // Dinero y experiencia con derivados en vivo
+    cy.get('input[name="dinero-po"]').type('12');
+    cy.get('input[name="dinero-pp"]').type('30');
+    cy.contains('.character-form__formula-fija', 'valor total').should(
+      'contain',
+      '15 po',
+    );
+    cy.get('input[name="px-actual"]').type('3400');
+    cy.get('input[name="px-siguiente"]').type('5000');
+    cy.contains('.character-form__formula-fija', 'faltan').should(
+      'contain',
+      '1600',
+    );
+
     // Habilidades: Acrobacias clase + 3 rangos + (-1 Des) + 3 = +5
     cy.get('input[name="acrobacias-clase"]').check();
     cy.get('input[name="acrobacias-rangos"]').type('3');
@@ -158,6 +172,11 @@ describe('pathfinder-app-e2e', () => {
       .should('contain', 'peso total 2')
       .should('contain', 'carga ligera')
       .should('contain', 'Soltura con el arma');
+
+    // Dinero y experiencia derivados de lo guardado
+    cy.get('.characters__modal')
+      .should('contain', 'total 15 po')
+      .should('contain', 'PX 3400 / 5000 (faltan 1600)');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();

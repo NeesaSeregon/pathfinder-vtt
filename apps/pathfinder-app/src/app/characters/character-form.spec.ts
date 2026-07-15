@@ -43,10 +43,15 @@ type CharacterFormInterno = {
       nombre: { set(v: string): void };
       peso: { set(v: number | null): void };
     }[];
+    dinero: Record<string, { set(v: number | null): void }>;
+    experienciaActual: { set(v: number | null): void };
+    experienciaSiguienteNivel: { set(v: number | null): void };
   };
   agregarArma(): void;
   quitarArma(indice: number): void;
   agregarEquipo(): void;
+  oroTotal(): number;
+  pxFaltantes(): number | null;
   pesoTotalActual(): number;
   carga(): string | null;
   capacidad(): { pesada: number } | null;
@@ -234,6 +239,24 @@ describe('CharacterForm', () => {
     expect(emitido?.sheetData.equipo).toEqual([
       { nombre: 'Yunque', peso: 50 },
     ]);
+  });
+
+  it('deriva el oro total y los PX que faltan', () => {
+    interno.form.dinero['po'].set(12);
+    interno.form.dinero['pp'].set(30);
+    interno.form.experienciaActual.set(3400);
+    interno.form.experienciaSiguienteNivel.set(5000);
+
+    expect(interno.oroTotal()).toBe(15);
+    expect(interno.pxFaltantes()).toBe(1600);
+
+    interno.form.name.set('Valeros');
+    interno.submit();
+    expect(emitido?.sheetData.dinero).toEqual({ po: 12, pp: 30 });
+    expect(emitido?.sheetData.experiencia).toEqual({
+      actual: 3400,
+      siguienteNivel: 5000,
+    });
   });
 
   it('guarda solo las habilidades con datos y deriva el total', () => {

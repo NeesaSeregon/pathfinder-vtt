@@ -6,8 +6,10 @@ import {
   bonificadorHabilidad,
   cargaActual,
   dmc,
+  experienciaFaltante,
   HABILIDADES,
   pesoTotal,
+  totalEnOro,
   caDesprevenido,
   caDeToque,
   casillas,
@@ -207,6 +209,38 @@ export class CharactersPage {
       ].filter(Boolean);
       return `${arma.nombre ?? 'Arma sin nombre'} — ${detalles.join(' · ')}`;
     });
+  }
+
+  /** "12 po, 5 pp (total 12,5 po)" para la modal. */
+  protected dineroResumen(character: Character): string {
+    const dinero = character.sheetData.dinero;
+    if (!dinero) {
+      return '';
+    }
+    const monedas = [
+      dinero.ppr !== undefined && `${dinero.ppr} ppr`,
+      dinero.po !== undefined && `${dinero.po} po`,
+      dinero.pp !== undefined && `${dinero.pp} pp`,
+      dinero.pc !== undefined && `${dinero.pc} pc`,
+    ].filter(Boolean);
+    return `${monedas.join(', ')} (total ${totalEnOro(character.sheetData)} po)`;
+  }
+
+  /** "PX 3400 / 5000 (faltan 1600)" para la modal. */
+  protected experienciaResumen(character: Character): string {
+    const experiencia = character.sheetData.experiencia;
+    if (!experiencia) {
+      return '';
+    }
+    const partes = [`PX ${experiencia.actual ?? '—'}`];
+    if (experiencia.siguienteNivel !== undefined) {
+      partes.push(`/ ${experiencia.siguienteNivel}`);
+      const faltan = experienciaFaltante(character.sheetData);
+      if (faltan !== null) {
+        partes.push(`(faltan ${faltan})`);
+      }
+    }
+    return partes.join(' ');
   }
 
   /** "Cota de mallas +6 · Escudo +2" para la modal. */

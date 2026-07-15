@@ -581,6 +581,47 @@
   </fieldset>
 
   <fieldset class="character-form__armas">
+    <legend>Dinero y experiencia</legend>
+    <div class="character-form__formula">
+      <label>
+        PC (cobre)
+        <input type="number" min="0" name="dinero-pc" [(ngModel)]="form.dinero.pc" />
+      </label>
+      <label>
+        PP (plata)
+        <input type="number" min="0" name="dinero-pp" [(ngModel)]="form.dinero.pp" />
+      </label>
+      <label>
+        PO (oro)
+        <input type="number" min="0" name="dinero-po" [(ngModel)]="form.dinero.po" />
+      </label>
+      <label>
+        PPr (platino)
+        <input type="number" min="0" name="dinero-ppr" [(ngModel)]="form.dinero.ppr" />
+      </label>
+      <span class="character-form__formula-fija">
+        valor total: <strong>{{ oroTotal() }} po</strong>
+        · peso: {{ pesoDeMonedas() }} lb
+      </span>
+    </div>
+    <div class="character-form__formula">
+      <label>
+        Puntos de experiencia
+        <input type="number" min="0" name="px-actual" [(ngModel)]="form.experienciaActual" />
+      </label>
+      <label>
+        Siguiente nivel
+        <input type="number" min="0" name="px-siguiente" [(ngModel)]="form.experienciaSiguienteNivel" />
+      </label>
+      @if (pxFaltantes() !== null) {
+        <span class="character-form__formula-fija">
+          faltan <strong>{{ pxFaltantes() }}</strong> PX para subir
+        </span>
+      }
+    </div>
+  </fieldset>
+
+  <fieldset class="character-form__armas">
     <legend>Dotes y aptitudes especiales</legend>
     <label class="character-form__velocidad-temporales">
       Dotes (una por línea)

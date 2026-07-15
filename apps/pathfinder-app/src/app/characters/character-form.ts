@@ -20,8 +20,11 @@ import {
   capacidadDeCarga,
   CapacidadDeCarga,
   cargaActual,
+  DineroValores,
   dmc,
   EquipoItem,
+  ExperienciaValores,
+  experienciaFaltante,
   HABILIDADES,
   HabilidadValores,
   OfensivoValores,
@@ -43,6 +46,7 @@ import {
   modificadorTamano,
   modificadorTamanoManiobras,
   ObjetoCaValores,
+  pesoMonedas,
   pesoTotal,
   PgValores,
   piesAMetros,
@@ -57,9 +61,12 @@ import {
   SalvacionesValores,
   SalvacionValores,
   tiradaDeSalvacion,
+  totalEnOro,
   totalObjetosCa,
   VelocidadValores,
 } from '@pathfinder/shared';
+
+const CAMPOS_DINERO = ['pc', 'pp', 'po', 'ppr'] as const;
 
 const CAMPOS_SALVACION = ['base', 'modMagico', 'modVario', 'modTemporal'] as const;
 
@@ -275,6 +282,14 @@ export class CharacterForm {
     equipo: signal<EquipoForm[]>([]),
     dotes: signal(''),
     aptitudesEspeciales: signal(''),
+    dinero: {
+      pc: signal<number | null>(null),
+      pp: signal<number | null>(null),
+      po: signal<number | null>(null),
+      ppr: signal<number | null>(null),
+    },
+    experienciaActual: signal<number | null>(null),
+    experienciaSiguienteNivel: signal<number | null>(null),
     velocidad: crearVelocidadForm(),
     pgTotal: signal<number | null>(null),
     pgRd: signal(''),
@@ -371,6 +386,15 @@ export class CharacterForm {
     capacidadDeCarga(this.buildSheetData()),
   );
   protected readonly carga = computed(() => cargaActual(this.buildSheetData()));
+  protected readonly oroTotal = computed(() =>
+    totalEnOro(this.buildSheetData()),
+  );
+  protected readonly pesoDeMonedas = computed(() =>
+    pesoMonedas(this.buildSheetData()),
+  );
+  protected readonly pxFaltantes = computed(() =>
+    experienciaFaltante(this.buildSheetData()),
+  );
 
   /** Sumando de una casilla manual, con signo; vacía cuenta como +0. */
   protected sumando(valor: number | null): string {
@@ -575,6 +599,33 @@ export class CharacterForm {
       sheet.aptitudesEspeciales = aptitudes;
     } else {
       delete sheet.aptitudesEspeciales;
+    }
+
+    const dinero: DineroValores = {};
+    for (const moneda of CAMPOS_DINERO) {
+      const valor = this.form.dinero[moneda]();
+      if (valor !== null) {
+        dinero[moneda] = valor;
+      }
+    }
+    if (Object.keys(dinero).length > 0) {
+      sheet.dinero = dinero;
+    } else {
+      delete sheet.dinero;
+    }
+
+    const experiencia: ExperienciaValores = {};
+    if (this.form.experienciaActual() !== null) {
+      experiencia.actual = this.form.experienciaActual() as number;
+    }
+    if (this.form.experienciaSiguienteNivel() !== null) {
+      experiencia.siguienteNivel =
+        this.form.experienciaSiguienteNivel() as number;
+    }
+    if (Object.keys(experiencia).length > 0) {
+      sheet.experiencia = experiencia;
+    } else {
+      delete sheet.experiencia;
     }
 
     const pg: PgValores = {};
@@ -799,6 +850,13 @@ export class CharacterForm {
     );
     this.form.dotes.set(sheet.dotes ?? '');
     this.form.aptitudesEspeciales.set(sheet.aptitudesEspeciales ?? '');
+    for (const moneda of CAMPOS_DINERO) {
+      this.form.dinero[moneda].set(sheet.dinero?.[moneda] ?? null);
+    }
+    this.form.experienciaActual.set(sheet.experiencia?.actual ?? null);
+    this.form.experienciaSiguienteNivel.set(
+      sheet.experiencia?.siguienteNivel ?? null,
+    );
     for (const campo of CAMPOS_VELOCIDAD_PIES) {
       this.form.velocidad[campo].set(sheet.velocidad?.[campo] ?? null);
     }
