@@ -87,6 +87,17 @@
     color: #555;
   }
 
+  &__modal-armas {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.75rem;
+    color: #333;
+
+    li {
+      padding: 0.15rem 0;
+    }
+  }
+
   &__modal-atributos {
     border-collapse: collapse;
     margin-bottom: 1rem;

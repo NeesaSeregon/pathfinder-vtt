@@ -11,12 +11,17 @@ import { FormsModule } from '@angular/forms';
 import {
   ALINEAMIENTOS,
   Alineamiento,
+  ArmaValores,
   ATRIBUTO_ABREV,
   ATRIBUTO_LABELS,
   ATRIBUTOS,
   bmc,
   bonificadorHabilidad,
+  capacidadDeCarga,
+  CapacidadDeCarga,
+  cargaActual,
   dmc,
+  EquipoItem,
   HABILIDADES,
   HabilidadValores,
   OfensivoValores,
@@ -37,6 +42,8 @@ import {
   modificadorDeAtributo,
   modificadorTamano,
   modificadorTamanoManiobras,
+  ObjetoCaValores,
+  pesoTotal,
   PgValores,
   piesAMetros,
   puntuacionEfectiva,
@@ -50,6 +57,7 @@ import {
   SalvacionesValores,
   SalvacionValores,
   tiradaDeSalvacion,
+  totalObjetosCa,
   VelocidadValores,
 } from '@pathfinder/shared';
 
@@ -89,6 +97,60 @@ type VelocidadForm = Record<
   maniobrabilidad: WritableSignal<Maniobrabilidad | ''>;
   modTemporales: WritableSignal<string>;
 };
+
+const CAMPOS_ARMA = [
+  'nombre',
+  'bonifAtaque',
+  'critico',
+  'tipo',
+  'alcance',
+  'municion',
+  'dano',
+] as const;
+
+type ArmaForm = Record<(typeof CAMPOS_ARMA)[number], WritableSignal<string>>;
+
+function crearArmaForm(inicial?: ArmaValores): ArmaForm {
+  const form = {} as ArmaForm;
+  for (const campo of CAMPOS_ARMA) {
+    form[campo] = signal(inicial?.[campo] ?? '');
+  }
+  return form;
+}
+
+interface ObjetoCaForm {
+  nombre: WritableSignal<string>;
+  bonif: WritableSignal<number | null>;
+  tipo: WritableSignal<string>;
+  penalizador: WritableSignal<number | null>;
+  falloConjuro: WritableSignal<string>;
+  peso: WritableSignal<number | null>;
+  propiedades: WritableSignal<string>;
+}
+
+function crearObjetoCaForm(inicial?: ObjetoCaValores): ObjetoCaForm {
+  return {
+    nombre: signal(inicial?.nombre ?? ''),
+    bonif: signal<number | null>(inicial?.bonif ?? null),
+    tipo: signal(inicial?.tipo ?? ''),
+    penalizador: signal<number | null>(inicial?.penalizador ?? null),
+    falloConjuro: signal(inicial?.falloConjuro ?? ''),
+    peso: signal<number | null>(inicial?.peso ?? null),
+    propiedades: signal(inicial?.propiedades ?? ''),
+  };
+}
+
+interface EquipoForm {
+  nombre: WritableSignal<string>;
+  peso: WritableSignal<number | null>;
+}
+
+function crearEquipoForm(inicial?: EquipoItem): EquipoForm {
+  return {
+    nombre: signal(inicial?.nombre ?? ''),
+    peso: signal<number | null>(inicial?.peso ?? null),
+  };
+}
 
 type HabilidadesForm = Record<
   string,
@@ -207,6 +269,12 @@ export class CharacterForm {
     habilidades: crearHabilidadesForm(),
     habilidadesNotas: signal(''),
     idiomas: signal(''),
+    // Listas dinámicas: una señal que contiene grupos de señales por fila
+    armas: signal<ArmaForm[]>([]),
+    objetosCa: signal<ObjetoCaForm[]>([]),
+    equipo: signal<EquipoForm[]>([]),
+    dotes: signal(''),
+    aptitudesEspeciales: signal(''),
     velocidad: crearVelocidadForm(),
     pgTotal: signal<number | null>(null),
     pgRd: signal(''),
@@ -265,6 +333,44 @@ export class CharacterForm {
     // o ninguno), el formulario se rellena o se vacía.
     effect(() => this.applyInitial(this.initial()));
   }
+
+  protected agregarArma(): void {
+    this.form.armas.update((armas) => [...armas, crearArmaForm()]);
+  }
+
+  protected quitarArma(indice: number): void {
+    this.form.armas.update((armas) => armas.filter((_, i) => i !== indice));
+  }
+
+  protected agregarObjetoCa(): void {
+    this.form.objetosCa.update((objetos) => [...objetos, crearObjetoCaForm()]);
+  }
+
+  protected quitarObjetoCa(indice: number): void {
+    this.form.objetosCa.update((objetos) =>
+      objetos.filter((_, i) => i !== indice),
+    );
+  }
+
+  protected agregarEquipo(): void {
+    this.form.equipo.update((equipo) => [...equipo, crearEquipoForm()]);
+  }
+
+  protected quitarEquipo(indice: number): void {
+    this.form.equipo.update((equipo) => equipo.filter((_, i) => i !== indice));
+  }
+
+  /** Totales derivados de las tablas de objetos CA y equipo, en vivo. */
+  protected readonly totalesObjetosCa = computed(() =>
+    totalObjetosCa(this.buildSheetData()),
+  );
+  protected readonly pesoTotalActual = computed(() =>
+    pesoTotal(this.buildSheetData()),
+  );
+  protected readonly capacidad = computed<CapacidadDeCarga | null>(() =>
+    capacidadDeCarga(this.buildSheetData()),
+  );
+  protected readonly carga = computed(() => cargaActual(this.buildSheetData()));
 
   /** Sumando de una casilla manual, con signo; vacía cuenta como +0. */
   protected sumando(valor: number | null): string {
@@ -437,6 +543,40 @@ export class CharacterForm {
       delete sheet.idiomas;
     }
 
+    const armas = this.buildArmas();
+    if (armas.length > 0) {
+      sheet.armas = armas;
+    } else {
+      delete sheet.armas;
+    }
+
+    const objetosCa = this.buildObjetosCa();
+    if (objetosCa.length > 0) {
+      sheet.objetosCa = objetosCa;
+    } else {
+      delete sheet.objetosCa;
+    }
+
+    const equipo = this.buildEquipo();
+    if (equipo.length > 0) {
+      sheet.equipo = equipo;
+    } else {
+      delete sheet.equipo;
+    }
+
+    const dotes = this.form.dotes().trim();
+    if (dotes) {
+      sheet.dotes = dotes;
+    } else {
+      delete sheet.dotes;
+    }
+    const aptitudes = this.form.aptitudesEspeciales().trim();
+    if (aptitudes) {
+      sheet.aptitudesEspeciales = aptitudes;
+    } else {
+      delete sheet.aptitudesEspeciales;
+    }
+
     const pg: PgValores = {};
     const pgTotal = this.form.pgTotal();
     if (pgTotal !== null) {
@@ -452,6 +592,56 @@ export class CharacterForm {
       delete sheet.pg;
     }
     return sheet;
+  }
+
+  private buildArmas(): ArmaValores[] {
+    return this.form.armas()
+      .map((fila) => {
+        const arma: ArmaValores = {};
+        for (const campo of CAMPOS_ARMA) {
+          const valor = fila[campo]().trim();
+          if (valor) {
+            arma[campo] = valor;
+          }
+        }
+        return arma;
+      })
+      // Las filas añadidas pero dejadas en blanco no se guardan
+      .filter((arma) => Object.keys(arma).length > 0);
+  }
+
+  private buildObjetosCa(): ObjetoCaValores[] {
+    return this.form.objetosCa()
+      .map((fila) => {
+        const objeto: ObjetoCaValores = {};
+        const nombre = fila.nombre().trim();
+        if (nombre) objeto.nombre = nombre;
+        if (fila.bonif() !== null) objeto.bonif = fila.bonif() as number;
+        const tipo = fila.tipo().trim();
+        if (tipo) objeto.tipo = tipo;
+        if (fila.penalizador() !== null) {
+          objeto.penalizador = fila.penalizador() as number;
+        }
+        const falloConjuro = fila.falloConjuro().trim();
+        if (falloConjuro) objeto.falloConjuro = falloConjuro;
+        if (fila.peso() !== null) objeto.peso = fila.peso() as number;
+        const propiedades = fila.propiedades().trim();
+        if (propiedades) objeto.propiedades = propiedades;
+        return objeto;
+      })
+      .filter((objeto) => Object.keys(objeto).length > 0);
+  }
+
+  private buildEquipo(): EquipoItem[] {
+    return this.form.equipo()
+      .map((fila) => {
+        const item: EquipoItem = {};
+        const nombre = fila.nombre().trim();
+        if (nombre) item.nombre = nombre;
+        if (fila.peso() !== null) item.peso = fila.peso() as number;
+        return item;
+      })
+      .filter((item) => Object.keys(item).length > 0);
   }
 
   private buildHabilidades(): Record<string, HabilidadValores> {
@@ -600,6 +790,15 @@ export class CharacterForm {
     }
     this.form.habilidadesNotas.set(sheet.habilidadesNotas ?? '');
     this.form.idiomas.set(sheet.idiomas ?? '');
+    this.form.armas.set((sheet.armas ?? []).map((arma) => crearArmaForm(arma)));
+    this.form.objetosCa.set(
+      (sheet.objetosCa ?? []).map((objeto) => crearObjetoCaForm(objeto)),
+    );
+    this.form.equipo.set(
+      (sheet.equipo ?? []).map((item) => crearEquipoForm(item)),
+    );
+    this.form.dotes.set(sheet.dotes ?? '');
+    this.form.aptitudesEspeciales.set(sheet.aptitudesEspeciales ?? '');
     for (const campo of CAMPOS_VELOCIDAD_PIES) {
       this.form.velocidad[campo].set(sheet.velocidad?.[campo] ?? null);
     }

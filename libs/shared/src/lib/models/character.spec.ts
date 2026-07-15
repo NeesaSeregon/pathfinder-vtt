@@ -3,8 +3,12 @@ import {
   bonificadorHabilidad,
   caDeToque,
   caDesprevenido,
+  capacidadDeCarga,
+  cargaActual,
   dmc,
   HABILIDADES,
+  pesoTotal,
+  totalObjetosCa,
   casillas,
   claseDeArmadura,
   formatearModificador,
@@ -362,6 +366,93 @@ describe('tiradaDeSalvacion', () => {
         'fortaleza',
       ),
     ).toBe(3);
+  });
+});
+
+describe('capacidadDeCarga', () => {
+  it('FUE 10: la fila clásica de la tabla (33/66/100)', () => {
+    const capacidad = capacidadDeCarga({
+      atributos: { fuerza: { puntuacion: 10 } },
+    });
+    expect(capacidad).toEqual({
+      ligera: 33,
+      media: 66,
+      pesada: 100,
+      levantarCabeza: 100,
+      levantarSuelo: 200,
+      empujarArrastrar: 500,
+    });
+  });
+
+  it('FUE 18: 100/200/300', () => {
+    const capacidad = capacidadDeCarga({
+      atributos: { fuerza: { puntuacion: 18 } },
+    });
+    expect(capacidad?.pesada).toBe(300);
+  });
+
+  it('más allá de FUE 29 se usa la fila de (FUE-10) por 4', () => {
+    // FUE 32 → fila de 22 (173/346/520) x4
+    const capacidad = capacidadDeCarga({
+      atributos: { fuerza: { puntuacion: 32 } },
+    });
+    expect(capacidad?.pesada).toBe(2080);
+  });
+
+  it('el tamaño multiplica: un grande carga el doble', () => {
+    const capacidad = capacidadDeCarga({
+      tamano: 'grande',
+      atributos: { fuerza: { puntuacion: 10 } },
+    });
+    expect(capacidad?.pesada).toBe(200);
+  });
+
+  it('la fuerza de toro también carga más (ajuste temporal)', () => {
+    // FUE 14 + 4 → efectiva 18 → pesada 300
+    const capacidad = capacidadDeCarga({
+      atributos: { fuerza: { puntuacion: 14, ajusteTemporal: 4 } },
+    });
+    expect(capacidad?.pesada).toBe(300);
+  });
+
+  it('sin Fuerza anotada no hay límites que mostrar', () => {
+    expect(capacidadDeCarga({})).toBeNull();
+  });
+});
+
+describe('pesoTotal y cargaActual', () => {
+  const sheet = {
+    atributos: { fuerza: { puntuacion: 10 } }, // 33/66/100
+    equipo: [{ nombre: 'Mochila', peso: 2 }, { nombre: 'Cuerda', peso: 10 }],
+    objetosCa: [{ nombre: 'Cota de mallas', bonif: 6, peso: 40 }],
+  };
+
+  it('suma el equipo y los objetos CA', () => {
+    expect(pesoTotal(sheet)).toBe(52);
+  });
+
+  it('clasifica la carga comparando con los límites', () => {
+    expect(cargaActual(sheet)).toBe('media'); // 52 > 33 y <= 66
+    expect(cargaActual({ atributos: { fuerza: { puntuacion: 10 } } })).toBe(
+      'ligera',
+    );
+    expect(
+      cargaActual({
+        atributos: { fuerza: { puntuacion: 1 } }, // 3/6/10
+        equipo: [{ nombre: 'Yunque', peso: 50 }],
+      }),
+    ).toBe('sobrecargado');
+  });
+
+  it('totalObjetosCa suma bonif, penalizador y peso', () => {
+    expect(
+      totalObjetosCa({
+        objetosCa: [
+          { bonif: 6, penalizador: -5, peso: 40 },
+          { bonif: 2, penalizador: -1, peso: 15 },
+        ],
+      }),
+    ).toEqual({ bonif: 8, penalizador: -6, peso: 55 });
   });
 });
 

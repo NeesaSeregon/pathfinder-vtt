@@ -80,6 +80,13 @@
                 Modificadores de salvación: {{ notasSalvaciones }}
               </p>
             }
+            @if (armasDe(character).length > 0) {
+              <ul class="characters__modal-armas">
+                @for (arma of armasDe(character); track arma) {
+                  <li>{{ arma }}</li>
+                }
+              </ul>
+            }
             @if (habilidadesDe(character).length > 0) {
               <p class="characters__modal-velocidad">
                 Habilidades: {{ habilidadesDe(character).join(' · ') }}
@@ -92,6 +99,22 @@
             }
             @if (character.sheetData.idiomas; as idiomas) {
               <p class="characters__modal-velocidad">Idiomas: {{ idiomas }}</p>
+            }
+            @if (objetosCaDe(character); as objetosCa) {
+              <p class="characters__modal-velocidad">
+                Objetos CA: {{ objetosCa }}
+              </p>
+            }
+            @if (equipoResumen(character); as equipo) {
+              <p class="characters__modal-velocidad">Equipo: {{ equipo }}</p>
+            }
+            @if (character.sheetData.dotes; as dotes) {
+              <p class="characters__modal-velocidad">Dotes: {{ dotes }}</p>
+            }
+            @if (character.sheetData.aptitudesEspeciales; as aptitudes) {
+              <p class="characters__modal-velocidad">
+                Aptitudes especiales: {{ aptitudes }}
+              </p>
             }
           } @else if (pgResumen(character)) {
             <p class="characters__modal-combate">{{ pgResumen(character) }}</p>

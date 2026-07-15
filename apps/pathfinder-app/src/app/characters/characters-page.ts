@@ -4,8 +4,10 @@ import {
   ATRIBUTOS,
   bmc,
   bonificadorHabilidad,
+  cargaActual,
   dmc,
   HABILIDADES,
+  pesoTotal,
   caDesprevenido,
   caDeToque,
   casillas,
@@ -190,6 +192,47 @@ export class CharactersPage {
           tiradaDeSalvacion(character.sheetData, salvacion),
         )}`,
     ).join(' · ');
+  }
+
+  /** Una línea por arma: "Espada larga — ataque +9/+4 · daño 1d8+4 · ...". */
+  protected armasDe(character: Character): string[] {
+    return (character.sheetData.armas ?? []).map((arma) => {
+      const detalles = [
+        arma.bonifAtaque && `ataque ${arma.bonifAtaque}`,
+        arma.dano && `daño ${arma.dano}`,
+        arma.critico && `crítico ${arma.critico}`,
+        arma.tipo && `tipo ${arma.tipo}`,
+        arma.alcance && `alcance ${arma.alcance}`,
+        arma.municion && `munición ${arma.municion}`,
+      ].filter(Boolean);
+      return `${arma.nombre ?? 'Arma sin nombre'} — ${detalles.join(' · ')}`;
+    });
+  }
+
+  /** "Cota de mallas +6 · Escudo +2" para la modal. */
+  protected objetosCaDe(character: Character): string {
+    return (character.sheetData.objetosCa ?? [])
+      .map((objeto) =>
+        [objeto.nombre ?? 'Objeto', objeto.bonif !== undefined && `+${objeto.bonif}`]
+          .filter(Boolean)
+          .join(' '),
+      )
+      .join(' · ');
+  }
+
+  /** "5 objetos · peso total 52 (carga media)" para la modal. */
+  protected equipoResumen(character: Character): string {
+    const cantidad = character.sheetData.equipo?.length ?? 0;
+    if (cantidad === 0 && !character.sheetData.objetosCa?.length) {
+      return '';
+    }
+    const peso = pesoTotal(character.sheetData);
+    const carga = cargaActual(character.sheetData);
+    const partes = [`${cantidad} objetos de equipo`, `peso total ${peso}`];
+    if (carga) {
+      partes.push(`carga ${carga}`);
+    }
+    return partes.join(' · ');
   }
 
   /** Habilidades con datos, con su bonificador total derivado. */

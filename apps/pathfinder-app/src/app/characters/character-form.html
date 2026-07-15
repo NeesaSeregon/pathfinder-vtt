@@ -366,6 +366,232 @@
     </label>
   </fieldset>
 
+  <fieldset class="character-form__armas">
+    <legend>Armas</legend>
+    @for (arma of form.armas(); track arma; let i = $index) {
+      <div class="character-form__arma">
+        <label class="character-form__arma-nombre">
+          Arma
+          <input
+            type="text"
+            maxlength="100"
+            [name]="'arma' + i + '-nombre'"
+            [attr.name]="'arma' + i + '-nombre'"
+            [(ngModel)]="arma.nombre"
+          />
+        </label>
+        <label>
+          Bonif. ataque
+          <input
+            type="text"
+            maxlength="20"
+            placeholder="+9/+4"
+            [name]="'arma' + i + '-ataque'"
+            [attr.name]="'arma' + i + '-ataque'"
+            [(ngModel)]="arma.bonifAtaque"
+          />
+        </label>
+        <label>
+          Crítico
+          <input
+            type="text"
+            maxlength="20"
+            placeholder="19-20/×2"
+            [name]="'arma' + i + '-critico'"
+            [attr.name]="'arma' + i + '-critico'"
+            [(ngModel)]="arma.critico"
+          />
+        </label>
+        <label>
+          Tipo
+          <input
+            type="text"
+            maxlength="20"
+            placeholder="C, P, Cont."
+            [name]="'arma' + i + '-tipo'"
+            [attr.name]="'arma' + i + '-tipo'"
+            [(ngModel)]="arma.tipo"
+          />
+        </label>
+        <label>
+          Alcance
+          <input
+            type="text"
+            maxlength="20"
+            [name]="'arma' + i + '-alcance'"
+            [attr.name]="'arma' + i + '-alcance'"
+            [(ngModel)]="arma.alcance"
+          />
+        </label>
+        <label>
+          Munición
+          <input
+            type="text"
+            maxlength="30"
+            [name]="'arma' + i + '-municion'"
+            [attr.name]="'arma' + i + '-municion'"
+            [(ngModel)]="arma.municion"
+          />
+        </label>
+        <label>
+          Daño
+          <input
+            type="text"
+            maxlength="30"
+            placeholder="1d8+4"
+            [name]="'arma' + i + '-dano'"
+            [attr.name]="'arma' + i + '-dano'"
+            [(ngModel)]="arma.dano"
+          />
+        </label>
+        <button type="button" (click)="quitarArma(i)">Quitar</button>
+      </div>
+    }
+    <button
+      type="button"
+      class="character-form__arma-agregar"
+      (click)="agregarArma()"
+    >
+      Añadir arma
+    </button>
+  </fieldset>
+
+  <fieldset class="character-form__armas">
+    <legend>Objetos CA</legend>
+    @for (objeto of form.objetosCa(); track objeto; let i = $index) {
+      <div class="character-form__arma">
+        <label class="character-form__arma-nombre">
+          Objeto
+          <input type="text" maxlength="100"
+            [name]="'objetoca' + i + '-nombre'"
+            [attr.name]="'objetoca' + i + '-nombre'"
+            [(ngModel)]="objeto.nombre" />
+        </label>
+        <label>
+          Bonif.
+          <input type="number"
+            [name]="'objetoca' + i + '-bonif'"
+            [attr.name]="'objetoca' + i + '-bonif'"
+            [(ngModel)]="objeto.bonif" />
+        </label>
+        <label>
+          Tipo
+          <input type="text" maxlength="30"
+            [name]="'objetoca' + i + '-tipo'"
+            [attr.name]="'objetoca' + i + '-tipo'"
+            [(ngModel)]="objeto.tipo" />
+        </label>
+        <label>
+          Penal. prueba
+          <input type="number" max="0"
+            [name]="'objetoca' + i + '-penal'"
+            [attr.name]="'objetoca' + i + '-penal'"
+            [(ngModel)]="objeto.penalizador" />
+        </label>
+        <label>
+          Fallo conjuro
+          <input type="text" maxlength="10" placeholder="15%"
+            [name]="'objetoca' + i + '-fallo'"
+            [attr.name]="'objetoca' + i + '-fallo'"
+            [(ngModel)]="objeto.falloConjuro" />
+        </label>
+        <label>
+          Peso
+          <input type="number" min="0"
+            [name]="'objetoca' + i + '-peso'"
+            [attr.name]="'objetoca' + i + '-peso'"
+            [(ngModel)]="objeto.peso" />
+        </label>
+        <label>
+          Propiedades
+          <input type="text" maxlength="100"
+            [name]="'objetoca' + i + '-propiedades'"
+            [attr.name]="'objetoca' + i + '-propiedades'"
+            [(ngModel)]="objeto.propiedades" />
+        </label>
+        <button type="button" (click)="quitarObjetoCa(i)">Quitar</button>
+      </div>
+    }
+    <div class="character-form__formula">
+      <span class="character-form__formula-fija">TOTALES:</span>
+      <span class="character-form__formula-total">
+        Bonif. <output>{{ totalesObjetosCa().bonif }}</output>
+      </span>
+      <span class="character-form__formula-total">
+        Penal. <output>{{ totalesObjetosCa().penalizador }}</output>
+      </span>
+      <span class="character-form__formula-total">
+        Peso <output>{{ totalesObjetosCa().peso }}</output>
+      </span>
+    </div>
+    <button type="button" class="character-form__arma-agregar" (click)="agregarObjetoCa()">
+      Añadir objeto CA
+    </button>
+  </fieldset>
+
+  <fieldset class="character-form__armas">
+    <legend>Equipo</legend>
+    @for (item of form.equipo(); track item; let i = $index) {
+      <div class="character-form__arma">
+        <label class="character-form__arma-nombre">
+          Objeto
+          <input type="text" maxlength="100"
+            [name]="'equipo' + i + '-nombre'"
+            [attr.name]="'equipo' + i + '-nombre'"
+            [(ngModel)]="item.nombre" />
+        </label>
+        <label>
+          Peso
+          <input type="number" min="0"
+            [name]="'equipo' + i + '-peso'"
+            [attr.name]="'equipo' + i + '-peso'"
+            [(ngModel)]="item.peso" />
+        </label>
+        <button type="button" (click)="quitarEquipo(i)">Quitar</button>
+      </div>
+    }
+    <button type="button" class="character-form__arma-agregar" (click)="agregarEquipo()">
+      Añadir equipo
+    </button>
+
+    <div class="character-form__formula">
+      <span class="character-form__formula-total">
+        Peso total <output>{{ pesoTotalActual() }}</output>
+      </span>
+      @if (carga(); as cargaHoy) {
+        <span class="character-form__formula-fija">
+          carga actual: <strong>{{ cargaHoy }}</strong>
+        </span>
+      }
+    </div>
+    @if (capacidad(); as limites) {
+      <div class="character-form__formula character-form__carga">
+        <span>Carga ligera <output>{{ limites.ligera }}</output></span>
+        <span>Carga media <output>{{ limites.media }}</output></span>
+        <span>Carga pesada <output>{{ limites.pesada }}</output></span>
+        <span>Levantar sobre la cabeza <output>{{ limites.levantarCabeza }}</output></span>
+        <span>Levantar del suelo <output>{{ limites.levantarSuelo }}</output></span>
+        <span>Empujar o arrastrar <output>{{ limites.empujarArrastrar }}</output></span>
+      </div>
+    } @else {
+      <p class="character-form__habilidades-nota">
+        Anota la Fuerza para calcular los límites de carga.
+      </p>
+    }
+  </fieldset>
+
+  <fieldset class="character-form__armas">
+    <legend>Dotes y aptitudes especiales</legend>
+    <label class="character-form__velocidad-temporales">
+      Dotes (una por línea)
+      <textarea name="dotes" rows="5" maxlength="2000" [(ngModel)]="form.dotes"></textarea>
+    </label>
+    <label class="character-form__velocidad-temporales">
+      Aptitudes especiales (una por línea)
+      <textarea name="aptitudes-especiales" rows="5" maxlength="2000" [(ngModel)]="form.aptitudesEspeciales"></textarea>
+    </label>
+  </fieldset>
+
   <fieldset class="character-form__habilidades">
     <legend>Habilidades</legend>
     <div class="character-form__habilidades-grid">

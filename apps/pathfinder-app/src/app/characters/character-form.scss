@@ -191,6 +191,80 @@
     }
   }
 
+  &__armas {
+    grid-column: 1 / -1;
+    border: 1px solid #ccc;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    legend {
+      font-size: 0.85rem;
+      color: #444;
+      padding: 0 0.25rem;
+    }
+  }
+
+  &__arma {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px dashed #ddd;
+
+    label {
+      width: 7rem;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 0.35rem 0.75rem;
+    }
+  }
+
+  &__arma-nombre {
+    flex: 1;
+    min-width: 10rem;
+  }
+
+  &__arma-agregar {
+    align-self: start;
+    padding: 0.45rem 1rem;
+  }
+
+  &__carga {
+    span {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: #555;
+      text-align: center;
+      width: 8rem;
+    }
+
+    output {
+      font-weight: 600;
+      color: #222;
+      border: 1px solid #999;
+      border-radius: 0.25rem;
+      padding: 0.25rem;
+    }
+  }
+
+  textarea {
+    padding: 0.35rem 0.5rem;
+    font-family: inherit;
+    resize: vertical;
+  }
+
   &__habilidades {
     grid-column: 1 / -1;
     border: 1px solid #ccc;

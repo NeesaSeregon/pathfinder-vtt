@@ -38,7 +38,18 @@ type CharacterFormInterno = {
         modVario: { set(v: number | null): void };
       }
     >;
+    armas(): Record<string, { set(v: string): void }>[];
+    equipo(): {
+      nombre: { set(v: string): void };
+      peso: { set(v: number | null): void };
+    }[];
   };
+  agregarArma(): void;
+  quitarArma(indice: number): void;
+  agregarEquipo(): void;
+  pesoTotalActual(): number;
+  carga(): string | null;
+  capacidad(): { pesada: number } | null;
   totalHabilidad(id: string): string;
   totalSalvacion(salvacion: string): string;
   bmcTotal(): string;
@@ -180,6 +191,49 @@ describe('CharacterForm', () => {
     interno.submit();
     expect(emitido?.sheetData.ofensivo).toEqual({ ataqueBase: 3 });
     expect(emitido?.sheetData.tamano).toBe('grande');
+  });
+
+  it('guarda las armas rellenas y descarta las filas en blanco', () => {
+    interno.form.name.set('Valeros');
+    interno.agregarArma();
+    interno.agregarArma(); // esta se queda vacía
+    interno.form.armas()[0]['nombre'].set('Espada larga');
+    interno.form.armas()[0]['bonifAtaque'].set('+9/+4');
+    interno.form.armas()[0]['dano'].set('1d8+4');
+    interno.submit();
+
+    expect(emitido?.sheetData.armas).toEqual([
+      { nombre: 'Espada larga', bonifAtaque: '+9/+4', dano: '1d8+4' },
+    ]);
+  });
+
+  it('quitarArma elimina la fila indicada', () => {
+    interno.agregarArma();
+    interno.agregarArma();
+    interno.form.armas()[0]['nombre'].set('Espada');
+    interno.form.armas()[1]['nombre'].set('Arco');
+    interno.quitarArma(0);
+
+    interno.form.name.set('Valeros');
+    interno.submit();
+    expect(emitido?.sheetData.armas).toEqual([{ nombre: 'Arco' }]);
+  });
+
+  it('deriva peso total, límites y categoría de carga en vivo', () => {
+    interno.form.atributos['fuerza'].puntuacion.set(10); // 33/66/100
+    interno.agregarEquipo();
+    interno.form.equipo()[0].nombre.set('Yunque');
+    interno.form.equipo()[0].peso.set(50);
+
+    expect(interno.pesoTotalActual()).toBe(50);
+    expect(interno.capacidad()?.pesada).toBe(100);
+    expect(interno.carga()).toBe('media'); // 50 > 33 y <= 66
+
+    interno.form.name.set('Valeros');
+    interno.submit();
+    expect(emitido?.sheetData.equipo).toEqual([
+      { nombre: 'Yunque', peso: 50 },
+    ]);
   });
 
   it('guarda solo las habilidades con datos y deriva el total', () => {

@@ -60,6 +60,25 @@ describe('pathfinder-app-e2e', () => {
       '+3',
     );
 
+    // Armas: fila dinámica
+    cy.contains('button', 'Añadir arma').click();
+    cy.get('input[name="arma0-nombre"]').type('Espada larga');
+    cy.get('input[name="arma0-ataque"]').type('+9/+4');
+    cy.get('input[name="arma0-dano"]').type('1d8+4');
+
+    // Equipo: con FUE efectiva 22 (fuerza de toro) la carga pesada es 520
+    cy.contains('button', 'Añadir equipo').click();
+    cy.get('input[name="equipo0-nombre"]').type('Mochila');
+    cy.get('input[name="equipo0-peso"]').type('2');
+    cy.contains('.character-form__formula-total', 'Peso total').should(
+      'contain',
+      '2',
+    );
+    cy.get('.character-form__carga').should('contain', '520');
+
+    // Dotes
+    cy.get('textarea[name="dotes"]').type('Soltura con el arma{enter}Esquiva');
+
     // Habilidades: Acrobacias clase + 3 rangos + (-1 Des) + 3 = +5
     cy.get('input[name="acrobacias-clase"]').check();
     cy.get('input[name="acrobacias-rangos"]').type('3');
@@ -127,6 +146,18 @@ describe('pathfinder-app-e2e', () => {
       .should('contain', 'Acrobacias +5')
       .should('contain', 'Artesanía (Herrería) +1')
       .should('contain', 'Idiomas: común, élfico');
+
+    // El arma guardada como array en el JSONB
+    cy.get('.characters__modal-armas')
+      .should('contain', 'Espada larga')
+      .should('contain', 'ataque +9/+4')
+      .should('contain', 'daño 1d8+4');
+
+    // Equipo con carga derivada, y dotes
+    cy.get('.characters__modal')
+      .should('contain', 'peso total 2')
+      .should('contain', 'carga ligera')
+      .should('contain', 'Soltura con el arma');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();

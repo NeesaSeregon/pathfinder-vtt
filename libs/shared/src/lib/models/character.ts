@@ -380,6 +380,175 @@ export function bonificadorHabilidad(
   );
 }
 
+/**
+ * Un arma de la ficha. Todo es manual, como en el papel: derivar el
+ * bonificador de ataque exige modelar dotes, mejoras y ataques iterativos
+ * (por eso bonifAtaque es texto: "+9/+4"). Cuando exista un sistema de
+ * efectos/dotes, podrá derivarse. Se guarda como ARRAY en sheetData.
+ */
+export interface ArmaValores {
+  nombre?: string;
+  bonifAtaque?: string;
+  critico?: string;
+  tipo?: string;
+  alcance?: string;
+  municion?: string;
+  dano?: string;
+}
+
+/** Un objeto que aporta CA (armadura, escudo, anillo...). */
+export interface ObjetoCaValores {
+  nombre?: string;
+  bonif?: number;
+  tipo?: string;
+  penalizador?: number;
+  falloConjuro?: string;
+  peso?: number;
+  propiedades?: string;
+}
+
+/** Fila TOTALES de la tabla de objetos CA: sumas de las columnas numéricas. */
+export interface TotalesObjetosCa {
+  bonif: number;
+  penalizador: number;
+  peso: number;
+}
+
+export function totalObjetosCa(sheet: CharacterSheetData): TotalesObjetosCa {
+  return (sheet.objetosCa ?? []).reduce<TotalesObjetosCa>(
+    (total, objeto) => ({
+      bonif: total.bonif + (objeto.bonif ?? 0),
+      penalizador: total.penalizador + (objeto.penalizador ?? 0),
+      peso: total.peso + (objeto.peso ?? 0),
+    }),
+    { bonif: 0, penalizador: 0, peso: 0 },
+  );
+}
+
+export interface EquipoItem {
+  nombre?: string;
+  peso?: number;
+}
+
+/** Peso total transportado: equipo + objetos CA (en libras, unidad de PF1e). */
+export function pesoTotal(sheet: CharacterSheetData): number {
+  const equipo = (sheet.equipo ?? []).reduce(
+    (total, item) => total + (item.peso ?? 0),
+    0,
+  );
+  return equipo + totalObjetosCa(sheet).peso;
+}
+
+/**
+ * Tabla de capacidad de carga del Core (libras): [ligera, media, pesada]
+ * por puntuación de Fuerza 1..29. Más allá de 29: la fila de (FUE-10) x4.
+ */
+const TABLA_CARGA: readonly [number, number, number][] = [
+  [3, 6, 10],
+  [6, 13, 20],
+  [10, 20, 30],
+  [13, 26, 40],
+  [16, 33, 50],
+  [20, 40, 60],
+  [23, 46, 70],
+  [26, 53, 80],
+  [30, 60, 90],
+  [33, 66, 100],
+  [38, 76, 115],
+  [43, 86, 130],
+  [50, 100, 150],
+  [58, 116, 175],
+  [66, 133, 200],
+  [76, 153, 230],
+  [86, 173, 260],
+  [100, 200, 300],
+  [116, 233, 350],
+  [133, 266, 400],
+  [153, 306, 460],
+  [173, 346, 520],
+  [200, 400, 600],
+  [233, 466, 700],
+  [266, 533, 800],
+  [306, 613, 920],
+  [346, 693, 1040],
+  [400, 800, 1200],
+  [466, 933, 1400],
+];
+
+/** Multiplicador de carga por tamaño (criatura bípeda). */
+const MULTIPLICADOR_CARGA: Record<Tamano, number> = {
+  fino: 1 / 8,
+  diminuto: 1 / 4,
+  menudo: 1 / 2,
+  pequeno: 3 / 4,
+  mediano: 1,
+  grande: 2,
+  enorme: 4,
+  gargantuesco: 8,
+  colosal: 16,
+};
+
+export interface CapacidadDeCarga {
+  ligera: number;
+  media: number;
+  pesada: number;
+  levantarCabeza: number;
+  levantarSuelo: number;
+  empujarArrastrar: number;
+}
+
+/**
+ * Límites de carga según la Fuerza EFECTIVA (con ajustes temporales) y el
+ * tamaño. Levantar sobre la cabeza = carga pesada máxima; levantar del
+ * suelo = x2; empujar o arrastrar = x5. Sin Fuerza anotada, null.
+ */
+export function capacidadDeCarga(
+  sheet: CharacterSheetData,
+): CapacidadDeCarga | null {
+  const fuerza = puntuacionEfectiva(sheet.atributos?.fuerza);
+  if (fuerza === undefined || fuerza < 1) {
+    return null;
+  }
+  let base: [number, number, number];
+  if (fuerza <= 29) {
+    base = TABLA_CARGA[fuerza - 1];
+  } else {
+    // FUE 30+: la fila de (FUE - 10) multiplicada por 4
+    const [ligera, media, pesada] = TABLA_CARGA[fuerza - 10 - 1];
+    base = [ligera * 4, media * 4, pesada * 4];
+  }
+  const multiplicador =
+    sheet.tamano && sheet.tamano in MULTIPLICADOR_CARGA
+      ? MULTIPLICADOR_CARGA[sheet.tamano]
+      : 1;
+  const [ligera, media, pesada] = base.map((limite) =>
+    Math.floor(limite * multiplicador),
+  );
+  return {
+    ligera,
+    media,
+    pesada,
+    levantarCabeza: pesada,
+    levantarSuelo: pesada * 2,
+    empujarArrastrar: pesada * 5,
+  };
+}
+
+/** Categoría de carga actual comparando el peso total con los límites. */
+export function cargaActual(
+  sheet: CharacterSheetData,
+): 'ligera' | 'media' | 'pesada' | 'sobrecargado' | null {
+  const capacidad = capacidadDeCarga(sheet);
+  if (!capacidad) {
+    return null;
+  }
+  const peso = pesoTotal(sheet);
+  if (peso <= capacidad.ligera) return 'ligera';
+  if (peso <= capacidad.media) return 'media';
+  if (peso <= capacidad.pesada) return 'pesada';
+  return 'sobrecargado';
+}
+
 export const SALVACIONES = ['fortaleza', 'reflejos', 'voluntad'] as const;
 
 export type Salvacion = (typeof SALVACIONES)[number];
@@ -508,6 +677,12 @@ export interface CharacterSheetData {
   salvaciones?: SalvacionesValores;
   ofensivo?: OfensivoValores;
   habilidades?: Record<string, HabilidadValores>;
+  armas?: ArmaValores[];
+  objetosCa?: ObjetoCaValores[];
+  equipo?: EquipoItem[];
+  /** Una dote por línea, como en el papel. */
+  dotes?: string;
+  aptitudesEspeciales?: string;
   /** Caja "Modificadores condicionales" al pie de la tabla de habilidades. */
   habilidadesNotas?: string;
   idiomas?: string;
