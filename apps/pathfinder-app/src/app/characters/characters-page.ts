@@ -13,6 +13,10 @@ import {
   formatearModificador,
   iniciativa,
   piesAMetros,
+  puntuacionEfectiva,
+  SALVACION_LABELS,
+  SALVACIONES,
+  tiradaDeSalvacion,
 } from '@pathfinder/shared';
 import { CharactersApi } from './characters-api';
 import { CharacterForm } from './character-form';
@@ -152,6 +156,19 @@ export class CharactersPage {
     );
   }
 
+  /** "Fortaleza +9 · Reflejos -1 · Voluntad +1" si hay datos de salvación. */
+  protected salvacionesResumen(character: Character): string {
+    if (!character.sheetData.salvaciones) {
+      return '';
+    }
+    return SALVACIONES.map(
+      (salvacion) =>
+        `${SALVACION_LABELS[salvacion]} ${conSigno(
+          tiradaDeSalvacion(character.sheetData, salvacion),
+        )}`,
+    ).join(' · ');
+  }
+
   /** "PG 45 · RD 5/hierro frío", o solo la parte que exista. */
   protected pgResumen(character: Character): string {
     const pg = character.sheetData.pg;
@@ -209,18 +226,27 @@ export class CharactersPage {
   protected atributosDe(character: Character): {
     label: string;
     puntuacion: number | null;
-    ajusteTemporal: number | null;
+    ajusteTemporal: string;
+    modTemporal: string;
   }[] {
     const atributos = character.sheetData.atributos;
     if (!atributos) {
       return [];
     }
     return ATRIBUTOS.filter((atributo) => atributos[atributo]).map(
-      (atributo) => ({
-        label: ATRIBUTO_LABELS[atributo],
-        puntuacion: atributos[atributo]?.puntuacion ?? null,
-        ajusteTemporal: atributos[atributo]?.ajusteTemporal ?? null,
-      }),
+      (atributo) => {
+        const valor = atributos[atributo];
+        const ajuste = valor?.ajusteTemporal;
+        return {
+          label: ATRIBUTO_LABELS[atributo],
+          puntuacion: valor?.puntuacion ?? null,
+          ajusteTemporal: ajuste !== undefined ? conSigno(ajuste) : '—',
+          modTemporal:
+            ajuste !== undefined
+              ? formatearModificador(puntuacionEfectiva(valor))
+              : '—',
+        };
+      },
     );
   }
 

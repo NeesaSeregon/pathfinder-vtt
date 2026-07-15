@@ -23,10 +23,16 @@ type CharacterFormInterno = {
     velocidad: Record<string, { set(v: number | string | null): void }>;
     pgTotal: { set(v: number | null): void };
     pgRd: { set(v: string): void };
+    salvaciones: Record<
+      string,
+      Record<string, { set(v: number | null): void }>
+    >;
   };
+  totalSalvacion(salvacion: string): string;
   caTotal(): number;
   iniciativaTotal(): string;
   enCasillasYMetros(pies: number | null): string;
+  modTemporal(atributo: string): string;
   submit(): void;
 };
 
@@ -120,16 +126,41 @@ describe('CharacterForm', () => {
   it('guarda solo los atributos rellenos, sin modificadores derivados', () => {
     interno.form.name.set('Valeros');
     interno.form.atributos['fuerza'].puntuacion.set(18);
-    interno.form.atributos['fuerza'].ajusteTemporal.set(20);
+    interno.form.atributos['fuerza'].ajusteTemporal.set(4);
     interno.form.atributos['destreza'].puntuacion.set(9);
     interno.submit();
 
     expect(emitido?.sheetData.atributos).toEqual({
-      fuerza: { puntuacion: 18, ajusteTemporal: 20 },
+      fuerza: { puntuacion: 18, ajusteTemporal: 4 },
       destreza: { puntuacion: 9 },
     });
     // constitución y compañía no se rellenaron: no deben aparecer
     expect(emitido?.sheetData.atributos).not.toHaveProperty('constitucion');
+  });
+
+  it('guarda las salvaciones rellenas y calcula el total en vivo', () => {
+    interno.form.name.set('Valeros');
+    interno.form.atributos['constitucion'].puntuacion.set(14);
+    interno.form.salvaciones['fortaleza']['base'].set(4);
+    interno.form.salvaciones['fortaleza']['modMagico'].set(1);
+
+    // 4 (base) + 2 (CON 14) + 1 (mágico) = +7
+    expect(interno.totalSalvacion('fortaleza')).toBe('+7');
+
+    interno.submit();
+    expect(emitido?.sheetData.salvaciones).toEqual({
+      fortaleza: { base: 4, modMagico: 1 },
+    });
+  });
+
+  it('el modif. temporal deriva de puntuación + ajuste', () => {
+    interno.form.atributos['fuerza'].puntuacion.set(18);
+    // Sin efecto activo, la columna va vacía
+    expect(interno.modTemporal('fuerza')).toBe('—');
+
+    // Fuerza de toro (+4): efectiva 22 → +6
+    interno.form.atributos['fuerza'].ajusteTemporal.set(4);
+    expect(interno.modTemporal('fuerza')).toBe('+6');
   });
 
   it('guarda solo las casillas de combate rellenas, sin totales', () => {

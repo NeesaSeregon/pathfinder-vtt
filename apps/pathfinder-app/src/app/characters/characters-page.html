@@ -64,6 +64,14 @@
                 Modificadores: {{ notas }}
               </p>
             }
+            @if (salvacionesResumen(character); as salvaciones) {
+              <p class="characters__modal-combate">{{ salvaciones }}</p>
+            }
+            @if (character.sheetData.salvaciones?.notas; as notasSalvaciones) {
+              <p class="characters__modal-velocidad">
+                Modificadores de salvación: {{ notasSalvaciones }}
+              </p>
+            }
           } @else if (pgResumen(character)) {
             <p class="characters__modal-combate">{{ pgResumen(character) }}</p>
           }
@@ -101,8 +109,8 @@
                     <th>{{ fila.label }}</th>
                     <td>{{ fila.puntuacion ?? '—' }}</td>
                     <td>{{ modificador(fila.puntuacion) }}</td>
-                    <td>{{ fila.ajusteTemporal ?? '—' }}</td>
-                    <td>{{ modificador(fila.ajusteTemporal) }}</td>
+                    <td>{{ fila.ajusteTemporal }}</td>
+                    <td>{{ fila.modTemporal }}</td>
                   </tr>
                 }
               </tbody>

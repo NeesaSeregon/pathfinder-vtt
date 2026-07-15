@@ -8,6 +8,8 @@ import {
   MODIFICADOR_MANIOBRABILIDAD,
   modificadorDeCaracteristica,
   piesAMetros,
+  puntuacionEfectiva,
+  tiradaDeSalvacion,
 } from './character';
 
 describe('modificadorDeCaracteristica', () => {
@@ -83,13 +85,36 @@ describe('claseDeArmadura', () => {
     ).toBe(8);
   });
 
-  it('el ajuste temporal de Destreza reemplaza a la puntuación', () => {
-    // Des 14 pero ajustada temporalmente a 8 → mod -1 → CA 9
+  it('el ajuste temporal de Destreza se SUMA a la puntuación', () => {
+    // Des 14 con ajuste -6 (p. ej. veneno) → efectiva 8 → mod -1 → CA 9
     expect(
       claseDeArmadura({
-        atributos: { destreza: { puntuacion: 14, ajusteTemporal: 8 } },
+        atributos: { destreza: { puntuacion: 14, ajusteTemporal: -6 } },
       }),
     ).toBe(9);
+  });
+});
+
+describe('puntuacionEfectiva', () => {
+  it('suma el ajuste temporal a la puntuación (fuerza de toro: +4)', () => {
+    expect(puntuacionEfectiva({ puntuacion: 14, ajusteTemporal: 4 })).toBe(18);
+  });
+
+  it('los ajustes negativos restan (veneno, fatiga)', () => {
+    expect(puntuacionEfectiva({ puntuacion: 14, ajusteTemporal: -6 })).toBe(8);
+  });
+
+  it('sin ajuste, la efectiva es la puntuación tal cual', () => {
+    expect(puntuacionEfectiva({ puntuacion: 14 })).toBe(14);
+  });
+
+  it('solo con ajuste, se aplica sobre la media (10)', () => {
+    expect(puntuacionEfectiva({ ajusteTemporal: 4 })).toBe(14);
+  });
+
+  it('sin ningún dato devuelve undefined', () => {
+    expect(puntuacionEfectiva(undefined)).toBeUndefined();
+    expect(puntuacionEfectiva({})).toBeUndefined();
   });
 });
 
@@ -159,6 +184,53 @@ describe('iniciativa', () => {
 
   it('ignora los modificadores varios de la CA', () => {
     expect(iniciativa({ combate: { modVarioCa: 4 } })).toBe(0);
+  });
+});
+
+describe('tiradaDeSalvacion', () => {
+  it('es 0 para una ficha sin datos', () => {
+    expect(tiradaDeSalvacion({}, 'fortaleza')).toBe(0);
+  });
+
+  it('cada salvación usa el modificador de SU atributo', () => {
+    const sheet = {
+      atributos: {
+        constitucion: { puntuacion: 14 }, // +2
+        destreza: { puntuacion: 8 }, // -1
+        sabiduria: { puntuacion: 12 }, // +1
+      },
+    };
+    expect(tiradaDeSalvacion(sheet, 'fortaleza')).toBe(2);
+    expect(tiradaDeSalvacion(sheet, 'reflejos')).toBe(-1);
+    expect(tiradaDeSalvacion(sheet, 'voluntad')).toBe(1);
+  });
+
+  it('suma base, mágico, vario y temporal', () => {
+    // 4 (base) + 2 (CON 14) + 1 (capa) + 1 (dote) + 1 (bendecir) = 9
+    expect(
+      tiradaDeSalvacion(
+        {
+          atributos: { constitucion: { puntuacion: 14 } },
+          salvaciones: {
+            fortaleza: { base: 4, modMagico: 1, modVario: 1, modTemporal: 1 },
+          },
+        },
+        'fortaleza',
+      ),
+    ).toBe(9);
+  });
+
+  it('el ajuste temporal del atributo se propaga a la salvación', () => {
+    // CON 14 envenenada con -6 → efectiva 8 → mod -1 → Fort: 4 - 1 = 3
+    expect(
+      tiradaDeSalvacion(
+        {
+          atributos: { constitucion: { puntuacion: 14, ajusteTemporal: -6 } },
+          salvaciones: { fortaleza: { base: 4 } },
+        },
+        'fortaleza',
+      ),
+    ).toBe(3);
   });
 });
 

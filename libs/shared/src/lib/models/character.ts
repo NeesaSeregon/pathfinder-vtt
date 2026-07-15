@@ -39,10 +39,30 @@ export const ATRIBUTO_LABELS: Record<Atributo, string> = {
  * Los modificadores no se almacenan: se derivan con
  * modificadorDeCaracteristica(). Guardar datos derivados invita a que se
  * desincronicen del dato original.
+ *
+ * ajusteTemporal es una SUMA/RESTA a la puntuación mientras dura un efecto
+ * (fuerza de toro: +4; veneno: -4). El "modif. temporal" de la ficha se
+ * deriva de (puntuacion + ajusteTemporal), nunca se guarda.
  */
 export interface AtributoValor {
   puntuacion?: number;
   ajusteTemporal?: number;
+}
+
+/**
+ * Puntuación con el ajuste temporal aplicado. Si no hay ningún dato,
+ * undefined; si solo hay ajuste, se aplica sobre la media (10).
+ */
+export function puntuacionEfectiva(
+  valor: AtributoValor | undefined,
+): number | undefined {
+  if (
+    !valor ||
+    (valor.puntuacion === undefined && valor.ajusteTemporal === undefined)
+  ) {
+    return undefined;
+  }
+  return (valor.puntuacion ?? 10) + (valor.ajusteTemporal ?? 0);
 }
 
 export type CharacterAtributos = Partial<Record<Atributo, AtributoValor>>;
@@ -90,16 +110,15 @@ export interface CombateValores {
 }
 
 /**
- * Modificador efectivo de un atributo: si hay ajuste temporal, este
- * REEMPLAZA a la puntuación (regla de Pathfinder). Sin datos cuenta como 0.
+ * Modificador efectivo de un atributo: el de la puntuación CON el ajuste
+ * temporal sumado. Sin datos cuenta como 0.
  */
 export function modificadorDeAtributo(
   sheet: CharacterSheetData,
   atributo: Atributo,
 ): number {
-  const valor = sheet.atributos?.[atributo];
-  const puntuacion = valor?.ajusteTemporal ?? valor?.puntuacion;
-  return puntuacion === undefined ? 0 : modificadorDeCaracteristica(puntuacion);
+  const efectiva = puntuacionEfectiva(sheet.atributos?.[atributo]);
+  return efectiva === undefined ? 0 : modificadorDeCaracteristica(efectiva);
 }
 
 /**
@@ -163,6 +182,61 @@ export function iniciativa(sheet: CharacterSheetData): number {
   return (
     modificadorDeAtributo(sheet, 'destreza') +
     (sheet.combate?.modVarioIniciativa ?? 0)
+  );
+}
+
+export const SALVACIONES = ['fortaleza', 'reflejos', 'voluntad'] as const;
+
+export type Salvacion = (typeof SALVACIONES)[number];
+
+/** Atributo del que se alimenta cada tirada de salvación. */
+export const SALVACION_ATRIBUTO: Record<Salvacion, Atributo> = {
+  fortaleza: 'constitucion',
+  reflejos: 'destreza',
+  voluntad: 'sabiduria',
+};
+
+export const SALVACION_LABELS: Record<Salvacion, string> = {
+  fortaleza: 'Fortaleza',
+  reflejos: 'Reflejos',
+  voluntad: 'Voluntad',
+};
+
+/**
+ * Casillas manuales de una salvación. El mod. de característica y el total
+ * NO se guardan: se derivan con tiradaDeSalvacion().
+ */
+export interface SalvacionValores {
+  base?: number;
+  modMagico?: number;
+  modVario?: number;
+  modTemporal?: number;
+}
+
+export interface SalvacionesValores {
+  fortaleza?: SalvacionValores;
+  reflejos?: SalvacionValores;
+  voluntad?: SalvacionValores;
+  /** Caja "Modificadores": origen de cada bonificador, texto libre. */
+  notas?: string;
+}
+
+/**
+ * Total = base + mod. del atributo asociado + mágico + vario + temporal.
+ * Usa modificadorDeAtributo, así que los ajustes temporales del atributo
+ * (veneno a la CON...) se reflejan solos en la salvación.
+ */
+export function tiradaDeSalvacion(
+  sheet: CharacterSheetData,
+  salvacion: Salvacion,
+): number {
+  const valores = sheet.salvaciones?.[salvacion] ?? {};
+  return (
+    (valores.base ?? 0) +
+    modificadorDeAtributo(sheet, SALVACION_ATRIBUTO[salvacion]) +
+    (valores.modMagico ?? 0) +
+    (valores.modVario ?? 0) +
+    (valores.modTemporal ?? 0)
   );
 }
 
@@ -236,6 +310,7 @@ export interface CharacterSheetData {
   combate?: CombateValores;
   velocidad?: VelocidadValores;
   pg?: PgValores;
+  salvaciones?: SalvacionesValores;
   jugador?: string;
   clase?: string;
   alineamiento?: Alineamiento;

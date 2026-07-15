@@ -20,7 +20,8 @@ describe('pathfinder-app-e2e', () => {
     // Atributos: el modificador se calcula en vivo al escribir
     cy.get('input[name="fuerza-puntuacion"]').type('18');
     cy.get('.character-form__atributos-grid').should('contain', '+4');
-    cy.get('input[name="fuerza-ajuste"]').type('20');
+    // Fuerza de toro: ajuste +4 → efectiva 22 → modif. temporal +6
+    cy.get('input[name="fuerza-ajuste"]').type('4');
     cy.get('input[name="destreza-puntuacion"]').type('9');
 
     // Combate: CA = 10 + 5 + 2 + (-1 de Des 9) = 16; iniciativa = -1 + 2 = +1
@@ -51,6 +52,13 @@ describe('pathfinder-app-e2e', () => {
     cy.get('input[name="pg-total"]').type('45');
     cy.get('input[name="pg-rd"]').type('5/hierro frío');
 
+    // Salvaciones: Reflejos base 4 + (-1 de Des 9) = +3, en vivo
+    cy.get('input[name="reflejos-base"]').type('4');
+    cy.contains('.character-form__salvacion-nombre', 'Reflejos').should(
+      'contain',
+      '+3',
+    );
+
     cy.get('button[type="submit"]').click();
     cy.contains('li', name).should('contain', 'Nivel 7');
 
@@ -60,12 +68,11 @@ describe('pathfinder-app-e2e', () => {
     cy.get('.characters__modal').should('contain', 'legal bueno');
     cy.get('.characters__modal').should('contain', 'Elfo');
 
-    // Atributos guardados: puntuación 18 → +4, ajuste 20 → +5, 9 → -1
+    // Atributos: FUE 18 (+4) con ajuste +4 → modif. temporal +6
     cy.contains('.characters__modal-atributos tr', 'Fuerza')
       .should('contain', '18')
       .should('contain', '+4')
-      .should('contain', '20')
-      .should('contain', '+5');
+      .should('contain', '+6');
     cy.contains('.characters__modal-atributos tr', 'Destreza')
       .should('contain', '9')
       .should('contain', '-1');
@@ -84,6 +91,9 @@ describe('pathfinder-app-e2e', () => {
       'contain',
       'Base 30 pies (6 cas. / 9 m)',
     );
+
+    // Salvaciones derivadas de lo guardado
+    cy.get('.characters__modal').should('contain', 'Reflejos +3');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();

@@ -82,16 +82,15 @@
           [(ngModel)]="form.atributos[atributo].puntuacion"
         />
         <output>{{ modificador(form.atributos[atributo].puntuacion()) }}</output>
+        <!-- Ajuste temporal: SUMA/RESTA a la puntuación (fuerza de toro: +4) -->
         <input
           type="number"
-          min="1"
+          placeholder="±"
           [name]="atributo + '-ajuste'"
           [attr.name]="atributo + '-ajuste'"
           [(ngModel)]="form.atributos[atributo].ajusteTemporal"
         />
-        <output>
-          {{ modificador(form.atributos[atributo].ajusteTemporal()) }}
-        </output>
+        <output>{{ modTemporal(atributo) }}</output>
       }
     </div>
   </fieldset>
@@ -184,6 +183,69 @@
         <input type="text" name="pg-rd" maxlength="50" [(ngModel)]="form.pgRd" />
       </label>
     </div>
+  </fieldset>
+
+  <fieldset class="character-form__salvaciones">
+    <legend>Tiradas de salvación</legend>
+    @for (salvacion of salvaciones; track salvacion) {
+      <div class="character-form__formula">
+        <span class="character-form__formula-total character-form__salvacion-nombre">
+          {{ salvacionLabels[salvacion] }}
+          <small>({{ atributoDeSalvacion(salvacion) }})</small>
+          <output>{{ totalSalvacion(salvacion) }}</output>
+        </span>
+        <span class="character-form__formula-fija">=</span>
+        <label>
+          Salvación base
+          <input
+            type="number"
+            [name]="salvacion + '-base'"
+            [attr.name]="salvacion + '-base'"
+            [(ngModel)]="form.salvaciones[salvacion].base"
+          />
+        </label>
+        <label>
+          Modif. caract.
+          <output>{{ modAtributoSalvacion(salvacion) }}</output>
+        </label>
+        <label>
+          Modif. mágico
+          <input
+            type="number"
+            [name]="salvacion + '-magico'"
+            [attr.name]="salvacion + '-magico'"
+            [(ngModel)]="form.salvaciones[salvacion].modMagico"
+          />
+        </label>
+        <label>
+          Modif. vario
+          <input
+            type="number"
+            [name]="salvacion + '-vario'"
+            [attr.name]="salvacion + '-vario'"
+            [(ngModel)]="form.salvaciones[salvacion].modVario"
+          />
+        </label>
+        <label>
+          Modif. temporal
+          <input
+            type="number"
+            [name]="salvacion + '-temporal'"
+            [attr.name]="salvacion + '-temporal'"
+            [(ngModel)]="form.salvaciones[salvacion].modTemporal"
+          />
+        </label>
+      </div>
+    }
+    <label class="character-form__velocidad-temporales">
+      Modificadores (origen de cada bonif.)
+      <input
+        type="text"
+        name="salvaciones-notas"
+        maxlength="200"
+        [(ngModel)]="form.salvacionesNotas"
+      />
+    </label>
   </fieldset>
 
   <fieldset class="character-form__velocidad">

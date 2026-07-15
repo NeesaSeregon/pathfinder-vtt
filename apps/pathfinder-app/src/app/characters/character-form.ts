@@ -30,8 +30,36 @@ import {
   modificadorDeAtributo,
   PgValores,
   piesAMetros,
+  puntuacionEfectiva,
+  Salvacion,
+  SALVACION_ATRIBUTO,
+  SALVACION_LABELS,
+  SALVACIONES,
+  SalvacionesValores,
+  SalvacionValores,
+  tiradaDeSalvacion,
   VelocidadValores,
 } from '@pathfinder/shared';
+
+const CAMPOS_SALVACION = ['base', 'modMagico', 'modVario', 'modTemporal'] as const;
+
+type SalvacionesForm = Record<
+  Salvacion,
+  Record<(typeof CAMPOS_SALVACION)[number], WritableSignal<number | null>>
+>;
+
+function crearSalvacionesForm(): SalvacionesForm {
+  const form = {} as SalvacionesForm;
+  for (const salvacion of SALVACIONES) {
+    form[salvacion] = {
+      base: signal<number | null>(null),
+      modMagico: signal<number | null>(null),
+      modVario: signal<number | null>(null),
+      modTemporal: signal<number | null>(null),
+    };
+  }
+  return form;
+}
 
 const CAMPOS_VELOCIDAD_PIES = [
   'base',
@@ -124,6 +152,8 @@ export class CharacterForm {
   protected readonly atributos = ATRIBUTOS;
   protected readonly atributoLabels = ATRIBUTO_LABELS;
   protected readonly modificador = formatearModificador;
+  protected readonly salvaciones = SALVACIONES;
+  protected readonly salvacionLabels = SALVACION_LABELS;
 
   protected readonly maniobrabilidades = MANIOBRABILIDADES;
 
@@ -131,6 +161,8 @@ export class CharacterForm {
     atributos: crearAtributosForm(),
     combate: crearCombateForm(),
     combateNotas: signal(''),
+    salvaciones: crearSalvacionesForm(),
+    salvacionesNotas: signal(''),
     velocidad: crearVelocidadForm(),
     pgTotal: signal<number | null>(null),
     pgRd: signal(''),
@@ -175,6 +207,39 @@ export class CharacterForm {
     // Cada vez que cambia `initial` (abrir la edición de otro personaje,
     // o ninguno), el formulario se rellena o se vacía.
     effect(() => this.applyInitial(this.initial()));
+  }
+
+  /** Total de una salvación, en vivo, con la fórmula compartida. */
+  protected totalSalvacion(salvacion: Salvacion): string {
+    return conSigno(tiradaDeSalvacion(this.buildSheetData(), salvacion));
+  }
+
+  /** Modif. del atributo asociado a una salvación (CON/DES/SAB), en vivo. */
+  protected modAtributoSalvacion(salvacion: Salvacion): string {
+    return conSigno(
+      modificadorDeAtributo(this.buildSheetData(), SALVACION_ATRIBUTO[salvacion]),
+    );
+  }
+
+  /** Abreviatura del atributo asociado: (Constitución), (Destreza)... */
+  protected atributoDeSalvacion(salvacion: Salvacion): string {
+    return ATRIBUTO_LABELS[SALVACION_ATRIBUTO[salvacion]];
+  }
+
+  /**
+   * Modif. temporal de un atributo: el modificador de (puntuación + ajuste).
+   * Sin ajuste no hay efecto activo, así que se muestra —.
+   */
+  protected modTemporal(atributo: (typeof ATRIBUTOS)[number]): string {
+    const ajuste = this.form.atributos[atributo].ajusteTemporal();
+    if (ajuste === null) {
+      return '—';
+    }
+    const efectiva = puntuacionEfectiva({
+      puntuacion: this.form.atributos[atributo].puntuacion() ?? undefined,
+      ajusteTemporal: ajuste,
+    });
+    return formatearModificador(efectiva);
   }
 
   /** "6 cas. / 9 m" a partir de pies, o — si la casilla está vacía. */
@@ -257,6 +322,13 @@ export class CharacterForm {
       delete sheet.velocidad;
     }
 
+    const salvaciones = this.buildSalvaciones();
+    if (Object.keys(salvaciones).length > 0) {
+      sheet.salvaciones = salvaciones;
+    } else {
+      delete sheet.salvaciones;
+    }
+
     const pg: PgValores = {};
     const pgTotal = this.form.pgTotal();
     if (pgTotal !== null) {
@@ -272,6 +344,27 @@ export class CharacterForm {
       delete sheet.pg;
     }
     return sheet;
+  }
+
+  private buildSalvaciones(): SalvacionesValores {
+    const salvaciones: SalvacionesValores = {};
+    for (const salvacion of SALVACIONES) {
+      const valores: SalvacionValores = {};
+      for (const campo of CAMPOS_SALVACION) {
+        const valor = this.form.salvaciones[salvacion][campo]();
+        if (valor !== null) {
+          valores[campo] = valor;
+        }
+      }
+      if (Object.keys(valores).length > 0) {
+        salvaciones[salvacion] = valores;
+      }
+    }
+    const notas = this.form.salvacionesNotas().trim();
+    if (notas) {
+      salvaciones.notas = notas;
+    }
+    return salvaciones;
   }
 
   private buildVelocidad(): VelocidadValores {
@@ -350,6 +443,14 @@ export class CharacterForm {
       this.form.combate[campo].set(sheet.combate?.[campo] ?? null);
     }
     this.form.combateNotas.set(sheet.combate?.notas ?? '');
+    for (const salvacion of SALVACIONES) {
+      for (const campo of CAMPOS_SALVACION) {
+        this.form.salvaciones[salvacion][campo].set(
+          sheet.salvaciones?.[salvacion]?.[campo] ?? null,
+        );
+      }
+    }
+    this.form.salvacionesNotas.set(sheet.salvaciones?.notas ?? '');
     for (const campo of CAMPOS_VELOCIDAD_PIES) {
       this.form.velocidad[campo].set(sheet.velocidad?.[campo] ?? null);
     }

@@ -150,6 +150,31 @@
     text-align: left;
   }
 
+  &__salvaciones {
+    grid-column: 1 / -1;
+    border: 1px solid #ccc;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    legend {
+      font-size: 0.85rem;
+      color: #444;
+      padding: 0 0.25rem;
+    }
+  }
+
+  &__salvacion-nombre {
+    min-width: 11rem;
+
+    small {
+      font-weight: 400;
+      color: #666;
+    }
+  }
+
   &__velocidad {
     grid-column: 1 / -1;
     border: 1px solid #ccc;
