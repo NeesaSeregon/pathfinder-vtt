@@ -17,6 +17,8 @@ import {
   CharacterAtributos,
   CharacterSheetData,
   CharacterUpsert,
+  caDesprevenido,
+  caDeToque,
   casillas,
   claseDeArmadura,
   CombateValores,
@@ -26,6 +28,7 @@ import {
   Maniobrabilidad,
   MANIOBRABILIDADES,
   modificadorDeAtributo,
+  PgValores,
   piesAMetros,
   VelocidadValores,
 } from '@pathfinder/shared';
@@ -64,6 +67,7 @@ const CAMPOS_COMBATE = [
   'modTamano',
   'armaduraNatural',
   'modDesvio',
+  'modEsquiva',
   'modVarioCa',
   'modVarioIniciativa',
 ] as const;
@@ -126,7 +130,10 @@ export class CharacterForm {
   protected readonly form = {
     atributos: crearAtributosForm(),
     combate: crearCombateForm(),
+    combateNotas: signal(''),
     velocidad: crearVelocidadForm(),
+    pgTotal: signal<number | null>(null),
+    pgRd: signal(''),
     name: signal(''),
     level: signal(1),
     jugador: signal(''),
@@ -150,6 +157,12 @@ export class CharacterForm {
    */
   protected readonly caTotal = computed(() =>
     claseDeArmadura(this.buildSheetData()),
+  );
+  protected readonly caToque = computed(() =>
+    caDeToque(this.buildSheetData()),
+  );
+  protected readonly caDesprevenidoTotal = computed(() =>
+    caDesprevenido(this.buildSheetData()),
   );
   protected readonly iniciativaTotal = computed(() =>
     conSigno(iniciativa(this.buildSheetData())),
@@ -243,6 +256,21 @@ export class CharacterForm {
     } else {
       delete sheet.velocidad;
     }
+
+    const pg: PgValores = {};
+    const pgTotal = this.form.pgTotal();
+    if (pgTotal !== null) {
+      pg.total = pgTotal;
+    }
+    const pgRd = this.form.pgRd().trim();
+    if (pgRd) {
+      pg.rd = pgRd;
+    }
+    if (Object.keys(pg).length > 0) {
+      sheet.pg = pg;
+    } else {
+      delete sheet.pg;
+    }
     return sheet;
   }
 
@@ -272,6 +300,10 @@ export class CharacterForm {
       if (valor !== null) {
         combate[campo] = valor;
       }
+    }
+    const notas = this.form.combateNotas().trim();
+    if (notas) {
+      combate.notas = notas;
     }
     return combate;
   }
@@ -317,6 +349,7 @@ export class CharacterForm {
     for (const campo of CAMPOS_COMBATE) {
       this.form.combate[campo].set(sheet.combate?.[campo] ?? null);
     }
+    this.form.combateNotas.set(sheet.combate?.notas ?? '');
     for (const campo of CAMPOS_VELOCIDAD_PIES) {
       this.form.velocidad[campo].set(sheet.velocidad?.[campo] ?? null);
     }
@@ -324,5 +357,7 @@ export class CharacterForm {
       sheet.velocidad?.maniobrabilidad ?? '',
     );
     this.form.velocidad.modTemporales.set(sheet.velocidad?.modTemporales ?? '');
+    this.form.pgTotal.set(sheet.pg?.total ?? null);
+    this.form.pgRd.set(sheet.pg?.rd ?? '');
   }
 }

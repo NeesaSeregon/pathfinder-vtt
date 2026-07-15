@@ -2,6 +2,8 @@ import { Component, inject, signal, viewChild } from '@angular/core';
 import {
   ATRIBUTO_LABELS,
   ATRIBUTOS,
+  caDesprevenido,
+  caDeToque,
   casillas,
   Character,
   CharacterSheetData,
@@ -136,6 +138,8 @@ export class CharactersPage {
 
   protected readonly modificador = formatearModificador;
   protected readonly ca = claseDeArmadura;
+  protected readonly caToque = caDeToque;
+  protected readonly caDesprevenido = caDesprevenido;
 
   protected iniciativaDe(character: Character): string {
     return conSigno(iniciativa(character.sheetData));
@@ -146,6 +150,22 @@ export class CharactersPage {
     return Boolean(
       character.sheetData.combate || character.sheetData.atributos?.destreza,
     );
+  }
+
+  /** "PG 45 · RD 5/hierro frío", o solo la parte que exista. */
+  protected pgResumen(character: Character): string {
+    const pg = character.sheetData.pg;
+    if (!pg) {
+      return '';
+    }
+    const partes: string[] = [];
+    if (pg.total !== undefined) {
+      partes.push(`PG ${pg.total}`);
+    }
+    if (pg.rd) {
+      partes.push(`RD ${pg.rd}`);
+    }
+    return partes.join(' · ');
   }
 
   /** Resumen de velocidades para la modal: solo los modos rellenos. */

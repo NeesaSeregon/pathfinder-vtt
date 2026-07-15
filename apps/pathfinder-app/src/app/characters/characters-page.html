@@ -51,9 +51,21 @@
           </p>
           @if (tieneCombate(character)) {
             <p class="characters__modal-combate">
-              CA {{ ca(character.sheetData) }} · Iniciativa
+              CA {{ ca(character.sheetData) }} (toque
+              {{ caToque(character.sheetData) }}, desprevenido
+              {{ caDesprevenido(character.sheetData) }}) · Iniciativa
               {{ iniciativaDe(character) }}
+              @if (pgResumen(character)) {
+                · {{ pgResumen(character) }}
+              }
             </p>
+            @if (character.sheetData.combate?.notas; as notas) {
+              <p class="characters__modal-velocidad">
+                Modificadores: {{ notas }}
+              </p>
+            }
+          } @else if (pgResumen(character)) {
+            <p class="characters__modal-combate">{{ pgResumen(character) }}</p>
           }
           @if (velocidadResumen(character).length > 0) {
             <p class="characters__modal-velocidad">

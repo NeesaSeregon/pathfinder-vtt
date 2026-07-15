@@ -1,4 +1,6 @@
 import {
+  caDeToque,
+  caDesprevenido,
   casillas,
   claseDeArmadura,
   formatearModificador,
@@ -88,6 +90,56 @@ describe('claseDeArmadura', () => {
         atributos: { destreza: { puntuacion: 14, ajusteTemporal: 8 } },
       }),
     ).toBe(9);
+  });
+});
+
+describe('caDeToque', () => {
+  it('ignora armadura, escudo y armadura natural', () => {
+    // CA total sería 22; el toque solo conserva Des (+2)
+    expect(
+      caDeToque({
+        atributos: { destreza: { puntuacion: 14 } },
+        combate: { bonifArmadura: 5, bonifEscudo: 2, armaduraNatural: 3 },
+      }),
+    ).toBe(12);
+  });
+
+  it('conserva desvío, esquiva, tamaño y varios', () => {
+    expect(
+      caDeToque({
+        combate: { modDesvio: 2, modEsquiva: 1, modTamano: 1, modVarioCa: 1 },
+      }),
+    ).toBe(15);
+  });
+});
+
+describe('caDesprevenido', () => {
+  it('pierde el mod. de Destreza positivo y la esquiva', () => {
+    // Total: 10+5+2+1 = 18 → desprevenido: 10+5 = 15
+    expect(
+      caDesprevenido({
+        atributos: { destreza: { puntuacion: 14 } },
+        combate: { bonifArmadura: 5, modEsquiva: 1 },
+      }),
+    ).toBe(15);
+  });
+
+  it('conserva el mod. de Destreza NEGATIVO (no te vuelve más ágil)', () => {
+    // Des 7 (-2): desprevenido = 10 + 5 - 2 = 13
+    expect(
+      caDesprevenido({
+        atributos: { destreza: { puntuacion: 7 } },
+        combate: { bonifArmadura: 5 },
+      }),
+    ).toBe(13);
+  });
+
+  it('conserva armadura, escudo y armadura natural', () => {
+    expect(
+      caDesprevenido({
+        combate: { bonifArmadura: 5, bonifEscudo: 2, armaduraNatural: 3 },
+      }),
+    ).toBe(20);
   });
 });
 

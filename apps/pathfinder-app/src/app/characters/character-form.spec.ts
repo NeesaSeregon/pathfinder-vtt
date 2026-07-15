@@ -21,6 +21,8 @@ type CharacterFormInterno = {
     >;
     combate: Record<string, { set(v: number | null): void }>;
     velocidad: Record<string, { set(v: number | string | null): void }>;
+    pgTotal: { set(v: number | null): void };
+    pgRd: { set(v: string): void };
   };
   caTotal(): number;
   iniciativaTotal(): string;
@@ -171,6 +173,24 @@ describe('CharacterForm', () => {
     // Casillas y metros son derivados, no persistidos
     expect(interno.enCasillasYMetros(30)).toBe('6 cas. / 9 m');
     expect(interno.enCasillasYMetros(null)).toBe('—');
+  });
+
+  it('guarda los puntos de golpe y la RD solo si están rellenos', () => {
+    interno.form.name.set('Valeros');
+    interno.form.pgTotal.set(45);
+    interno.form.pgRd.set('5/hierro frío');
+    interno.submit();
+
+    expect(emitido?.sheetData.pg).toEqual({
+      total: 45,
+      rd: '5/hierro frío',
+    });
+  });
+
+  it('no incluye el bloque pg si sus casillas están vacías', () => {
+    interno.form.name.set('Valeros');
+    interno.submit();
+    expect(emitido?.sheetData).not.toHaveProperty('pg');
   });
 
   it('pinta el modificador calculado en la plantilla', async () => {

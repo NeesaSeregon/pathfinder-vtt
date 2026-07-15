@@ -28,6 +28,16 @@ describe('pathfinder-app-e2e', () => {
     cy.get('input[name="ca-bonif-escudo"]').type('2');
     cy.get('input[name="iniciativa-vario"]').type('2');
     cy.contains('.character-form__formula-total', 'CA').should('contain', '16');
+    // Toque ignora armadura y escudo: 10 + (-1 Des) = 9.
+    // Desprevenido conserva el mod NEGATIVO de Des: 10+5+2-1 = 16.
+    cy.contains('.character-form__formula-total', 'Toque').should(
+      'contain',
+      '9',
+    );
+    cy.contains('.character-form__formula-total', 'Desprevenido').should(
+      'contain',
+      '16',
+    );
     cy.contains('.character-form__formula-total', 'Iniciativa').should(
       'contain',
       '+1',
@@ -36,6 +46,10 @@ describe('pathfinder-app-e2e', () => {
     // Velocidad: 30 pies → 6 casillas / 9 m, derivado en vivo
     cy.get('input[name="velocidad-base"]').type('30');
     cy.get('.character-form__velocidad').should('contain', '6 cas. / 9 m');
+
+    // Puntos de golpe y reducción de daño
+    cy.get('input[name="pg-total"]').type('45');
+    cy.get('input[name="pg-rd"]').type('5/hierro frío');
 
     cy.get('button[type="submit"]').click();
     cy.contains('li', name).should('contain', 'Nivel 7');
@@ -56,10 +70,14 @@ describe('pathfinder-app-e2e', () => {
       .should('contain', '9')
       .should('contain', '-1');
 
-    // Totales de combate derivados de lo guardado
+    // Totales de combate derivados de lo guardado, más PG y RD
     cy.get('.characters__modal-combate')
       .should('contain', 'CA 16')
-      .should('contain', 'Iniciativa +1');
+      .should('contain', 'toque 9')
+      .should('contain', 'desprevenido 16')
+      .should('contain', 'Iniciativa +1')
+      .should('contain', 'PG 45')
+      .should('contain', 'RD 5/hierro frío');
 
     // Velocidad guardada en pies, mostrada con sus derivados
     cy.get('.characters__modal-velocidad').should(

@@ -129,8 +129,30 @@
         <input type="number" name="ca-mod-desvio" [(ngModel)]="form.combate.modDesvio" />
       </label>
       <label>
+        Modif. esquiva
+        <input type="number" name="ca-mod-esquiva" [(ngModel)]="form.combate.modEsquiva" />
+      </label>
+      <label>
         Modif. vario
         <input type="number" name="ca-mod-vario" [(ngModel)]="form.combate.modVarioCa" />
+      </label>
+    </div>
+
+    <div class="character-form__formula">
+      <span class="character-form__formula-total">
+        Toque <output>{{ caToque() }}</output>
+      </span>
+      <span class="character-form__formula-total">
+        Desprevenido <output>{{ caDesprevenidoTotal() }}</output>
+      </span>
+      <label class="character-form__combate-notas">
+        Modificadores (origen de cada bonif.)
+        <input
+          type="text"
+          name="ca-notas"
+          maxlength="200"
+          [(ngModel)]="form.combateNotas"
+        />
       </label>
     </div>
 
@@ -146,6 +168,20 @@
       <label>
         Modif. vario
         <input type="number" name="iniciativa-vario" [(ngModel)]="form.combate.modVarioIniciativa" />
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="character-form__pg">
+    <legend>Puntos de golpe</legend>
+    <div class="character-form__formula">
+      <label>
+        Total
+        <input type="number" name="pg-total" min="0" [(ngModel)]="form.pgTotal" />
+      </label>
+      <label class="character-form__pg-rd">
+        RD (p. ej. 5/hierro frío)
+        <input type="text" name="pg-rd" maxlength="50" [(ngModel)]="form.pgRd" />
       </label>
     </div>
   </fieldset>

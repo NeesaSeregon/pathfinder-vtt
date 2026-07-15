@@ -31,6 +31,15 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   (nx g @nx/nest:resource, nx g @angular/...), no a mano.
 - Los comandos se ejecutan en PowerShell (Windows).
 
+## Decisiones de diseño
+- sheetData (JSONB) guarda solo DATOS ORIGEN del personaje; los derivados
+  (modificadores, CA/toque/desprevenido, iniciativa, casillas/metros) se
+  calculan con funciones puras en libs/shared, nunca se persisten.
+- El ESTADO DE SESIÓN (PG actuales, daño no letal, condiciones y efectos
+  temporales de combate) NO va en sheetData: pertenecerá al modelo de
+  partida cuando exista el tablero compartido. Decidido el 2026-07-15
+  para trabajar con vistas a la integración ficha-tablero.
+
 ## Estado actual
 - Estructura del monorepo creada y subida a GitHub.
 - Persistencia funcionando: PostgreSQL 17 (Docker) + TypeORM con

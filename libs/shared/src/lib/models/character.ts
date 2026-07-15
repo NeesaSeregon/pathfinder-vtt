@@ -81,8 +81,12 @@ export interface CombateValores {
   modTamano?: number;
   armaduraNatural?: number;
   modDesvio?: number;
+  /** Bonif. de esquiva separado del vario: se pierde al quedar desprevenido. */
+  modEsquiva?: number;
   modVarioCa?: number;
   modVarioIniciativa?: number;
+  /** Caja "Modificadores" de la ficha: anota el origen de cada bonif. */
+  notas?: string;
 }
 
 /**
@@ -109,6 +113,44 @@ export function claseDeArmadura(sheet: CharacterSheetData): number {
     (combate.bonifArmadura ?? 0) +
     (combate.bonifEscudo ?? 0) +
     modificadorDeAtributo(sheet, 'destreza') +
+    (combate.modTamano ?? 0) +
+    (combate.armaduraNatural ?? 0) +
+    (combate.modDesvio ?? 0) +
+    (combate.modEsquiva ?? 0) +
+    (combate.modVarioCa ?? 0)
+  );
+}
+
+/**
+ * CA de toque: el ataque solo necesita tocarte (rayos, conjuros de toque,
+ * criaturas incorpóreas), así que IGNORA armadura, escudo y armadura
+ * natural. Conserva Destreza, tamaño, desvío, esquiva y varios.
+ */
+export function caDeToque(sheet: CharacterSheetData): number {
+  const combate = sheet.combate ?? {};
+  return (
+    10 +
+    modificadorDeAtributo(sheet, 'destreza') +
+    (combate.modTamano ?? 0) +
+    (combate.modDesvio ?? 0) +
+    (combate.modEsquiva ?? 0) +
+    (combate.modVarioCa ?? 0)
+  );
+}
+
+/**
+ * CA desprevenido: aún no has actuado en el combate (o te niegan la
+ * Destreza), así que PIERDES el mod. de Destreza positivo y la esquiva.
+ * Un mod. de Destreza NEGATIVO se conserva: estar desprevenido no te
+ * vuelve más ágil (de ahí el Math.min).
+ */
+export function caDesprevenido(sheet: CharacterSheetData): number {
+  const combate = sheet.combate ?? {};
+  return (
+    10 +
+    (combate.bonifArmadura ?? 0) +
+    (combate.bonifEscudo ?? 0) +
+    Math.min(modificadorDeAtributo(sheet, 'destreza'), 0) +
     (combate.modTamano ?? 0) +
     (combate.armaduraNatural ?? 0) +
     (combate.modDesvio ?? 0) +
@@ -163,6 +205,16 @@ export interface VelocidadValores {
   modTemporales?: string;
 }
 
+/**
+ * Puntos de golpe. El total es manual (tiradas de dado de golpe + mod. CON
+ * por nivel + extras: no hay fórmula posible). La RD (reducción de daño)
+ * es texto con la notación del juego: "5/hierro frío", "10/plata", "3/—".
+ */
+export interface PgValores {
+  total?: number;
+  rd?: string;
+}
+
 /** 1 casilla del tablero = 5 pies. */
 export function casillas(pies: number): number {
   return Math.floor(pies / 5);
@@ -183,6 +235,7 @@ export interface CharacterSheetData {
   atributos?: CharacterAtributos;
   combate?: CombateValores;
   velocidad?: VelocidadValores;
+  pg?: PgValores;
   jugador?: string;
   clase?: string;
   alineamiento?: Alineamiento;
