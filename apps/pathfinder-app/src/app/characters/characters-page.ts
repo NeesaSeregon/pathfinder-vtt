@@ -5,10 +5,14 @@ import {
   Character,
   CharacterSheetData,
   CharacterUpsert,
+  claseDeArmadura,
+  conSigno,
   formatearModificador,
+  iniciativa,
 } from '@pathfinder/shared';
 import { CharactersApi } from './characters-api';
 import { CharacterForm } from './character-form';
+import { mensajeDeError } from './mensaje-de-error';
 
 // Orden y etiqueta con la que se muestra cada campo de la ficha.
 const ETIQUETAS_FICHA: [keyof CharacterSheetData & string, string][] = [
@@ -59,8 +63,8 @@ export class CharactersPage {
         this.characters.set(characters);
         this.loading.set(false);
       },
-      error: () => {
-        this.error.set('No se pudo cargar la lista. ¿Está la API arrancada?');
+      error: (err) => {
+        this.error.set(`No se pudo cargar la lista: ${mensajeDeError(err)}`);
         this.loading.set(false);
       },
     });
@@ -72,7 +76,8 @@ export class CharactersPage {
         this.characters.update((list) => [...list, created]);
         this.createForm().reset();
       },
-      error: () => this.error.set('No se pudo crear el personaje.'),
+      error: (err) =>
+        this.error.set(`No se pudo crear el personaje: ${mensajeDeError(err)}`),
     });
   }
 
@@ -107,7 +112,10 @@ export class CharactersPage {
         this.selected.set(updated);
         this.editing.set(false);
       },
-      error: () => this.error.set('No se pudo guardar el personaje.'),
+      error: (err) =>
+        this.error.set(
+          `No se pudo guardar el personaje: ${mensajeDeError(err)}`,
+        ),
     });
   }
 
@@ -117,11 +125,26 @@ export class CharactersPage {
         this.characters.update((list) =>
           list.filter((c) => c.id !== character.id),
         ),
-      error: () => this.error.set('No se pudo borrar el personaje.'),
+      error: (err) =>
+        this.error.set(
+          `No se pudo borrar el personaje: ${mensajeDeError(err)}`,
+        ),
     });
   }
 
   protected readonly modificador = formatearModificador;
+  protected readonly ca = claseDeArmadura;
+
+  protected iniciativaDe(character: Character): string {
+    return conSigno(iniciativa(character.sheetData));
+  }
+
+  /** Solo mostramos el resumen de combate si hay algún dato que lo alimente. */
+  protected tieneCombate(character: Character): boolean {
+    return Boolean(
+      character.sheetData.combate || character.sheetData.atributos?.destreza,
+    );
+  }
 
   /** Filas de atributos que el personaje tiene rellenas, para la modal. */
   protected atributosDe(character: Character): {

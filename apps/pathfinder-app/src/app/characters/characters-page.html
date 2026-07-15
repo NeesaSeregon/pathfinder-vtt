@@ -49,6 +49,12 @@
               · {{ character.sheetData.clase }}
             }
           </p>
+          @if (tieneCombate(character)) {
+            <p class="characters__modal-combate">
+              CA {{ ca(character.sheetData) }} · Iniciativa
+              {{ iniciativaDe(character) }}
+            </p>
+          }
           @if (sheetEntries(character).length > 0) {
             <dl class="characters__modal-sheet">
               @for (entry of sheetEntries(character); track entry.label) {

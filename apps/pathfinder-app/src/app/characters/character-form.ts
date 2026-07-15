@@ -1,5 +1,6 @@
 import {
   Component,
+  computed,
   effect,
   input,
   output,
@@ -16,8 +17,36 @@ import {
   CharacterAtributos,
   CharacterSheetData,
   CharacterUpsert,
+  claseDeArmadura,
+  CombateValores,
+  conSigno,
   formatearModificador,
+  iniciativa,
+  modificadorDeAtributo,
 } from '@pathfinder/shared';
+
+const CAMPOS_COMBATE = [
+  'bonifArmadura',
+  'bonifEscudo',
+  'modTamano',
+  'armaduraNatural',
+  'modDesvio',
+  'modVarioCa',
+  'modVarioIniciativa',
+] as const;
+
+type CombateForm = Record<
+  (typeof CAMPOS_COMBATE)[number],
+  WritableSignal<number | null>
+>;
+
+function crearCombateForm(): CombateForm {
+  const form = {} as CombateForm;
+  for (const campo of CAMPOS_COMBATE) {
+    form[campo] = signal<number | null>(null);
+  }
+  return form;
+}
 
 type AtributosForm = Record<
   (typeof ATRIBUTOS)[number],
@@ -61,6 +90,7 @@ export class CharacterForm {
 
   protected readonly form = {
     atributos: crearAtributosForm(),
+    combate: crearCombateForm(),
     name: signal(''),
     level: signal(1),
     jugador: signal(''),
@@ -76,6 +106,21 @@ export class CharacterForm {
     cabello: signal(''),
     ojos: signal(''),
   };
+
+  /**
+   * Totales derivados EN VIVO: buildSheetData() lee señales, así que estos
+   * computed se recalculan solos al teclear en cualquier casilla implicada
+   * (Destreza incluida). La fórmula es la misma de la lib compartida.
+   */
+  protected readonly caTotal = computed(() =>
+    claseDeArmadura(this.buildSheetData()),
+  );
+  protected readonly iniciativaTotal = computed(() =>
+    conSigno(iniciativa(this.buildSheetData())),
+  );
+  protected readonly modDestreza = computed(() =>
+    conSigno(modificadorDeAtributo(this.buildSheetData(), 'destreza')),
+  );
 
   constructor() {
     // Cada vez que cambia `initial` (abrir la edición de otro personaje,
@@ -140,7 +185,25 @@ export class CharacterForm {
     } else {
       delete sheet.atributos;
     }
+
+    const combate = this.buildCombate();
+    if (Object.keys(combate).length > 0) {
+      sheet.combate = combate;
+    } else {
+      delete sheet.combate;
+    }
     return sheet;
+  }
+
+  private buildCombate(): CombateValores {
+    const combate: CombateValores = {};
+    for (const campo of CAMPOS_COMBATE) {
+      const valor = this.form.combate[campo]();
+      if (valor !== null) {
+        combate[campo] = valor;
+      }
+    }
+    return combate;
   }
 
   private buildAtributos(): CharacterAtributos {
@@ -180,6 +243,9 @@ export class CharacterForm {
       this.form.atributos[atributo].ajusteTemporal.set(
         valor?.ajusteTemporal ?? null,
       );
+    }
+    for (const campo of CAMPOS_COMBATE) {
+      this.form.combate[campo].set(sheet.combate?.[campo] ?? null);
     }
   }
 }

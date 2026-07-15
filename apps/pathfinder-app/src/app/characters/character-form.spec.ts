@@ -19,7 +19,10 @@ type CharacterFormInterno = {
         ajusteTemporal: { set(v: number | null): void };
       }
     >;
+    combate: Record<string, { set(v: number | null): void }>;
   };
+  caTotal(): number;
+  iniciativaTotal(): string;
   submit(): void;
 };
 
@@ -123,6 +126,32 @@ describe('CharacterForm', () => {
     });
     // constitución y compañía no se rellenaron: no deben aparecer
     expect(emitido?.sheetData.atributos).not.toHaveProperty('constitucion');
+  });
+
+  it('guarda solo las casillas de combate rellenas, sin totales', () => {
+    interno.form.name.set('Valeros');
+    interno.form.combate['bonifArmadura'].set(5);
+    interno.form.combate['bonifEscudo'].set(2);
+    interno.submit();
+
+    expect(emitido?.sheetData.combate).toEqual({
+      bonifArmadura: 5,
+      bonifEscudo: 2,
+    });
+    // El total de CA no se persiste: es derivado
+    expect(emitido?.sheetData.combate).not.toHaveProperty('ca');
+  });
+
+  it('recalcula CA e iniciativa en vivo al cambiar Destreza', () => {
+    interno.form.combate['bonifArmadura'].set(5);
+    interno.form.combate['modVarioIniciativa'].set(2);
+    // Sin Destreza: CA = 10 + 5, iniciativa = +2
+    expect(interno.caTotal()).toBe(15);
+    expect(interno.iniciativaTotal()).toBe('+2');
+
+    interno.form.atributos['destreza'].puntuacion.set(9);
+    expect(interno.caTotal()).toBe(14);
+    expect(interno.iniciativaTotal()).toBe('+1');
   });
 
   it('pinta el modificador calculado en la plantilla', async () => {

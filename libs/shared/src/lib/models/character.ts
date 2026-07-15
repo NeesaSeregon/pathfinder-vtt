@@ -56,6 +56,11 @@ export function modificadorDeCaracteristica(puntuacion: number): number {
   return Math.floor((puntuacion - 10) / 2);
 }
 
+/** Formatea un número con su signo, al estilo de la ficha: +2, -1, +0. */
+export function conSigno(valor: number): string {
+  return valor >= 0 ? `+${valor}` : `${valor}`;
+}
+
 /** Formatea un modificador al estilo de la ficha: +2, −1, o — si no hay dato. */
 export function formatearModificador(
   puntuacion: number | null | undefined,
@@ -63,8 +68,60 @@ export function formatearModificador(
   if (puntuacion === null || puntuacion === undefined) {
     return '—';
   }
-  const mod = modificadorDeCaracteristica(puntuacion);
-  return mod >= 0 ? `+${mod}` : `${mod}`;
+  return conSigno(modificadorDeCaracteristica(puntuacion));
+}
+
+/**
+ * Casillas de combate que se rellenan a mano en la ficha. Los totales
+ * (CA, iniciativa) NO se guardan: se derivan con las funciones de abajo.
+ */
+export interface CombateValores {
+  bonifArmadura?: number;
+  bonifEscudo?: number;
+  modTamano?: number;
+  armaduraNatural?: number;
+  modDesvio?: number;
+  modVarioCa?: number;
+  modVarioIniciativa?: number;
+}
+
+/**
+ * Modificador efectivo de un atributo: si hay ajuste temporal, este
+ * REEMPLAZA a la puntuación (regla de Pathfinder). Sin datos cuenta como 0.
+ */
+export function modificadorDeAtributo(
+  sheet: CharacterSheetData,
+  atributo: Atributo,
+): number {
+  const valor = sheet.atributos?.[atributo];
+  const puntuacion = valor?.ajusteTemporal ?? valor?.puntuacion;
+  return puntuacion === undefined ? 0 : modificadorDeCaracteristica(puntuacion);
+}
+
+/**
+ * CA = 10 + bonif. armadura + bonif. escudo + mod. Destreza + mod. tamaño
+ *      + armadura natural + mod. desvío + mod. vario
+ */
+export function claseDeArmadura(sheet: CharacterSheetData): number {
+  const combate = sheet.combate ?? {};
+  return (
+    10 +
+    (combate.bonifArmadura ?? 0) +
+    (combate.bonifEscudo ?? 0) +
+    modificadorDeAtributo(sheet, 'destreza') +
+    (combate.modTamano ?? 0) +
+    (combate.armaduraNatural ?? 0) +
+    (combate.modDesvio ?? 0) +
+    (combate.modVarioCa ?? 0)
+  );
+}
+
+/** Iniciativa = mod. Destreza + mod. vario */
+export function iniciativa(sheet: CharacterSheetData): number {
+  return (
+    modificadorDeAtributo(sheet, 'destreza') +
+    (sheet.combate?.modVarioIniciativa ?? 0)
+  );
 }
 
 /**
@@ -75,6 +132,7 @@ export function formatearModificador(
  */
 export interface CharacterSheetData {
   atributos?: CharacterAtributos;
+  combate?: CombateValores;
   jugador?: string;
   clase?: string;
   alineamiento?: Alineamiento;

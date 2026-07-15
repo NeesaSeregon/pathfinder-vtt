@@ -23,6 +23,16 @@ describe('pathfinder-app-e2e', () => {
     cy.get('input[name="fuerza-ajuste"]').type('20');
     cy.get('input[name="destreza-puntuacion"]').type('9');
 
+    // Combate: CA = 10 + 5 + 2 + (-1 de Des 9) = 16; iniciativa = -1 + 2 = +1
+    cy.get('input[name="ca-bonif-armadura"]').type('5');
+    cy.get('input[name="ca-bonif-escudo"]').type('2');
+    cy.get('input[name="iniciativa-vario"]').type('2');
+    cy.contains('.character-form__formula-total', 'CA').should('contain', '16');
+    cy.contains('.character-form__formula-total', 'Iniciativa').should(
+      'contain',
+      '+1',
+    );
+
     cy.get('button[type="submit"]').click();
     cy.contains('li', name).should('contain', 'Nivel 7');
 
@@ -41,6 +51,11 @@ describe('pathfinder-app-e2e', () => {
     cy.contains('.characters__modal-atributos tr', 'Destreza')
       .should('contain', '9')
       .should('contain', '-1');
+
+    // Totales de combate derivados de lo guardado
+    cy.get('.characters__modal-combate')
+      .should('contain', 'CA 16')
+      .should('contain', 'Iniciativa +1');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();

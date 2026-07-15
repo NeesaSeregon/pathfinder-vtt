@@ -63,4 +63,65 @@
     font-weight: 600;
     color: #444;
   }
+
+  &__combate {
+    grid-column: 1 / -1;
+    border: 1px solid #ccc;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    legend {
+      font-size: 0.85rem;
+      color: #444;
+      padding: 0 0.25rem;
+    }
+  }
+
+  &__formula {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    label {
+      width: 6.5rem;
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    output {
+      display: block;
+      font-weight: 600;
+      color: #333;
+      padding: 0.35rem 0;
+    }
+  }
+
+  &__formula-total {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #222;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+
+    output {
+      font-size: 1.25rem;
+      border: 2px solid #222;
+      border-radius: 0.25rem;
+      padding: 0.2rem 0.6rem;
+    }
+  }
+
+  &__formula-fija {
+    color: #666;
+    padding-bottom: 0.5rem;
+  }
 }

@@ -96,6 +96,60 @@
     </div>
   </fieldset>
 
+  <fieldset class="character-form__combate">
+    <legend>Combate</legend>
+
+    <div class="character-form__formula">
+      <span class="character-form__formula-total">
+        CA <output>{{ caTotal() }}</output>
+      </span>
+      <span class="character-form__formula-fija">= 10 +</span>
+      <label>
+        Bonif. armadura
+        <input type="number" name="ca-bonif-armadura" [(ngModel)]="form.combate.bonifArmadura" />
+      </label>
+      <label>
+        Bonif. escudo
+        <input type="number" name="ca-bonif-escudo" [(ngModel)]="form.combate.bonifEscudo" />
+      </label>
+      <label>
+        Modif. Destreza
+        <output>{{ modDestreza() }}</output>
+      </label>
+      <label>
+        Modif. tamaño
+        <input type="number" name="ca-mod-tamano" [(ngModel)]="form.combate.modTamano" />
+      </label>
+      <label>
+        Armadura natural
+        <input type="number" name="ca-armadura-natural" [(ngModel)]="form.combate.armaduraNatural" />
+      </label>
+      <label>
+        Modif. desvío
+        <input type="number" name="ca-mod-desvio" [(ngModel)]="form.combate.modDesvio" />
+      </label>
+      <label>
+        Modif. vario
+        <input type="number" name="ca-mod-vario" [(ngModel)]="form.combate.modVarioCa" />
+      </label>
+    </div>
+
+    <div class="character-form__formula">
+      <span class="character-form__formula-total">
+        Iniciativa <output>{{ iniciativaTotal() }}</output>
+      </span>
+      <span class="character-form__formula-fija">=</span>
+      <label>
+        Modif. Destreza
+        <output>{{ modDestreza() }}</output>
+      </label>
+      <label>
+        Modif. vario
+        <input type="number" name="iniciativa-vario" [(ngModel)]="form.combate.modVarioIniciativa" />
+      </label>
+    </div>
+  </fieldset>
+
   <button type="submit" [disabled]="!form.name().trim()">
     {{ submitLabel() }}
   </button>

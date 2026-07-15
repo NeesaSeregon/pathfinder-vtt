@@ -1,5 +1,7 @@
 import {
+  claseDeArmadura,
   formatearModificador,
+  iniciativa,
   modificadorDeCaracteristica,
 } from './character';
 
@@ -45,5 +47,62 @@ describe('formatearModificador', () => {
   it('muestra un guión cuando no hay puntuación', () => {
     expect(formatearModificador(null)).toBe('—');
     expect(formatearModificador(undefined)).toBe('—');
+  });
+});
+
+describe('claseDeArmadura', () => {
+  it('es 10 para una ficha sin datos (sin armadura, Destreza media)', () => {
+    expect(claseDeArmadura({})).toBe(10);
+  });
+
+  it('suma todos los bonificadores y el modificador de Destreza', () => {
+    // 10 + 5 + 2 + (+2 de Des 14) + 1 + 3 + 1 + 1 = 25
+    expect(
+      claseDeArmadura({
+        atributos: { destreza: { puntuacion: 14 } },
+        combate: {
+          bonifArmadura: 5,
+          bonifEscudo: 2,
+          modTamano: 1,
+          armaduraNatural: 3,
+          modDesvio: 1,
+          modVarioCa: 1,
+        },
+      }),
+    ).toBe(25);
+  });
+
+  it('los modificadores negativos de Destreza bajan la CA', () => {
+    expect(
+      claseDeArmadura({ atributos: { destreza: { puntuacion: 7 } } }),
+    ).toBe(8);
+  });
+
+  it('el ajuste temporal de Destreza reemplaza a la puntuación', () => {
+    // Des 14 pero ajustada temporalmente a 8 → mod -1 → CA 9
+    expect(
+      claseDeArmadura({
+        atributos: { destreza: { puntuacion: 14, ajusteTemporal: 8 } },
+      }),
+    ).toBe(9);
+  });
+});
+
+describe('iniciativa', () => {
+  it('es 0 para una ficha sin datos', () => {
+    expect(iniciativa({})).toBe(0);
+  });
+
+  it('suma el modificador de Destreza y el modificador vario', () => {
+    expect(
+      iniciativa({
+        atributos: { destreza: { puntuacion: 9 } },
+        combate: { modVarioIniciativa: 2 },
+      }),
+    ).toBe(1);
+  });
+
+  it('ignora los modificadores varios de la CA', () => {
+    expect(iniciativa({ combate: { modVarioCa: 4 } })).toBe(0);
   });
 });
