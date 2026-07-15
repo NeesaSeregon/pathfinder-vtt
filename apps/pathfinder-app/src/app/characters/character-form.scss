@@ -191,6 +191,80 @@
     }
   }
 
+  &__habilidades {
+    grid-column: 1 / -1;
+    border: 1px solid #ccc;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    legend {
+      font-size: 0.85rem;
+      color: #444;
+      padding: 0 0.25rem;
+    }
+  }
+
+  &__habilidades-grid {
+    display: grid;
+    grid-template-columns: auto minmax(12rem, 1fr) 4rem 5rem 4rem 4rem;
+    gap: 0.3rem 0.75rem;
+    align-items: center;
+
+    input[type='number'] {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    output {
+      text-align: center;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+
+  &__habilidades-head {
+    font-size: 0.75rem;
+    color: #666;
+    text-align: center;
+
+    &--nombre {
+      text-align: left;
+    }
+  }
+
+  &__habilidad-nombre {
+    font-size: 0.85rem;
+    color: #444;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+
+    abbr {
+      text-decoration: none;
+      color: #a00;
+    }
+
+    input {
+      flex: 1;
+      min-width: 6rem;
+    }
+  }
+
+  &__habilidad-atributo {
+    font-size: 0.8rem;
+    color: #666;
+    text-align: center;
+  }
+
+  &__habilidades-nota {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #888;
+  }
+
   &__velocidad {
     grid-column: 1 / -1;
     border: 1px solid #ccc;

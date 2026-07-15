@@ -3,7 +3,9 @@ import {
   ATRIBUTO_LABELS,
   ATRIBUTOS,
   bmc,
+  bonificadorHabilidad,
   dmc,
+  HABILIDADES,
   caDesprevenido,
   caDeToque,
   casillas,
@@ -188,6 +190,23 @@ export class CharactersPage {
           tiradaDeSalvacion(character.sheetData, salvacion),
         )}`,
     ).join(' · ');
+  }
+
+  /** Habilidades con datos, con su bonificador total derivado. */
+  protected habilidadesDe(character: Character): string[] {
+    const habilidades = character.sheetData.habilidades;
+    if (!habilidades) {
+      return [];
+    }
+    return HABILIDADES.filter((def) => habilidades[def.id]).map((def) => {
+      const especialidad = habilidades[def.id]?.especialidad;
+      const nombre = especialidad
+        ? `${def.label} (${especialidad})`
+        : def.label;
+      return `${nombre} ${conSigno(
+        bonificadorHabilidad(character.sheetData, def.id),
+      )}`;
+    });
   }
 
   /** "PG 45 · RD 5/hierro frío", o solo la parte que exista. */

@@ -366,6 +366,77 @@
     </label>
   </fieldset>
 
+  <fieldset class="character-form__habilidades">
+    <legend>Habilidades</legend>
+    <div class="character-form__habilidades-grid">
+      <span class="character-form__habilidades-head">Clase</span>
+      <span class="character-form__habilidades-head character-form__habilidades-head--nombre">
+        Nombre
+      </span>
+      <span class="character-form__habilidades-head">Bonif. total</span>
+      <span class="character-form__habilidades-head">Modif. caract.</span>
+      <span class="character-form__habilidades-head">Rangos</span>
+      <span class="character-form__habilidades-head">Modif. vario</span>
+      @for (def of habilidadesDef; track def.id) {
+        <input
+          type="checkbox"
+          title="Habilidad de clase"
+          [name]="def.id + '-clase'"
+          [attr.name]="def.id + '-clase'"
+          [(ngModel)]="form.habilidades[def.id].esClase"
+        />
+        <span class="character-form__habilidad-nombre">
+          {{ def.label }}@if (def.soloEntrenada) {<abbr title="Sólo entrenada">*</abbr>}
+          @if (def.conEspecialidad) {
+            <input
+              type="text"
+              placeholder="especialidad"
+              maxlength="50"
+              [name]="def.id + '-especialidad'"
+              [attr.name]="def.id + '-especialidad'"
+              [(ngModel)]="form.habilidades[def.id].especialidad"
+            />
+          }
+        </span>
+        <output>{{ totalHabilidad(def.id) }}</output>
+        <span class="character-form__habilidad-atributo">
+          {{ atributoAbrev[def.atributo] }}
+          {{ modAtributoHabilidad(def.atributo) }}
+        </span>
+        <input
+          type="number"
+          min="0"
+          [name]="def.id + '-rangos'"
+          [attr.name]="def.id + '-rangos'"
+          [(ngModel)]="form.habilidades[def.id].rangos"
+        />
+        <input
+          type="number"
+          [name]="def.id + '-vario'"
+          [attr.name]="def.id + '-vario'"
+          [(ngModel)]="form.habilidades[def.id].modVario"
+        />
+      }
+    </div>
+    <p class="character-form__habilidades-nota">
+      Clase = habilidad de clase (+3 automático con 1+ rangos) ·
+      * sólo entrenada
+    </p>
+    <label class="character-form__velocidad-temporales">
+      Modificadores condicionales
+      <input
+        type="text"
+        name="habilidades-notas"
+        maxlength="300"
+        [(ngModel)]="form.habilidadesNotas"
+      />
+    </label>
+    <label class="character-form__velocidad-temporales">
+      Idiomas
+      <input type="text" name="idiomas" maxlength="300" [(ngModel)]="form.idiomas" />
+    </label>
+  </fieldset>
+
   <button type="submit" [disabled]="!form.name().trim()">
     {{ submitLabel() }}
   </button>

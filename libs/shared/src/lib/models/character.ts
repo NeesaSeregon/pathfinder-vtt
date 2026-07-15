@@ -281,6 +281,105 @@ export function dmc(sheet: CharacterSheetData): number {
   );
 }
 
+/** Abreviaturas de atributo que usa la ficha (columna "=Des", "=Int"...). */
+export const ATRIBUTO_ABREV: Record<Atributo, string> = {
+  fuerza: 'Fue',
+  destreza: 'Des',
+  constitucion: 'Con',
+  inteligencia: 'Int',
+  sabiduria: 'Sab',
+  carisma: 'Car',
+};
+
+export interface HabilidadDef {
+  id: string;
+  label: string;
+  atributo: Atributo;
+  /** "* Sólo entrenada": sin rangos no se puede intentar. */
+  soloEntrenada?: boolean;
+  /** Hueco con especialidad a rellenar (Artesanía: herrería...). */
+  conEspecialidad?: boolean;
+}
+
+/** La lista de la ficha, con sus huecos repetidos para especialidades. */
+export const HABILIDADES: readonly HabilidadDef[] = [
+  { id: 'acrobacias', label: 'Acrobacias', atributo: 'destreza' },
+  { id: 'artesania1', label: 'Artesanía', atributo: 'inteligencia', conEspecialidad: true },
+  { id: 'artesania2', label: 'Artesanía', atributo: 'inteligencia', conEspecialidad: true },
+  { id: 'artesania3', label: 'Artesanía', atributo: 'inteligencia', conEspecialidad: true },
+  { id: 'averiguarIntenciones', label: 'Averiguar intenciones', atributo: 'sabiduria' },
+  { id: 'conocimientoConjuros', label: 'Conocimiento de conjuros', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'curar', label: 'Curar', atributo: 'sabiduria' },
+  { id: 'diplomacia', label: 'Diplomacia', atributo: 'carisma' },
+  { id: 'disfrazarse', label: 'Disfrazarse', atributo: 'carisma' },
+  { id: 'enganar', label: 'Engañar', atributo: 'carisma' },
+  { id: 'escapismo', label: 'Escapismo', atributo: 'destreza' },
+  { id: 'interpretar1', label: 'Interpretar', atributo: 'carisma', conEspecialidad: true },
+  { id: 'interpretar2', label: 'Interpretar', atributo: 'carisma', conEspecialidad: true },
+  { id: 'intimidar', label: 'Intimidar', atributo: 'carisma' },
+  { id: 'inutilizarMecanismo', label: 'Inutilizar mecanismo', atributo: 'destreza', soloEntrenada: true },
+  { id: 'juegoDeManos', label: 'Juego de manos', atributo: 'destreza', soloEntrenada: true },
+  { id: 'linguistica', label: 'Lingüística', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'montar', label: 'Montar', atributo: 'destreza' },
+  { id: 'nadar', label: 'Nadar', atributo: 'fuerza' },
+  { id: 'percepcion', label: 'Percepción', atributo: 'sabiduria' },
+  { id: 'profesion1', label: 'Profesión', atributo: 'sabiduria', soloEntrenada: true, conEspecialidad: true },
+  { id: 'profesion2', label: 'Profesión', atributo: 'sabiduria', soloEntrenada: true, conEspecialidad: true },
+  { id: 'saberArcano', label: 'Saber (arcano)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'saberDungeons', label: 'Saber (dungeons)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'saberGeografia', label: 'Saber (geografía)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'saberHistoria', label: 'Saber (historia)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'saberIngenieria', label: 'Saber (ingeniería)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'saberLocal', label: 'Saber (local)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'saberLosPlanos', label: 'Saber (los Planos)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'saberNaturaleza', label: 'Saber (naturaleza)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'saberNobleza', label: 'Saber (nobleza)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'saberReligion', label: 'Saber (religión)', atributo: 'inteligencia', soloEntrenada: true },
+  { id: 'sigilo', label: 'Sigilo', atributo: 'destreza' },
+  { id: 'supervivencia', label: 'Supervivencia', atributo: 'sabiduria' },
+  { id: 'tasacion', label: 'Tasación', atributo: 'inteligencia' },
+  { id: 'tratoConAnimales', label: 'Trato con animales', atributo: 'carisma', soloEntrenada: true },
+  { id: 'trepar', label: 'Trepar', atributo: 'fuerza' },
+  { id: 'usarObjetoMagico', label: 'Usar objeto mágico', atributo: 'carisma', soloEntrenada: true },
+  { id: 'volar', label: 'Volar', atributo: 'destreza' },
+];
+
+/** Casillas manuales de una habilidad; el bonificador total se deriva. */
+export interface HabilidadValores {
+  esClase?: boolean;
+  rangos?: number;
+  modVario?: number;
+  especialidad?: string;
+}
+
+/**
+ * Bonif. total = mod. del atributo + rangos + vario
+ *   + 3 si es habilidad de clase CON al menos 1 rango (regla de PF1e;
+ *     no lo apuntes también en "vario" o contará doble)
+ *   + para Volar, el modificador de maniobrabilidad (torpe -8...perfecta +8).
+ */
+export function bonificadorHabilidad(
+  sheet: CharacterSheetData,
+  id: string,
+): number {
+  const valores = sheet.habilidades?.[id] ?? {};
+  const def = HABILIDADES.find((habilidad) => habilidad.id === id);
+  const rangos = valores.rangos ?? 0;
+  const bonifClase = valores.esClase && rangos > 0 ? 3 : 0;
+  let maniobrabilidad = 0;
+  if (id === 'volar' && sheet.velocidad?.maniobrabilidad) {
+    maniobrabilidad =
+      MODIFICADOR_MANIOBRABILIDAD[sheet.velocidad.maniobrabilidad];
+  }
+  return (
+    (def ? modificadorDeAtributo(sheet, def.atributo) : 0) +
+    rangos +
+    (valores.modVario ?? 0) +
+    bonifClase +
+    maniobrabilidad
+  );
+}
+
 export const SALVACIONES = ['fortaleza', 'reflejos', 'voluntad'] as const;
 
 export type Salvacion = (typeof SALVACIONES)[number];
@@ -408,6 +507,10 @@ export interface CharacterSheetData {
   pg?: PgValores;
   salvaciones?: SalvacionesValores;
   ofensivo?: OfensivoValores;
+  habilidades?: Record<string, HabilidadValores>;
+  /** Caja "Modificadores condicionales" al pie de la tabla de habilidades. */
+  habilidadesNotas?: string;
+  idiomas?: string;
   jugador?: string;
   clase?: string;
   alineamiento?: Alineamiento;

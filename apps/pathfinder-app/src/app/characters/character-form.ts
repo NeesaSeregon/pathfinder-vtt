@@ -11,10 +11,14 @@ import { FormsModule } from '@angular/forms';
 import {
   ALINEAMIENTOS,
   Alineamiento,
+  ATRIBUTO_ABREV,
   ATRIBUTO_LABELS,
   ATRIBUTOS,
   bmc,
+  bonificadorHabilidad,
   dmc,
+  HABILIDADES,
+  HabilidadValores,
   OfensivoValores,
   Character,
   CharacterAtributos,
@@ -85,6 +89,29 @@ type VelocidadForm = Record<
   maniobrabilidad: WritableSignal<Maniobrabilidad | ''>;
   modTemporales: WritableSignal<string>;
 };
+
+type HabilidadesForm = Record<
+  string,
+  {
+    esClase: WritableSignal<boolean>;
+    especialidad: WritableSignal<string>;
+    rangos: WritableSignal<number | null>;
+    modVario: WritableSignal<number | null>;
+  }
+>;
+
+function crearHabilidadesForm(): HabilidadesForm {
+  const form: HabilidadesForm = {};
+  for (const habilidad of HABILIDADES) {
+    form[habilidad.id] = {
+      esClase: signal(false),
+      especialidad: signal(''),
+      rangos: signal<number | null>(null),
+      modVario: signal<number | null>(null),
+    };
+  }
+  return form;
+}
 
 function crearVelocidadForm(): VelocidadForm {
   const form = {
@@ -163,6 +190,8 @@ export class CharacterForm {
   protected readonly salvacionLabels = SALVACION_LABELS;
   protected readonly tamanos = TAMANOS;
   protected readonly tamanoLabels = TAMANO_LABELS;
+  protected readonly habilidadesDef = HABILIDADES;
+  protected readonly atributoAbrev = ATRIBUTO_ABREV;
 
   protected readonly maniobrabilidades = MANIOBRABILIDADES;
 
@@ -175,6 +204,9 @@ export class CharacterForm {
     ataqueBase: signal<number | null>(null),
     resistenciaConjuros: signal<number | null>(null),
     ofensivoNotas: signal(''),
+    habilidades: crearHabilidadesForm(),
+    habilidadesNotas: signal(''),
+    idiomas: signal(''),
     velocidad: crearVelocidadForm(),
     pgTotal: signal<number | null>(null),
     pgRd: signal(''),
@@ -237,6 +269,16 @@ export class CharacterForm {
   /** Sumando de una casilla manual, con signo; vacía cuenta como +0. */
   protected sumando(valor: number | null): string {
     return conSigno(valor ?? 0);
+  }
+
+  /** Bonif. total de una habilidad, en vivo, con la fórmula compartida. */
+  protected totalHabilidad(id: string): string {
+    return conSigno(bonificadorHabilidad(this.buildSheetData(), id));
+  }
+
+  /** Mod. del atributo asociado a una habilidad, en vivo. */
+  protected modAtributoHabilidad(atributo: (typeof ATRIBUTOS)[number]): string {
+    return conSigno(modificadorDeAtributo(this.buildSheetData(), atributo));
   }
 
   /** Total de una salvación, en vivo, con la fórmula compartida. */
@@ -376,6 +418,25 @@ export class CharacterForm {
       delete sheet.ofensivo;
     }
 
+    const habilidades = this.buildHabilidades();
+    if (Object.keys(habilidades).length > 0) {
+      sheet.habilidades = habilidades;
+    } else {
+      delete sheet.habilidades;
+    }
+    const habilidadesNotas = this.form.habilidadesNotas().trim();
+    if (habilidadesNotas) {
+      sheet.habilidadesNotas = habilidadesNotas;
+    } else {
+      delete sheet.habilidadesNotas;
+    }
+    const idiomas = this.form.idiomas().trim();
+    if (idiomas) {
+      sheet.idiomas = idiomas;
+    } else {
+      delete sheet.idiomas;
+    }
+
     const pg: PgValores = {};
     const pgTotal = this.form.pgTotal();
     if (pgTotal !== null) {
@@ -391,6 +452,31 @@ export class CharacterForm {
       delete sheet.pg;
     }
     return sheet;
+  }
+
+  private buildHabilidades(): Record<string, HabilidadValores> {
+    const habilidades: Record<string, HabilidadValores> = {};
+    for (const def of HABILIDADES) {
+      const fila = this.form.habilidades[def.id];
+      const valores: HabilidadValores = {};
+      if (fila.esClase()) {
+        valores.esClase = true;
+      }
+      if (fila.rangos() !== null) {
+        valores.rangos = fila.rangos() as number;
+      }
+      if (fila.modVario() !== null) {
+        valores.modVario = fila.modVario() as number;
+      }
+      const especialidad = fila.especialidad().trim();
+      if (especialidad) {
+        valores.especialidad = especialidad;
+      }
+      if (Object.keys(valores).length > 0) {
+        habilidades[def.id] = valores;
+      }
+    }
+    return habilidades;
   }
 
   private buildSalvaciones(): SalvacionesValores {
@@ -503,6 +589,17 @@ export class CharacterForm {
       sheet.ofensivo?.resistenciaConjuros ?? null,
     );
     this.form.ofensivoNotas.set(sheet.ofensivo?.notas ?? '');
+    for (const def of HABILIDADES) {
+      const valores = sheet.habilidades?.[def.id];
+      this.form.habilidades[def.id].esClase.set(valores?.esClase ?? false);
+      this.form.habilidades[def.id].especialidad.set(
+        valores?.especialidad ?? '',
+      );
+      this.form.habilidades[def.id].rangos.set(valores?.rangos ?? null);
+      this.form.habilidades[def.id].modVario.set(valores?.modVario ?? null);
+    }
+    this.form.habilidadesNotas.set(sheet.habilidadesNotas ?? '');
+    this.form.idiomas.set(sheet.idiomas ?? '');
     for (const campo of CAMPOS_VELOCIDAD_PIES) {
       this.form.velocidad[campo].set(sheet.velocidad?.[campo] ?? null);
     }

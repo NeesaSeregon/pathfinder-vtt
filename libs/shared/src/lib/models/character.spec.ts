@@ -1,8 +1,10 @@
 import {
   bmc,
+  bonificadorHabilidad,
   caDeToque,
   caDesprevenido,
   dmc,
+  HABILIDADES,
   casillas,
   claseDeArmadura,
   formatearModificador,
@@ -262,6 +264,57 @@ describe('dmc', () => {
         combate: { modDesvio: 2, modEsquiva: 1 },
       }),
     ).toBe(16);
+  });
+});
+
+describe('bonificadorHabilidad', () => {
+  it('sin datos, es solo el modificador del atributo asociado', () => {
+    // Acrobacias depende de Destreza
+    expect(
+      bonificadorHabilidad(
+        { atributos: { destreza: { puntuacion: 14 } } },
+        'acrobacias',
+      ),
+    ).toBe(2);
+  });
+
+  it('suma rangos y modificador vario', () => {
+    expect(
+      bonificadorHabilidad(
+        {
+          atributos: { destreza: { puntuacion: 14 } },
+          habilidades: { acrobacias: { rangos: 3, modVario: 1 } },
+        },
+        'acrobacias',
+      ),
+    ).toBe(6);
+  });
+
+  it('habilidad de clase con rangos: +3; sin rangos: nada', () => {
+    const conRangos = {
+      habilidades: { sigilo: { esClase: true, rangos: 1 } },
+    };
+    const sinRangos = { habilidades: { sigilo: { esClase: true } } };
+    expect(bonificadorHabilidad(conRangos, 'sigilo')).toBe(4); // 1 + 3
+    expect(bonificadorHabilidad(sinRangos, 'sigilo')).toBe(0);
+  });
+
+  it('Volar incluye el modificador de maniobrabilidad', () => {
+    expect(
+      bonificadorHabilidad(
+        {
+          habilidades: { volar: { rangos: 2 } },
+          velocidad: { volar: 60, maniobrabilidad: 'buena' },
+        },
+        'volar',
+      ),
+    ).toBe(6); // 2 rangos + 4 de maniobrabilidad buena
+  });
+
+  it('la lista de la ficha tiene sus 39 huecos', () => {
+    expect(HABILIDADES).toHaveLength(39);
+    // y los huecos repetidos existen (Artesanía x3, Interpretar x2...)
+    expect(HABILIDADES.filter((h) => h.label === 'Artesanía')).toHaveLength(3);
   });
 });
 

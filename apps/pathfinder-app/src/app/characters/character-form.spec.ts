@@ -29,7 +29,17 @@ type CharacterFormInterno = {
     >;
     ataqueBase: { set(v: number | null): void };
     tamano: { set(v: string): void };
+    habilidades: Record<
+      string,
+      {
+        esClase: { set(v: boolean): void };
+        especialidad: { set(v: string): void };
+        rangos: { set(v: number | null): void };
+        modVario: { set(v: number | null): void };
+      }
+    >;
   };
+  totalHabilidad(id: string): string;
   totalSalvacion(salvacion: string): string;
   bmcTotal(): string;
   dmcTotal(): number;
@@ -170,6 +180,26 @@ describe('CharacterForm', () => {
     interno.submit();
     expect(emitido?.sheetData.ofensivo).toEqual({ ataqueBase: 3 });
     expect(emitido?.sheetData.tamano).toBe('grande');
+  });
+
+  it('guarda solo las habilidades con datos y deriva el total', () => {
+    interno.form.name.set('Valeros');
+    interno.form.atributos['destreza'].puntuacion.set(14); // +2
+    interno.form.habilidades['acrobacias'].esClase.set(true);
+    interno.form.habilidades['acrobacias'].rangos.set(3);
+    interno.form.habilidades['artesania1'].especialidad.set('Herrería');
+    interno.form.habilidades['artesania1'].rangos.set(1);
+
+    // 3 rangos + 2 Des + 3 de clase = +8
+    expect(interno.totalHabilidad('acrobacias')).toBe('+8');
+
+    interno.submit();
+    expect(emitido?.sheetData.habilidades).toEqual({
+      acrobacias: { esClase: true, rangos: 3 },
+      artesania1: { rangos: 1, especialidad: 'Herrería' },
+    });
+    // el resto de la lista no aparece: solo se persiste lo relleno
+    expect(emitido?.sheetData.habilidades).not.toHaveProperty('sigilo');
   });
 
   it('el modif. temporal deriva de puntuación + ajuste', () => {

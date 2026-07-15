@@ -60,6 +60,14 @@ describe('pathfinder-app-e2e', () => {
       '+3',
     );
 
+    // Habilidades: Acrobacias clase + 3 rangos + (-1 Des) + 3 = +5
+    cy.get('input[name="acrobacias-clase"]').check();
+    cy.get('input[name="acrobacias-rangos"]').type('3');
+    cy.contains('.character-form__habilidades-grid output', '+5');
+    cy.get('input[name="artesania1-especialidad"]').type('Herrería');
+    cy.get('input[name="artesania1-rangos"]').type('1');
+    cy.get('input[name="idiomas"]').type('común, élfico');
+
     // Ofensivo: FUE efectiva 22 (+6) → BMC 3+6 = +9; DMC 10+3+6-1 = 18
     cy.get('input[name="ataque-base"]').type('3');
     cy.contains('.character-form__formula-total', 'BMC').should(
@@ -113,6 +121,12 @@ describe('pathfinder-app-e2e', () => {
       .should('contain', 'Ataque base +3')
       .should('contain', 'BMC +9')
       .should('contain', 'DMC 18');
+
+    // Habilidades derivadas de lo guardado, con especialidad e idiomas
+    cy.get('.characters__modal')
+      .should('contain', 'Acrobacias +5')
+      .should('contain', 'Artesanía (Herrería) +1')
+      .should('contain', 'Idiomas: común, élfico');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();

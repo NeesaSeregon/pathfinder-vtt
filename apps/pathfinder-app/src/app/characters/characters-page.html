@@ -80,6 +80,19 @@
                 Modificadores de salvación: {{ notasSalvaciones }}
               </p>
             }
+            @if (habilidadesDe(character).length > 0) {
+              <p class="characters__modal-velocidad">
+                Habilidades: {{ habilidadesDe(character).join(' · ') }}
+              </p>
+            }
+            @if (character.sheetData.habilidadesNotas; as notasHabilidades) {
+              <p class="characters__modal-velocidad">
+                Modificadores condicionales: {{ notasHabilidades }}
+              </p>
+            }
+            @if (character.sheetData.idiomas; as idiomas) {
+              <p class="characters__modal-velocidad">Idiomas: {{ idiomas }}</p>
+            }
           } @else if (pgResumen(character)) {
             <p class="characters__modal-combate">{{ pgResumen(character) }}</p>
           }
