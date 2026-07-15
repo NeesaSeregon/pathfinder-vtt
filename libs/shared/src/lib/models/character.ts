@@ -92,13 +92,69 @@ export function formatearModificador(
 }
 
 /**
+ * Categorías de tamaño de PF1e. De la categoría se DERIVAN los dos
+ * modificadores de tamaño: el de CA/ataques y el de maniobras (inverso).
+ */
+export const TAMANOS = [
+  'fino',
+  'diminuto',
+  'menudo',
+  'pequeno',
+  'mediano',
+  'grande',
+  'enorme',
+  'gargantuesco',
+  'colosal',
+] as const;
+
+export type Tamano = (typeof TAMANOS)[number];
+
+export const TAMANO_LABELS: Record<Tamano, string> = {
+  fino: 'Fino',
+  diminuto: 'Diminuto',
+  menudo: 'Menudo',
+  pequeno: 'Pequeño',
+  mediano: 'Mediano',
+  grande: 'Grande',
+  enorme: 'Enorme',
+  gargantuesco: 'Gargantuesco',
+  colosal: 'Colosal',
+};
+
+/** Modificador de tamaño a CA y ataques: pequeño esquiva (+), grande es blanco fácil (-). */
+export const MODIFICADOR_TAMANO: Record<Tamano, number> = {
+  fino: 8,
+  diminuto: 4,
+  menudo: 2,
+  pequeno: 1,
+  mediano: 0,
+  grande: -1,
+  enorme: -2,
+  gargantuesco: -4,
+  colosal: -8,
+};
+
+export function modificadorTamano(sheet: CharacterSheetData): number {
+  const tamano = sheet.tamano;
+  return tamano && tamano in MODIFICADOR_TAMANO
+    ? MODIFICADOR_TAMANO[tamano]
+    : 0;
+}
+
+/** Para maniobras (BMC/DMC) el tamaño se INVIERTE: el grande empuja mejor. */
+export function modificadorTamanoManiobras(sheet: CharacterSheetData): number {
+  // 0 - x en lugar de -x: negar 0 produce -0, que no es idéntico a +0.
+  return 0 - modificadorTamano(sheet);
+}
+
+/**
  * Casillas de combate que se rellenan a mano en la ficha. Los totales
  * (CA, iniciativa) NO se guardan: se derivan con las funciones de abajo.
+ * El modificador de tamaño ya no es casilla: se deriva de sheet.tamano.
  */
 export interface CombateValores {
   bonifArmadura?: number;
   bonifEscudo?: number;
-  modTamano?: number;
   armaduraNatural?: number;
   modDesvio?: number;
   /** Bonif. de esquiva separado del vario: se pierde al quedar desprevenido. */
@@ -132,7 +188,7 @@ export function claseDeArmadura(sheet: CharacterSheetData): number {
     (combate.bonifArmadura ?? 0) +
     (combate.bonifEscudo ?? 0) +
     modificadorDeAtributo(sheet, 'destreza') +
-    (combate.modTamano ?? 0) +
+    modificadorTamano(sheet) +
     (combate.armaduraNatural ?? 0) +
     (combate.modDesvio ?? 0) +
     (combate.modEsquiva ?? 0) +
@@ -150,7 +206,7 @@ export function caDeToque(sheet: CharacterSheetData): number {
   return (
     10 +
     modificadorDeAtributo(sheet, 'destreza') +
-    (combate.modTamano ?? 0) +
+    modificadorTamano(sheet) +
     (combate.modDesvio ?? 0) +
     (combate.modEsquiva ?? 0) +
     (combate.modVarioCa ?? 0)
@@ -170,7 +226,7 @@ export function caDesprevenido(sheet: CharacterSheetData): number {
     (combate.bonifArmadura ?? 0) +
     (combate.bonifEscudo ?? 0) +
     Math.min(modificadorDeAtributo(sheet, 'destreza'), 0) +
-    (combate.modTamano ?? 0) +
+    modificadorTamano(sheet) +
     (combate.armaduraNatural ?? 0) +
     (combate.modDesvio ?? 0) +
     (combate.modVarioCa ?? 0)
@@ -187,13 +243,12 @@ export function iniciativa(sheet: CharacterSheetData): number {
 
 /**
  * Bloque ofensivo. El BMC y la DMC no se guardan: se derivan con bmc() y
- * dmc(). OJO: modTamanoManiobras está INVERTIDO respecto al de la CA
- * (pequeño: +1 a CA pero -1 aquí); para tamaño Mediano ambos son 0.
+ * dmc(), usando el modificador de tamaño de maniobras (inverso al de CA)
+ * derivado de sheet.tamano.
  */
 export interface OfensivoValores {
   ataqueBase?: number;
   resistenciaConjuros?: number;
-  modTamanoManiobras?: number;
   notas?: string;
 }
 
@@ -203,7 +258,7 @@ export function bmc(sheet: CharacterSheetData): number {
   return (
     (ofensivo.ataqueBase ?? 0) +
     modificadorDeAtributo(sheet, 'fuerza') +
-    (ofensivo.modTamanoManiobras ?? 0)
+    modificadorTamanoManiobras(sheet)
   );
 }
 
@@ -220,7 +275,7 @@ export function dmc(sheet: CharacterSheetData): number {
     (ofensivo.ataqueBase ?? 0) +
     modificadorDeAtributo(sheet, 'fuerza') +
     modificadorDeAtributo(sheet, 'destreza') +
-    (ofensivo.modTamanoManiobras ?? 0) +
+    modificadorTamanoManiobras(sheet) +
     (combate.modDesvio ?? 0) +
     (combate.modEsquiva ?? 0)
   );
@@ -359,7 +414,7 @@ export interface CharacterSheetData {
   paisNatal?: string;
   dios?: string;
   raza?: string;
-  tamano?: string;
+  tamano?: Tamano;
   edad?: number;
   altura?: string;
   peso?: string;

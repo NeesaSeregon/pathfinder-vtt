@@ -13,6 +13,7 @@ describe('pathfinder-app-e2e', () => {
     cy.get('input[name="jugador"]').type('Luis');
     cy.get('input[name="clase"]').type('Pícaro');
     cy.get('select[name="alineamiento"]').select('legal bueno');
+    cy.get('select[name="tamano"]').select('Mediano');
     cy.get('input[name="raza"]').type('Elfo');
     cy.get('input[name="level"]').clear();
     cy.get('input[name="level"]').type('7');
@@ -78,6 +79,7 @@ describe('pathfinder-app-e2e', () => {
     cy.contains('li', name).contains('button', 'Ver ficha').click();
     cy.get('.characters__modal').should('contain', 'legal bueno');
     cy.get('.characters__modal').should('contain', 'Elfo');
+    cy.get('.characters__modal').should('contain', 'Mediano');
 
     // Atributos: FUE 18 (+4) con ajuste +4 → modif. temporal +6
     cy.contains('.characters__modal-atributos tr', 'Fuerza')

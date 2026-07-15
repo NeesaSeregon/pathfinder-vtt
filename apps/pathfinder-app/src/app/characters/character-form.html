@@ -34,7 +34,12 @@
   </label>
   <label>
     Tamaño
-    <input type="text" name="tamano" maxlength="50" [(ngModel)]="form.tamano" />
+    <select name="tamano" [(ngModel)]="form.tamano">
+      <option value="">—</option>
+      @for (tamano of tamanos; track tamano) {
+        <option [value]="tamano">{{ tamanoLabels[tamano] }}</option>
+      }
+    </select>
   </label>
   <label>
     Edad
@@ -117,7 +122,7 @@
       </label>
       <label>
         Modif. tamaño
-        <input type="number" name="ca-mod-tamano" [(ngModel)]="form.combate.modTamano" />
+        <output>{{ modTamanoCa() }}</output>
       </label>
       <label>
         Armadura natural
@@ -199,7 +204,7 @@
       </label>
       <label>
         Modif. tamaño (maniobras)
-        <input type="number" name="tamano-maniobras" [(ngModel)]="form.modTamanoManiobras" />
+        <output>{{ modTamanoManiobrasTexto() }}</output>
       </label>
     </div>
 
@@ -208,13 +213,21 @@
         BMC <output>{{ bmcTotal() }}</output>
       </span>
       <span class="character-form__formula-fija">
-        = ataque base + Fuerza {{ modFuerza() }} + tamaño
+        = ataque base ({{ sumando(form.ataqueBase()) }}) + Fuerza
+        ({{ modFuerza() }}) + tamaño ({{ modTamanoManiobrasTexto() }})
       </span>
+    </div>
+
+    <div class="character-form__formula">
       <span class="character-form__formula-total">
         DMC <output>{{ dmcTotal() }}</output>
       </span>
       <span class="character-form__formula-fija">
-        = 10 + ataque base + Fuerza + Destreza {{ modDestreza() }} + tamaño + desvío + esquiva
+        = 10 + ataque base ({{ sumando(form.ataqueBase()) }}) + Fuerza
+        ({{ modFuerza() }}) + Destreza ({{ modDestreza() }}) + tamaño
+        ({{ modTamanoManiobrasTexto() }}) + desvío
+        ({{ sumando(form.combate.modDesvio()) }}) + esquiva
+        ({{ sumando(form.combate.modEsquiva()) }})
       </span>
     </div>
 

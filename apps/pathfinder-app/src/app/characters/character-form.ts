@@ -31,9 +31,14 @@ import {
   Maniobrabilidad,
   MANIOBRABILIDADES,
   modificadorDeAtributo,
+  modificadorTamano,
+  modificadorTamanoManiobras,
   PgValores,
   piesAMetros,
   puntuacionEfectiva,
+  Tamano,
+  TAMANO_LABELS,
+  TAMANOS,
   Salvacion,
   SALVACION_ATRIBUTO,
   SALVACION_LABELS,
@@ -95,7 +100,6 @@ function crearVelocidadForm(): VelocidadForm {
 const CAMPOS_COMBATE = [
   'bonifArmadura',
   'bonifEscudo',
-  'modTamano',
   'armaduraNatural',
   'modDesvio',
   'modEsquiva',
@@ -157,6 +161,8 @@ export class CharacterForm {
   protected readonly modificador = formatearModificador;
   protected readonly salvaciones = SALVACIONES;
   protected readonly salvacionLabels = SALVACION_LABELS;
+  protected readonly tamanos = TAMANOS;
+  protected readonly tamanoLabels = TAMANO_LABELS;
 
   protected readonly maniobrabilidades = MANIOBRABILIDADES;
 
@@ -168,7 +174,6 @@ export class CharacterForm {
     salvacionesNotas: signal(''),
     ataqueBase: signal<number | null>(null),
     resistenciaConjuros: signal<number | null>(null),
-    modTamanoManiobras: signal<number | null>(null),
     ofensivoNotas: signal(''),
     velocidad: crearVelocidadForm(),
     pgTotal: signal<number | null>(null),
@@ -181,7 +186,7 @@ export class CharacterForm {
     paisNatal: signal(''),
     dios: signal(''),
     raza: signal(''),
-    tamano: signal(''),
+    tamano: signal<Tamano | ''>(''),
     edad: signal<number | null>(null),
     altura: signal(''),
     peso: signal(''),
@@ -212,6 +217,12 @@ export class CharacterForm {
   protected readonly modFuerza = computed(() =>
     conSigno(modificadorDeAtributo(this.buildSheetData(), 'fuerza')),
   );
+  protected readonly modTamanoCa = computed(() =>
+    conSigno(modificadorTamano(this.buildSheetData())),
+  );
+  protected readonly modTamanoManiobrasTexto = computed(() =>
+    conSigno(modificadorTamanoManiobras(this.buildSheetData())),
+  );
   protected readonly bmcTotal = computed(() =>
     conSigno(bmc(this.buildSheetData())),
   );
@@ -221,6 +232,11 @@ export class CharacterForm {
     // Cada vez que cambia `initial` (abrir la edición de otro personaje,
     // o ninguno), el formulario se rellena o se vacía.
     effect(() => this.applyInitial(this.initial()));
+  }
+
+  /** Sumando de una casilla manual, con signo; vacía cuenta como +0. */
+  protected sumando(valor: number | null): string {
+    return conSigno(valor ?? 0);
   }
 
   /** Total de una salvación, en vivo, con la fórmula compartida. */
@@ -299,7 +315,7 @@ export class CharacterForm {
       paisNatal: texto(this.form.paisNatal()),
       dios: texto(this.form.dios()),
       raza: texto(this.form.raza()),
-      tamano: texto(this.form.tamano()),
+      tamano: this.form.tamano() || undefined,
       edad: this.form.edad() ?? undefined,
       altura: texto(this.form.altura()),
       peso: texto(this.form.peso()),
@@ -349,9 +365,6 @@ export class CharacterForm {
     }
     if (this.form.resistenciaConjuros() !== null) {
       ofensivo.resistenciaConjuros = this.form.resistenciaConjuros() as number;
-    }
-    if (this.form.modTamanoManiobras() !== null) {
-      ofensivo.modTamanoManiobras = this.form.modTamanoManiobras() as number;
     }
     const ofensivoNotas = this.form.ofensivoNotas().trim();
     if (ofensivoNotas) {
@@ -488,9 +501,6 @@ export class CharacterForm {
     this.form.ataqueBase.set(sheet.ofensivo?.ataqueBase ?? null);
     this.form.resistenciaConjuros.set(
       sheet.ofensivo?.resistenciaConjuros ?? null,
-    );
-    this.form.modTamanoManiobras.set(
-      sheet.ofensivo?.modTamanoManiobras ?? null,
     );
     this.form.ofensivoNotas.set(sheet.ofensivo?.notas ?? '');
     for (const campo of CAMPOS_VELOCIDAD_PIES) {

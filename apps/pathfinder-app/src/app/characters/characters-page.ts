@@ -18,6 +18,7 @@ import {
   puntuacionEfectiva,
   SALVACION_LABELS,
   SALVACIONES,
+  TAMANO_LABELS,
   tiradaDeSalvacion,
 } from '@pathfinder/shared';
 import { CharactersApi } from './characters-api';
@@ -277,6 +278,13 @@ export class CharactersPage {
     return ETIQUETAS_FICHA.filter(([key]) => {
       const value = character.sheetData[key];
       return value !== undefined && value !== null && value !== '';
-    }).map(([key, label]) => ({ label, value: character.sheetData[key] }));
+    }).map(([key, label]) => {
+      const value = character.sheetData[key];
+      // El tamaño se guarda como clave interna; se muestra con su etiqueta
+      if (key === 'tamano' && typeof value === 'string') {
+        return { label, value: TAMANO_LABELS[value as never] ?? value };
+      }
+      return { label, value };
+    });
   }
 }

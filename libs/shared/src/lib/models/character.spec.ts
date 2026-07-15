@@ -9,6 +9,8 @@ import {
   iniciativa,
   MODIFICADOR_MANIOBRABILIDAD,
   modificadorDeCaracteristica,
+  modificadorTamano,
+  modificadorTamanoManiobras,
   piesAMetros,
   puntuacionEfectiva,
   tiradaDeSalvacion,
@@ -65,14 +67,14 @@ describe('claseDeArmadura', () => {
   });
 
   it('suma todos los bonificadores y el modificador de Destreza', () => {
-    // 10 + 5 + 2 + (+2 de Des 14) + 1 + 3 + 1 + 1 = 25
+    // 10 + 5 + 2 + (+2 de Des 14) + (+1 pequeño) + 3 + 1 + 1 = 25
     expect(
       claseDeArmadura({
+        tamano: 'pequeno',
         atributos: { destreza: { puntuacion: 14 } },
         combate: {
           bonifArmadura: 5,
           bonifEscudo: 2,
-          modTamano: 1,
           armaduraNatural: 3,
           modDesvio: 1,
           modVarioCa: 1,
@@ -134,9 +136,33 @@ describe('caDeToque', () => {
   it('conserva desvío, esquiva, tamaño y varios', () => {
     expect(
       caDeToque({
-        combate: { modDesvio: 2, modEsquiva: 1, modTamano: 1, modVarioCa: 1 },
+        tamano: 'pequeno',
+        combate: { modDesvio: 2, modEsquiva: 1, modVarioCa: 1 },
       }),
     ).toBe(15);
+  });
+});
+
+describe('modificadorTamano', () => {
+  it('mediano es 0; los pequeños suman a CA, los grandes restan', () => {
+    expect(modificadorTamano({ tamano: 'mediano' })).toBe(0);
+    expect(modificadorTamano({ tamano: 'pequeno' })).toBe(1);
+    expect(modificadorTamano({ tamano: 'fino' })).toBe(8);
+    expect(modificadorTamano({ tamano: 'grande' })).toBe(-1);
+    expect(modificadorTamano({ tamano: 'colosal' })).toBe(-8);
+  });
+
+  it('sin tamaño (o con un valor antiguo no reconocido) cuenta como 0', () => {
+    expect(modificadorTamano({})).toBe(0);
+    expect(
+      modificadorTamano({ tamano: 'Mediano' as never }),
+    ).toBe(0);
+  });
+
+  it('el de maniobras es el inverso exacto', () => {
+    expect(modificadorTamanoManiobras({ tamano: 'grande' })).toBe(1);
+    expect(modificadorTamanoManiobras({ tamano: 'pequeno' })).toBe(-1);
+    expect(modificadorTamanoManiobras({ tamano: 'mediano' })).toBe(0);
   });
 });
 
@@ -198,14 +224,15 @@ describe('bmc', () => {
     // 3 (BAB) + 4 (FUE 18) + 1 (tamaño Grande) = +8
     expect(
       bmc({
+        tamano: 'grande',
         atributos: { fuerza: { puntuacion: 18 } },
-        ofensivo: { ataqueBase: 3, modTamanoManiobras: 1 },
+        ofensivo: { ataqueBase: 3 },
       }),
     ).toBe(8);
   });
 
   it('el tamaño pequeño RESTA (inverso al de la CA)', () => {
-    expect(bmc({ ofensivo: { ataqueBase: 3, modTamanoManiobras: -1 } })).toBe(2);
+    expect(bmc({ tamano: 'pequeno', ofensivo: { ataqueBase: 3 } })).toBe(2);
   });
 });
 
@@ -215,14 +242,15 @@ describe('dmc', () => {
   });
 
   it('suma 10 + BAB + Fuerza + Destreza + tamaño', () => {
-    // 10 + 3 + 4 (FUE 18) + 2 (DES 14) + 1 = 20
+    // 10 + 3 + 4 (FUE 18) + 2 (DES 14) + 1 (Grande) = 20
     expect(
       dmc({
+        tamano: 'grande',
         atributos: {
           fuerza: { puntuacion: 18 },
           destreza: { puntuacion: 14 },
         },
-        ofensivo: { ataqueBase: 3, modTamanoManiobras: 1 },
+        ofensivo: { ataqueBase: 3 },
       }),
     ).toBe(20);
   });
