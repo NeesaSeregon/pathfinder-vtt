@@ -79,6 +79,12 @@ describe('pathfinder-app-e2e', () => {
     // Dotes
     cy.get('textarea[name="dotes"]').type('Soltura con el arma{enter}Esquiva');
 
+    // Conjuros: INT 16 (+3) como lanzador → CD nivel 1 = 14, +1 adicional
+    cy.get('input[name="inteligencia-puntuacion"]').type('16');
+    cy.get('select[name="atributo-lanzamiento"]').select('Inteligencia');
+    cy.get('input[name="conjuros1-pordia"]').type('2');
+    cy.get('input[name="conjuros1-anotados"]').type('proyectil mágico');
+
     // Dinero y experiencia con derivados en vivo
     cy.get('input[name="dinero-po"]').type('12');
     cy.get('input[name="dinero-pp"]').type('30');
@@ -156,9 +162,10 @@ describe('pathfinder-app-e2e', () => {
       .should('contain', 'DMC 18');
 
     // Habilidades derivadas de lo guardado, con especialidad e idiomas
+    // Artesanía es +4: 1 rango + 3 de la INT 16 que pusimos para conjuros
     cy.get('.characters__modal')
       .should('contain', 'Acrobacias +5')
-      .should('contain', 'Artesanía (Herrería) +1')
+      .should('contain', 'Artesanía (Herrería) +4')
       .should('contain', 'Idiomas: común, élfico');
 
     // El arma guardada como array en el JSONB
@@ -177,6 +184,11 @@ describe('pathfinder-app-e2e', () => {
     cy.get('.characters__modal')
       .should('contain', 'total 15 po')
       .should('contain', 'PX 3400 / 5000 (faltan 1600)');
+
+    // Conjuros: CD y adicionales derivados de INT 16
+    cy.get('.characters__modal')
+      .should('contain', 'Nivel 1: CD 14 · 2/día · +1 adicionales')
+      .should('contain', 'proyectil mágico');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();

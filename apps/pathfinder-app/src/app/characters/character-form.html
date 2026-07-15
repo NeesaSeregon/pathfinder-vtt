@@ -704,6 +704,61 @@
     </label>
   </fieldset>
 
+  <fieldset class="character-form__armas">
+    <legend>Conjuros</legend>
+
+    <div class="character-form__formula">
+      <label>
+        Atributo de lanzamiento
+        <select name="atributo-lanzamiento" [(ngModel)]="form.atributoLanzamiento">
+          <option value="">— (no lanzador)</option>
+          @for (atributo of atributosLanzamiento; track atributo) {
+            <option [value]="atributo">{{ atributoLabels[atributo] }}</option>
+          }
+        </select>
+      </label>
+      <label class="character-form__arma-nombre">
+        Dominios / escuela de especialidad
+        <input type="text" maxlength="200" name="dominios-escuela" [(ngModel)]="form.dominiosEscuela" />
+      </label>
+    </div>
+
+    <div class="character-form__conjuros-grid">
+      <span class="character-form__habilidades-head">Nivel</span>
+      <span class="character-form__habilidades-head">Conocidos</span>
+      <span class="character-form__habilidades-head">CD salv.</span>
+      <span class="character-form__habilidades-head">Por día</span>
+      <span class="character-form__habilidades-head">Adicionales</span>
+      <span class="character-form__habilidades-head character-form__habilidades-head--nombre">
+        Conjuros anotados
+      </span>
+      @for (nivel of nivelesConjuro; track nivel) {
+        <span class="character-form__habilidad-nombre">
+          {{ nivel === 0 ? '0' : nivel + 'º' }}
+        </span>
+        <input type="number" min="0"
+          [name]="'conjuros' + nivel + '-conocidos'"
+          [attr.name]="'conjuros' + nivel + '-conocidos'"
+          [(ngModel)]="form.conjurosNiveles[nivel].conocidos" />
+        <output>{{ cdDeNivel(nivel) }}</output>
+        <input type="number" min="0"
+          [name]="'conjuros' + nivel + '-pordia'"
+          [attr.name]="'conjuros' + nivel + '-pordia'"
+          [(ngModel)]="form.conjurosNiveles[nivel].porDia" />
+        <output>{{ adicionalesDeNivel(nivel) }}</output>
+        <input type="text" maxlength="300"
+          [name]="'conjuros' + nivel + '-anotados'"
+          [attr.name]="'conjuros' + nivel + '-anotados'"
+          [(ngModel)]="form.conjurosNiveles[nivel].anotados" />
+      }
+    </div>
+
+    <label class="character-form__velocidad-temporales">
+      Modificadores condicionales
+      <input type="text" maxlength="300" name="conjuros-condicionales" [(ngModel)]="form.conjurosCondicionales" />
+    </label>
+  </fieldset>
+
   <button type="submit" [disabled]="!form.name().trim()">
     {{ submitLabel() }}
   </button>

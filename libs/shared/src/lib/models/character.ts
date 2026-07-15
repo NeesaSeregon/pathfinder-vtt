@@ -595,6 +595,62 @@ export function experienciaFaltante(sheet: CharacterSheetData): number | null {
   return Math.max(0, experiencia.siguienteNivel - experiencia.actual);
 }
 
+/** Atributo con el que lanza conjuros cada clase: INT mago, SAB clérigo... */
+export const ATRIBUTOS_LANZAMIENTO = [
+  'inteligencia',
+  'sabiduria',
+  'carisma',
+] as const;
+
+export type AtributoLanzamiento = (typeof ATRIBUTOS_LANZAMIENTO)[number];
+
+export interface NivelDeConjuros {
+  conocidos?: number;
+  porDia?: number;
+  /** Conjuros anotados en las líneas de ese nivel (dominio/escuela...). */
+  anotados?: string;
+}
+
+export interface ConjurosValores {
+  atributoLanzamiento?: AtributoLanzamiento;
+  /** Clave: nivel de conjuro "0".."9". */
+  niveles?: Record<string, NivelDeConjuros>;
+  condicionales?: string;
+  dominiosEscuela?: string;
+}
+
+/** CD de salvación = 10 + nivel del conjuro + mod. del atributo de lanzamiento. */
+export function cdConjuro(
+  sheet: CharacterSheetData,
+  nivel: number,
+): number | null {
+  const atributo = sheet.conjuros?.atributoLanzamiento;
+  if (!atributo) {
+    return null;
+  }
+  return 10 + nivel + modificadorDeAtributo(sheet, atributo);
+}
+
+/**
+ * Conjuros adicionales por atributo alto (tabla del Core como fórmula):
+ * si mod >= nivel, ⌊(mod - nivel) / 4⌋ + 1; si no, 0. El nivel 0 nunca
+ * da adicionales (el — de la ficha).
+ */
+export function conjurosAdicionales(
+  sheet: CharacterSheetData,
+  nivel: number,
+): number | null {
+  const atributo = sheet.conjuros?.atributoLanzamiento;
+  if (!atributo || nivel === 0) {
+    return null;
+  }
+  const mod = modificadorDeAtributo(sheet, atributo);
+  if (mod < nivel) {
+    return 0;
+  }
+  return Math.floor((mod - nivel) / 4) + 1;
+}
+
 export const SALVACIONES = ['fortaleza', 'reflejos', 'voluntad'] as const;
 
 export type Salvacion = (typeof SALVACIONES)[number];
@@ -731,6 +787,7 @@ export interface CharacterSheetData {
   aptitudesEspeciales?: string;
   dinero?: DineroValores;
   experiencia?: ExperienciaValores;
+  conjuros?: ConjurosValores;
   /** Caja "Modificadores condicionales" al pie de la tabla de habilidades. */
   habilidadesNotas?: string;
   idiomas?: string;

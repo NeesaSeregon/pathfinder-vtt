@@ -5,6 +5,8 @@ import {
   bmc,
   bonificadorHabilidad,
   cargaActual,
+  cdConjuro,
+  conjurosAdicionales,
   dmc,
   experienciaFaltante,
   HABILIDADES,
@@ -208,6 +210,27 @@ export class CharactersPage {
         arma.municion && `munición ${arma.municion}`,
       ].filter(Boolean);
       return `${arma.nombre ?? 'Arma sin nombre'} — ${detalles.join(' · ')}`;
+    });
+  }
+
+  /** Líneas de conjuros por nivel con CD y adicionales derivados. */
+  protected conjurosDe(character: Character): string[] {
+    const conjuros = character.sheetData.conjuros;
+    if (!conjuros?.niveles) {
+      return [];
+    }
+    return Object.entries(conjuros.niveles).map(([nivel, valores]) => {
+      const n = Number(nivel);
+      const partes = [
+        valores.conocidos !== undefined && `${valores.conocidos} conocidos`,
+        cdConjuro(character.sheetData, n) !== null &&
+          `CD ${cdConjuro(character.sheetData, n)}`,
+        valores.porDia !== undefined && `${valores.porDia}/día`,
+        (conjurosAdicionales(character.sheetData, n) ?? 0) > 0 &&
+          `+${conjurosAdicionales(character.sheetData, n)} adicionales`,
+        valores.anotados,
+      ].filter(Boolean);
+      return `Nivel ${nivel}: ${partes.join(' · ')}`;
     });
   }
 

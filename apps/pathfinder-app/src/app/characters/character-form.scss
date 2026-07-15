@@ -265,6 +265,24 @@
     resize: vertical;
   }
 
+  &__conjuros-grid {
+    display: grid;
+    grid-template-columns: 3rem 5rem 4rem 5rem 5.5rem minmax(12rem, 1fr);
+    gap: 0.3rem 0.75rem;
+    align-items: center;
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    output {
+      text-align: center;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+
   &__habilidades {
     grid-column: 1 / -1;
     border: 1px solid #ccc;

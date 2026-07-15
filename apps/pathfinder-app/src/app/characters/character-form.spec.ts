@@ -46,7 +46,15 @@ type CharacterFormInterno = {
     dinero: Record<string, { set(v: number | null): void }>;
     experienciaActual: { set(v: number | null): void };
     experienciaSiguienteNivel: { set(v: number | null): void };
+    atributoLanzamiento: { set(v: string): void };
+    conjurosNiveles: {
+      conocidos: { set(v: number | null): void };
+      porDia: { set(v: number | null): void };
+      anotados: { set(v: string): void };
+    }[];
   };
+  cdDeNivel(nivel: number): string;
+  adicionalesDeNivel(nivel: number): string;
   agregarArma(): void;
   quitarArma(indice: number): void;
   agregarEquipo(): void;
@@ -256,6 +264,23 @@ describe('CharacterForm', () => {
     expect(emitido?.sheetData.experiencia).toEqual({
       actual: 3400,
       siguienteNivel: 5000,
+    });
+  });
+
+  it('deriva CD y adicionales de conjuro del atributo de lanzamiento', () => {
+    interno.form.atributos['inteligencia'].puntuacion.set(18); // +4
+    interno.form.atributoLanzamiento.set('inteligencia');
+    interno.form.conjurosNiveles[1].porDia.set(2);
+
+    expect(interno.cdDeNivel(1)).toBe('15'); // 10 + 1 + 4
+    expect(interno.adicionalesDeNivel(1)).toBe('1');
+    expect(interno.adicionalesDeNivel(0)).toBe('—');
+
+    interno.form.name.set('Ezren');
+    interno.submit();
+    expect(emitido?.sheetData.conjuros).toEqual({
+      atributoLanzamiento: 'inteligencia',
+      niveles: { '1': { porDia: 2 } },
     });
   });
 

@@ -14,12 +14,17 @@ import {
   ArmaValores,
   ATRIBUTO_ABREV,
   ATRIBUTO_LABELS,
+  AtributoLanzamiento,
   ATRIBUTOS,
+  ATRIBUTOS_LANZAMIENTO,
   bmc,
   bonificadorHabilidad,
   capacidadDeCarga,
   CapacidadDeCarga,
   cargaActual,
+  cdConjuro,
+  ConjurosValores,
+  conjurosAdicionales,
   DineroValores,
   dmc,
   EquipoItem,
@@ -45,6 +50,7 @@ import {
   modificadorDeAtributo,
   modificadorTamano,
   modificadorTamanoManiobras,
+  NivelDeConjuros,
   ObjetoCaValores,
   pesoMonedas,
   pesoTotal,
@@ -67,6 +73,22 @@ import {
 } from '@pathfinder/shared';
 
 const CAMPOS_DINERO = ['pc', 'pp', 'po', 'ppr'] as const;
+
+export const NIVELES_CONJURO = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+
+interface NivelConjurosForm {
+  conocidos: WritableSignal<number | null>;
+  porDia: WritableSignal<number | null>;
+  anotados: WritableSignal<string>;
+}
+
+function crearConjurosForm(): NivelConjurosForm[] {
+  return NIVELES_CONJURO.map(() => ({
+    conocidos: signal<number | null>(null),
+    porDia: signal<number | null>(null),
+    anotados: signal(''),
+  }));
+}
 
 const CAMPOS_SALVACION = ['base', 'modMagico', 'modVario', 'modTemporal'] as const;
 
@@ -290,6 +312,10 @@ export class CharacterForm {
     },
     experienciaActual: signal<number | null>(null),
     experienciaSiguienteNivel: signal<number | null>(null),
+    atributoLanzamiento: signal<AtributoLanzamiento | ''>(''),
+    conjurosNiveles: crearConjurosForm(),
+    conjurosCondicionales: signal(''),
+    dominiosEscuela: signal(''),
     velocidad: crearVelocidadForm(),
     pgTotal: signal<number | null>(null),
     pgRd: signal(''),
@@ -395,6 +421,20 @@ export class CharacterForm {
   protected readonly pxFaltantes = computed(() =>
     experienciaFaltante(this.buildSheetData()),
   );
+
+  protected readonly nivelesConjuro = NIVELES_CONJURO;
+  protected readonly atributosLanzamiento = ATRIBUTOS_LANZAMIENTO;
+
+  /** CD y adicionales por nivel de conjuro, en vivo; — sin lanzador. */
+  protected cdDeNivel(nivel: number): string {
+    const cd = cdConjuro(this.buildSheetData(), nivel);
+    return cd === null ? '—' : `${cd}`;
+  }
+
+  protected adicionalesDeNivel(nivel: number): string {
+    const adicionales = conjurosAdicionales(this.buildSheetData(), nivel);
+    return adicionales === null ? '—' : `${adicionales}`;
+  }
 
   /** Sumando de una casilla manual, con signo; vacía cuenta como +0. */
   protected sumando(valor: number | null): string {
@@ -628,6 +668,13 @@ export class CharacterForm {
       delete sheet.experiencia;
     }
 
+    const conjuros = this.buildConjuros();
+    if (Object.keys(conjuros).length > 0) {
+      sheet.conjuros = conjuros;
+    } else {
+      delete sheet.conjuros;
+    }
+
     const pg: PgValores = {};
     const pgTotal = this.form.pgTotal();
     if (pgTotal !== null) {
@@ -659,6 +706,44 @@ export class CharacterForm {
       })
       // Las filas añadidas pero dejadas en blanco no se guardan
       .filter((arma) => Object.keys(arma).length > 0);
+  }
+
+  private buildConjuros(): ConjurosValores {
+    const conjuros: ConjurosValores = {};
+    const atributoLanzamiento = this.form.atributoLanzamiento();
+    if (atributoLanzamiento) {
+      conjuros.atributoLanzamiento = atributoLanzamiento;
+    }
+    const niveles: Record<string, NivelDeConjuros> = {};
+    for (const nivel of NIVELES_CONJURO) {
+      const fila = this.form.conjurosNiveles[nivel];
+      const valores: NivelDeConjuros = {};
+      if (fila.conocidos() !== null) {
+        valores.conocidos = fila.conocidos() as number;
+      }
+      if (fila.porDia() !== null) {
+        valores.porDia = fila.porDia() as number;
+      }
+      const anotados = fila.anotados().trim();
+      if (anotados) {
+        valores.anotados = anotados;
+      }
+      if (Object.keys(valores).length > 0) {
+        niveles[`${nivel}`] = valores;
+      }
+    }
+    if (Object.keys(niveles).length > 0) {
+      conjuros.niveles = niveles;
+    }
+    const condicionales = this.form.conjurosCondicionales().trim();
+    if (condicionales) {
+      conjuros.condicionales = condicionales;
+    }
+    const dominiosEscuela = this.form.dominiosEscuela().trim();
+    if (dominiosEscuela) {
+      conjuros.dominiosEscuela = dominiosEscuela;
+    }
+    return conjuros;
   }
 
   private buildObjetosCa(): ObjetoCaValores[] {
@@ -857,6 +942,17 @@ export class CharacterForm {
     this.form.experienciaSiguienteNivel.set(
       sheet.experiencia?.siguienteNivel ?? null,
     );
+    this.form.atributoLanzamiento.set(
+      sheet.conjuros?.atributoLanzamiento ?? '',
+    );
+    for (const nivel of NIVELES_CONJURO) {
+      const valores = sheet.conjuros?.niveles?.[`${nivel}`];
+      this.form.conjurosNiveles[nivel].conocidos.set(valores?.conocidos ?? null);
+      this.form.conjurosNiveles[nivel].porDia.set(valores?.porDia ?? null);
+      this.form.conjurosNiveles[nivel].anotados.set(valores?.anotados ?? '');
+    }
+    this.form.conjurosCondicionales.set(sheet.conjuros?.condicionales ?? '');
+    this.form.dominiosEscuela.set(sheet.conjuros?.dominiosEscuela ?? '');
     for (const campo of CAMPOS_VELOCIDAD_PIES) {
       this.form.velocidad[campo].set(sheet.velocidad?.[campo] ?? null);
     }

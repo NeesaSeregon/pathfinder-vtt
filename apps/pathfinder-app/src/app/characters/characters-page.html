@@ -122,6 +122,18 @@
             @if (experienciaResumen(character); as experiencia) {
               <p class="characters__modal-velocidad">{{ experiencia }}</p>
             }
+            @if (conjurosDe(character).length > 0) {
+              <ul class="characters__modal-armas">
+                @for (linea of conjurosDe(character); track linea) {
+                  <li>{{ linea }}</li>
+                }
+              </ul>
+            }
+            @if (character.sheetData.conjuros?.dominiosEscuela; as dominios) {
+              <p class="characters__modal-velocidad">
+                Dominios/escuela: {{ dominios }}
+              </p>
+            }
           } @else if (pgResumen(character)) {
             <p class="characters__modal-combate">{{ pgResumen(character) }}</p>
           }

@@ -5,6 +5,8 @@ import {
   caDesprevenido,
   capacidadDeCarga,
   cargaActual,
+  cdConjuro,
+  conjurosAdicionales,
   dmc,
   experienciaFaltante,
   HABILIDADES,
@@ -456,6 +458,40 @@ describe('pesoTotal y cargaActual', () => {
         ],
       }),
     ).toEqual({ bonif: 8, penalizador: -6, peso: 55 });
+  });
+});
+
+describe('conjuros', () => {
+  const mago = {
+    atributos: { inteligencia: { puntuacion: 18 } }, // +4
+    conjuros: { atributoLanzamiento: 'inteligencia' as const },
+  };
+
+  it('CD = 10 + nivel del conjuro + mod. de lanzamiento', () => {
+    expect(cdConjuro(mago, 0)).toBe(14);
+    expect(cdConjuro(mago, 1)).toBe(15);
+    expect(cdConjuro(mago, 9)).toBe(23);
+    // Sin atributo de lanzamiento elegido, no hay CD que derivar
+    expect(cdConjuro({}, 1)).toBeNull();
+  });
+
+  it('conjuros adicionales: la tabla del Core como fórmula', () => {
+    // INT 18 (+4): +1 adicional en niveles 1 a 4, ninguno en 5+
+    expect(conjurosAdicionales(mago, 1)).toBe(1);
+    expect(conjurosAdicionales(mago, 4)).toBe(1);
+    expect(conjurosAdicionales(mago, 5)).toBe(0);
+  });
+
+  it('con un atributo altísimo, más adicionales en los niveles bajos', () => {
+    const archimago = {
+      atributos: { inteligencia: { puntuacion: 20 } }, // +5
+      conjuros: { atributoLanzamiento: 'inteligencia' as const },
+    };
+    expect(conjurosAdicionales(archimago, 1)).toBe(2);
+  });
+
+  it('el nivel 0 nunca da adicionales (el — de la ficha)', () => {
+    expect(conjurosAdicionales(mago, 0)).toBeNull();
   });
 });
 
