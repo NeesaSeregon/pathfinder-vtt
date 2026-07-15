@@ -125,6 +125,55 @@ export function iniciativa(sheet: CharacterSheetData): number {
 }
 
 /**
+ * Grados de maniobrabilidad de vuelo (PF1e). Cada uno da un modificador
+ * a la habilidad Volar: torpe -8, pobre -4, normal +0, buena +4, perfecta +8.
+ */
+export const MANIOBRABILIDADES = [
+  'torpe',
+  'pobre',
+  'normal',
+  'buena',
+  'perfecta',
+] as const;
+
+export type Maniobrabilidad = (typeof MANIOBRABILIDADES)[number];
+
+export const MODIFICADOR_MANIOBRABILIDAD: Record<Maniobrabilidad, number> = {
+  torpe: -8,
+  pobre: -4,
+  normal: 0,
+  buena: 4,
+  perfecta: 8,
+};
+
+/**
+ * Velocidades en PIES (la unidad nativa del juego); casillas y metros se
+ * derivan. "conArmadura" es manual: depende de la armadura equipada (tabla
+ * irregular + excepciones raciales), que aún no modelamos.
+ * "modTemporales" es texto libre, como la caja de la ficha de papel.
+ */
+export interface VelocidadValores {
+  base?: number;
+  conArmadura?: number;
+  volar?: number;
+  maniobrabilidad?: Maniobrabilidad;
+  nadar?: number;
+  trepar?: number;
+  excavar?: number;
+  modTemporales?: string;
+}
+
+/** 1 casilla del tablero = 5 pies. */
+export function casillas(pies: number): number {
+  return Math.floor(pies / 5);
+}
+
+/** Conversión de la edición española: 1 casilla (5 pies) = 1,5 m. */
+export function piesAMetros(pies: number): number {
+  return pies * 0.3;
+}
+
+/**
  * Contenido flexible de la ficha de personaje. Se guarda como JSONB en
  * PostgreSQL, así que añadir campos aquí NO requiere migraciones ni cambios
  * en la API: solo tipado (este fichero) y formulario (front).
@@ -133,6 +182,7 @@ export function iniciativa(sheet: CharacterSheetData): number {
 export interface CharacterSheetData {
   atributos?: CharacterAtributos;
   combate?: CombateValores;
+  velocidad?: VelocidadValores;
   jugador?: string;
   clase?: string;
   alineamiento?: Alineamiento;

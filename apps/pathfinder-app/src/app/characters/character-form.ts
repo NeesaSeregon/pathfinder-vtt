@@ -17,13 +17,46 @@ import {
   CharacterAtributos,
   CharacterSheetData,
   CharacterUpsert,
+  casillas,
   claseDeArmadura,
   CombateValores,
   conSigno,
   formatearModificador,
   iniciativa,
+  Maniobrabilidad,
+  MANIOBRABILIDADES,
   modificadorDeAtributo,
+  piesAMetros,
+  VelocidadValores,
 } from '@pathfinder/shared';
+
+const CAMPOS_VELOCIDAD_PIES = [
+  'base',
+  'conArmadura',
+  'volar',
+  'nadar',
+  'trepar',
+  'excavar',
+] as const;
+
+type VelocidadForm = Record<
+  (typeof CAMPOS_VELOCIDAD_PIES)[number],
+  WritableSignal<number | null>
+> & {
+  maniobrabilidad: WritableSignal<Maniobrabilidad | ''>;
+  modTemporales: WritableSignal<string>;
+};
+
+function crearVelocidadForm(): VelocidadForm {
+  const form = {
+    maniobrabilidad: signal<Maniobrabilidad | ''>(''),
+    modTemporales: signal(''),
+  } as VelocidadForm;
+  for (const campo of CAMPOS_VELOCIDAD_PIES) {
+    form[campo] = signal<number | null>(null);
+  }
+  return form;
+}
 
 const CAMPOS_COMBATE = [
   'bonifArmadura',
@@ -88,9 +121,12 @@ export class CharacterForm {
   protected readonly atributoLabels = ATRIBUTO_LABELS;
   protected readonly modificador = formatearModificador;
 
+  protected readonly maniobrabilidades = MANIOBRABILIDADES;
+
   protected readonly form = {
     atributos: crearAtributosForm(),
     combate: crearCombateForm(),
+    velocidad: crearVelocidadForm(),
     name: signal(''),
     level: signal(1),
     jugador: signal(''),
@@ -126,6 +162,14 @@ export class CharacterForm {
     // Cada vez que cambia `initial` (abrir la edición de otro personaje,
     // o ninguno), el formulario se rellena o se vacía.
     effect(() => this.applyInitial(this.initial()));
+  }
+
+  /** "6 cas. / 9 m" a partir de pies, o — si la casilla está vacía. */
+  protected enCasillasYMetros(pies: number | null): string {
+    if (pies === null) {
+      return '—';
+    }
+    return `${casillas(pies)} cas. / ${piesAMetros(pies)} m`;
   }
 
   reset(): void {
@@ -192,7 +236,33 @@ export class CharacterForm {
     } else {
       delete sheet.combate;
     }
+
+    const velocidad = this.buildVelocidad();
+    if (Object.keys(velocidad).length > 0) {
+      sheet.velocidad = velocidad;
+    } else {
+      delete sheet.velocidad;
+    }
     return sheet;
+  }
+
+  private buildVelocidad(): VelocidadValores {
+    const velocidad: VelocidadValores = {};
+    for (const campo of CAMPOS_VELOCIDAD_PIES) {
+      const valor = this.form.velocidad[campo]();
+      if (valor !== null) {
+        velocidad[campo] = valor;
+      }
+    }
+    const maniobrabilidad = this.form.velocidad.maniobrabilidad();
+    if (maniobrabilidad) {
+      velocidad.maniobrabilidad = maniobrabilidad;
+    }
+    const modTemporales = this.form.velocidad.modTemporales().trim();
+    if (modTemporales) {
+      velocidad.modTemporales = modTemporales;
+    }
+    return velocidad;
   }
 
   private buildCombate(): CombateValores {
@@ -247,5 +317,12 @@ export class CharacterForm {
     for (const campo of CAMPOS_COMBATE) {
       this.form.combate[campo].set(sheet.combate?.[campo] ?? null);
     }
+    for (const campo of CAMPOS_VELOCIDAD_PIES) {
+      this.form.velocidad[campo].set(sheet.velocidad?.[campo] ?? null);
+    }
+    this.form.velocidad.maniobrabilidad.set(
+      sheet.velocidad?.maniobrabilidad ?? '',
+    );
+    this.form.velocidad.modTemporales.set(sheet.velocidad?.modTemporales ?? '');
   }
 }

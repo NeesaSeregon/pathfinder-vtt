@@ -55,6 +55,11 @@
               {{ iniciativaDe(character) }}
             </p>
           }
+          @if (velocidadResumen(character).length > 0) {
+            <p class="characters__modal-velocidad">
+              Velocidad: {{ velocidadResumen(character).join(' · ') }}
+            </p>
+          }
           @if (sheetEntries(character).length > 0) {
             <dl class="characters__modal-sheet">
               @for (entry of sheetEntries(character); track entry.label) {

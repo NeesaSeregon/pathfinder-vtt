@@ -33,6 +33,10 @@ describe('pathfinder-app-e2e', () => {
       '+1',
     );
 
+    // Velocidad: 30 pies → 6 casillas / 9 m, derivado en vivo
+    cy.get('input[name="velocidad-base"]').type('30');
+    cy.get('.character-form__velocidad').should('contain', '6 cas. / 9 m');
+
     cy.get('button[type="submit"]').click();
     cy.contains('li', name).should('contain', 'Nivel 7');
 
@@ -56,6 +60,12 @@ describe('pathfinder-app-e2e', () => {
     cy.get('.characters__modal-combate')
       .should('contain', 'CA 16')
       .should('contain', 'Iniciativa +1');
+
+    // Velocidad guardada en pies, mostrada con sus derivados
+    cy.get('.characters__modal-velocidad').should(
+      'contain',
+      'Base 30 pies (6 cas. / 9 m)',
+    );
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();

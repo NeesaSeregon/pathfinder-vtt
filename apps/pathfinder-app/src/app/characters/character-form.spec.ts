@@ -20,9 +20,11 @@ type CharacterFormInterno = {
       }
     >;
     combate: Record<string, { set(v: number | null): void }>;
+    velocidad: Record<string, { set(v: number | string | null): void }>;
   };
   caTotal(): number;
   iniciativaTotal(): string;
+  enCasillasYMetros(pies: number | null): string;
   submit(): void;
 };
 
@@ -152,6 +154,23 @@ describe('CharacterForm', () => {
     interno.form.atributos['destreza'].puntuacion.set(9);
     expect(interno.caTotal()).toBe(14);
     expect(interno.iniciativaTotal()).toBe('+1');
+  });
+
+  it('guarda solo las velocidades rellenas y deriva casillas y metros', () => {
+    interno.form.name.set('Valeros');
+    interno.form.velocidad['base'].set(30);
+    interno.form.velocidad['volar'].set(60);
+    interno.form.velocidad['maniobrabilidad'].set('buena');
+    interno.submit();
+
+    expect(emitido?.sheetData.velocidad).toEqual({
+      base: 30,
+      volar: 60,
+      maniobrabilidad: 'buena',
+    });
+    // Casillas y metros son derivados, no persistidos
+    expect(interno.enCasillasYMetros(30)).toBe('6 cas. / 9 m');
+    expect(interno.enCasillasYMetros(null)).toBe('—');
   });
 
   it('pinta el modificador calculado en la plantilla', async () => {

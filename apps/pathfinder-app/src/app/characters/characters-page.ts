@@ -2,6 +2,7 @@ import { Component, inject, signal, viewChild } from '@angular/core';
 import {
   ATRIBUTO_LABELS,
   ATRIBUTOS,
+  casillas,
   Character,
   CharacterSheetData,
   CharacterUpsert,
@@ -9,6 +10,7 @@ import {
   conSigno,
   formatearModificador,
   iniciativa,
+  piesAMetros,
 } from '@pathfinder/shared';
 import { CharactersApi } from './characters-api';
 import { CharacterForm } from './character-form';
@@ -144,6 +146,43 @@ export class CharactersPage {
     return Boolean(
       character.sheetData.combate || character.sheetData.atributos?.destreza,
     );
+  }
+
+  /** Resumen de velocidades para la modal: solo los modos rellenos. */
+  protected velocidadResumen(character: Character): string[] {
+    const velocidad = character.sheetData.velocidad;
+    if (!velocidad) {
+      return [];
+    }
+    const pies = (n: number) =>
+      `${n} pies (${casillas(n)} cas. / ${piesAMetros(n)} m)`;
+
+    const partes: string[] = [];
+    if (velocidad.base !== undefined) {
+      partes.push(`Base ${pies(velocidad.base)}`);
+    }
+    if (velocidad.conArmadura !== undefined) {
+      partes.push(`Con armadura ${pies(velocidad.conArmadura)}`);
+    }
+    if (velocidad.volar !== undefined) {
+      const grado = velocidad.maniobrabilidad
+        ? `, ${velocidad.maniobrabilidad}`
+        : '';
+      partes.push(`Volar ${pies(velocidad.volar)}${grado}`);
+    }
+    if (velocidad.nadar !== undefined) {
+      partes.push(`Nadar ${pies(velocidad.nadar)}`);
+    }
+    if (velocidad.trepar !== undefined) {
+      partes.push(`Trepar ${pies(velocidad.trepar)}`);
+    }
+    if (velocidad.excavar !== undefined) {
+      partes.push(`Excavar ${pies(velocidad.excavar)}`);
+    }
+    if (velocidad.modTemporales) {
+      partes.push(`Temporales: ${velocidad.modTemporales}`);
+    }
+    return partes;
   }
 
   /** Filas de atributos que el personaje tiene rellenas, para la modal. */

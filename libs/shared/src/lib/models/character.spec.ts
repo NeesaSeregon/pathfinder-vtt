@@ -1,8 +1,11 @@
 import {
+  casillas,
   claseDeArmadura,
   formatearModificador,
   iniciativa,
+  MODIFICADOR_MANIOBRABILIDAD,
   modificadorDeCaracteristica,
+  piesAMetros,
 } from './character';
 
 describe('modificadorDeCaracteristica', () => {
@@ -104,5 +107,24 @@ describe('iniciativa', () => {
 
   it('ignora los modificadores varios de la CA', () => {
     expect(iniciativa({ combate: { modVarioCa: 4 } })).toBe(0);
+  });
+});
+
+describe('velocidad', () => {
+  it('convierte pies a casillas (1 casilla = 5 pies)', () => {
+    expect(casillas(30)).toBe(6); // humano
+    expect(casillas(20)).toBe(4); // enano
+    expect(casillas(15)).toBe(3); // con armadura pesada sobre base 20
+  });
+
+  it('convierte pies a metros (1 casilla = 1,5 m, edición española)', () => {
+    expect(piesAMetros(30)).toBe(9);
+    expect(piesAMetros(20)).toBe(6);
+  });
+
+  it('la maniobrabilidad da su modificador a la habilidad Volar', () => {
+    expect(MODIFICADOR_MANIOBRABILIDAD.torpe).toBe(-8);
+    expect(MODIFICADOR_MANIOBRABILIDAD.normal).toBe(0);
+    expect(MODIFICADOR_MANIOBRABILIDAD.perfecta).toBe(8);
   });
 });

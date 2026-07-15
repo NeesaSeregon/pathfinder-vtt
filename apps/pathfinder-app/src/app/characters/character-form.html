@@ -150,6 +150,67 @@
     </div>
   </fieldset>
 
+  <fieldset class="character-form__velocidad">
+    <legend>Velocidad (tierra)</legend>
+
+    <div class="character-form__formula">
+      <label>
+        Base (pies)
+        <input type="number" name="velocidad-base" min="0" step="5" [(ngModel)]="form.velocidad.base" />
+      </label>
+      <label>
+        Cas. / m
+        <output>{{ enCasillasYMetros(form.velocidad.base()) }}</output>
+      </label>
+      <label>
+        Con armadura (pies)
+        <input type="number" name="velocidad-armadura" min="0" step="5" [(ngModel)]="form.velocidad.conArmadura" />
+      </label>
+      <label>
+        Cas. / m
+        <output>{{ enCasillasYMetros(form.velocidad.conArmadura()) }}</output>
+      </label>
+    </div>
+
+    <div class="character-form__formula">
+      <label>
+        Volar (pies)
+        <input type="number" name="velocidad-volar" min="0" step="5" [(ngModel)]="form.velocidad.volar" />
+      </label>
+      <label>
+        Maniobrabilidad
+        <select name="velocidad-maniobrabilidad" [(ngModel)]="form.velocidad.maniobrabilidad">
+          <option value="">—</option>
+          @for (grado of maniobrabilidades; track grado) {
+            <option [value]="grado">{{ grado }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Nadar (pies)
+        <input type="number" name="velocidad-nadar" min="0" step="5" [(ngModel)]="form.velocidad.nadar" />
+      </label>
+      <label>
+        Trepar (pies)
+        <input type="number" name="velocidad-trepar" min="0" step="5" [(ngModel)]="form.velocidad.trepar" />
+      </label>
+      <label>
+        Excavar (pies)
+        <input type="number" name="velocidad-excavar" min="0" step="5" [(ngModel)]="form.velocidad.excavar" />
+      </label>
+    </div>
+
+    <label class="character-form__velocidad-temporales">
+      Mod. temporales (apresuramiento, lentitud, enredado...)
+      <input
+        type="text"
+        name="velocidad-temporales"
+        maxlength="200"
+        [(ngModel)]="form.velocidad.modTemporales"
+      />
+    </label>
+  </fieldset>
+
   <button type="submit" [disabled]="!form.name().trim()">
     {{ submitLabel() }}
   </button>
