@@ -1,12 +1,42 @@
-import { Component, effect, input, output, signal } from '@angular/core';
+import {
+  Component,
+  effect,
+  input,
+  output,
+  signal,
+  WritableSignal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   ALINEAMIENTOS,
   Alineamiento,
+  ATRIBUTO_LABELS,
+  ATRIBUTOS,
   Character,
+  CharacterAtributos,
   CharacterSheetData,
   CharacterUpsert,
+  formatearModificador,
 } from '@pathfinder/shared';
+
+type AtributosForm = Record<
+  (typeof ATRIBUTOS)[number],
+  {
+    puntuacion: WritableSignal<number | null>;
+    ajusteTemporal: WritableSignal<number | null>;
+  }
+>;
+
+function crearAtributosForm(): AtributosForm {
+  const form = {} as AtributosForm;
+  for (const atributo of ATRIBUTOS) {
+    form[atributo] = {
+      puntuacion: signal<number | null>(null),
+      ajusteTemporal: signal<number | null>(null),
+    };
+  }
+  return form;
+}
 
 /**
  * Formulario de personaje reutilizable: sin `initial` es un alta vacía;
@@ -25,8 +55,12 @@ export class CharacterForm {
   readonly save = output<CharacterUpsert>();
 
   protected readonly alineamientos = ALINEAMIENTOS;
+  protected readonly atributos = ATRIBUTOS;
+  protected readonly atributoLabels = ATRIBUTO_LABELS;
+  protected readonly modificador = formatearModificador;
 
   protected readonly form = {
+    atributos: crearAtributosForm(),
     name: signal(''),
     level: signal(1),
     jugador: signal(''),
@@ -99,7 +133,29 @@ export class CharacterForm {
         sheet[key] = value;
       }
     }
+
+    const atributos = this.buildAtributos();
+    if (Object.keys(atributos).length > 0) {
+      sheet.atributos = atributos;
+    } else {
+      delete sheet.atributos;
+    }
     return sheet;
+  }
+
+  private buildAtributos(): CharacterAtributos {
+    const atributos: CharacterAtributos = {};
+    for (const atributo of ATRIBUTOS) {
+      const puntuacion = this.form.atributos[atributo].puntuacion();
+      const ajusteTemporal = this.form.atributos[atributo].ajusteTemporal();
+      if (puntuacion !== null || ajusteTemporal !== null) {
+        atributos[atributo] = {
+          ...(puntuacion !== null ? { puntuacion } : {}),
+          ...(ajusteTemporal !== null ? { ajusteTemporal } : {}),
+        };
+      }
+    }
+    return atributos;
   }
 
   private applyInitial(character: Character | null): void {
@@ -118,5 +174,12 @@ export class CharacterForm {
     this.form.peso.set(sheet.peso ?? '');
     this.form.cabello.set(sheet.cabello ?? '');
     this.form.ojos.set(sheet.ojos ?? '');
+    for (const atributo of ATRIBUTOS) {
+      const valor = sheet.atributos?.[atributo];
+      this.form.atributos[atributo].puntuacion.set(valor?.puntuacion ?? null);
+      this.form.atributos[atributo].ajusteTemporal.set(
+        valor?.ajusteTemporal ?? null,
+      );
+    }
   }
 }

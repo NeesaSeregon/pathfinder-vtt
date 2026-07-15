@@ -16,6 +16,13 @@ describe('pathfinder-app-e2e', () => {
     cy.get('input[name="raza"]').type('Elfo');
     cy.get('input[name="level"]').clear();
     cy.get('input[name="level"]').type('7');
+
+    // Atributos: el modificador se calcula en vivo al escribir
+    cy.get('input[name="fuerza-puntuacion"]').type('18');
+    cy.get('.character-form__atributos-grid').should('contain', '+4');
+    cy.get('input[name="fuerza-ajuste"]').type('20');
+    cy.get('input[name="destreza-puntuacion"]').type('9');
+
     cy.get('button[type="submit"]').click();
     cy.contains('li', name).should('contain', 'Nivel 7');
 
@@ -24,6 +31,16 @@ describe('pathfinder-app-e2e', () => {
     cy.contains('li', name).contains('button', 'Ver ficha').click();
     cy.get('.characters__modal').should('contain', 'legal bueno');
     cy.get('.characters__modal').should('contain', 'Elfo');
+
+    // Atributos guardados: puntuación 18 → +4, ajuste 20 → +5, 9 → -1
+    cy.contains('.characters__modal-atributos tr', 'Fuerza')
+      .should('contain', '18')
+      .should('contain', '+4')
+      .should('contain', '20')
+      .should('contain', '+5');
+    cy.contains('.characters__modal-atributos tr', 'Destreza')
+      .should('contain', '9')
+      .should('contain', '-1');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();

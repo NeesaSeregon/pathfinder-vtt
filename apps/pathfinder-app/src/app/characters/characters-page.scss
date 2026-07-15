@@ -78,6 +78,33 @@
     margin-top: 0;
   }
 
+  &__modal-atributos {
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+
+    th,
+    td {
+      padding: 0.25rem 0.75rem;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+    }
+
+    thead th {
+      font-size: 0.75rem;
+      color: #666;
+    }
+
+    tbody th {
+      text-align: left;
+      color: #444;
+    }
+
+    td:nth-child(3),
+    td:nth-child(5) {
+      font-weight: 600;
+    }
+  }
+
   &__modal-sheet {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));

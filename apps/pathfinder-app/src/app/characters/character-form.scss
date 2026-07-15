@@ -20,4 +20,47 @@
   button {
     padding: 0.45rem 1rem;
   }
+
+  &__atributos {
+    grid-column: 1 / -1;
+    border: 1px solid #ccc;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+
+    legend {
+      font-size: 0.85rem;
+      color: #444;
+      padding: 0 0.25rem;
+    }
+  }
+
+  &__atributos-grid {
+    display: grid;
+    grid-template-columns: minmax(7rem, auto) repeat(4, minmax(3.5rem, 1fr));
+    gap: 0.4rem 0.75rem;
+    align-items: center;
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    output {
+      text-align: center;
+      font-weight: 600;
+      color: #333;
+    }
+  }
+
+  &__atributos-head {
+    font-size: 0.75rem;
+    color: #666;
+    text-align: center;
+  }
+
+  &__atributo-nombre {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #444;
+  }
 }

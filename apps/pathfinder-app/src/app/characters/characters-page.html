@@ -61,6 +61,30 @@
           } @else {
             <p>La ficha está vacía.</p>
           }
+          @if (atributosDe(character).length > 0) {
+            <table class="characters__modal-atributos">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Punt.</th>
+                  <th>Modif.</th>
+                  <th>Ajuste temp.</th>
+                  <th>Modif. temp.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fila of atributosDe(character); track fila.label) {
+                  <tr>
+                    <th>{{ fila.label }}</th>
+                    <td>{{ fila.puntuacion ?? '—' }}</td>
+                    <td>{{ modificador(fila.puntuacion) }}</td>
+                    <td>{{ fila.ajusteTemporal ?? '—' }}</td>
+                    <td>{{ modificador(fila.ajusteTemporal) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
           <button type="button" (click)="editing.set(true)">Editar</button>
         } @else {
           <app-character-form

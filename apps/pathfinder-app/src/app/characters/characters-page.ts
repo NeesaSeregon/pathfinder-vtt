@@ -1,8 +1,11 @@
 import { Component, inject, signal, viewChild } from '@angular/core';
 import {
+  ATRIBUTO_LABELS,
+  ATRIBUTOS,
   Character,
   CharacterSheetData,
   CharacterUpsert,
+  formatearModificador,
 } from '@pathfinder/shared';
 import { CharactersApi } from './characters-api';
 import { CharacterForm } from './character-form';
@@ -116,6 +119,27 @@ export class CharactersPage {
         ),
       error: () => this.error.set('No se pudo borrar el personaje.'),
     });
+  }
+
+  protected readonly modificador = formatearModificador;
+
+  /** Filas de atributos que el personaje tiene rellenas, para la modal. */
+  protected atributosDe(character: Character): {
+    label: string;
+    puntuacion: number | null;
+    ajusteTemporal: number | null;
+  }[] {
+    const atributos = character.sheetData.atributos;
+    if (!atributos) {
+      return [];
+    }
+    return ATRIBUTOS.filter((atributo) => atributos[atributo]).map(
+      (atributo) => ({
+        label: ATRIBUTO_LABELS[atributo],
+        puntuacion: atributos[atributo]?.puntuacion ?? null,
+        ajusteTemporal: atributos[atributo]?.ajusteTemporal ?? null,
+      }),
+    );
   }
 
   /** Campos de la ficha que el personaje tiene rellenos, con su etiqueta. */

@@ -60,6 +60,42 @@
     Nivel
     <input type="number" name="level" min="1" max="20" [(ngModel)]="form.level" />
   </label>
+  <fieldset class="character-form__atributos">
+    <legend>Atributos</legend>
+    <div class="character-form__atributos-grid">
+      <span></span>
+      <span class="character-form__atributos-head">Punt.</span>
+      <span class="character-form__atributos-head">Modif.</span>
+      <span class="character-form__atributos-head">Ajuste temp.</span>
+      <span class="character-form__atributos-head">Modif. temp.</span>
+      @for (atributo of atributos; track atributo) {
+        <span class="character-form__atributo-nombre">
+          {{ atributoLabels[atributo] }}
+        </span>
+        <!-- [name] lo lee ngModel para registrarse; [attr.name] escribe el
+             atributo real en el DOM (útil para tests y autocompletado) -->
+        <input
+          type="number"
+          min="1"
+          [name]="atributo + '-puntuacion'"
+          [attr.name]="atributo + '-puntuacion'"
+          [(ngModel)]="form.atributos[atributo].puntuacion"
+        />
+        <output>{{ modificador(form.atributos[atributo].puntuacion()) }}</output>
+        <input
+          type="number"
+          min="1"
+          [name]="atributo + '-ajuste'"
+          [attr.name]="atributo + '-ajuste'"
+          [(ngModel)]="form.atributos[atributo].ajusteTemporal"
+        />
+        <output>
+          {{ modificador(form.atributos[atributo].ajusteTemporal()) }}
+        </output>
+      }
+    </div>
+  </fieldset>
+
   <button type="submit" [disabled]="!form.name().trim()">
     {{ submitLabel() }}
   </button>
