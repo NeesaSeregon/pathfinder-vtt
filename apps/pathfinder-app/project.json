@@ -66,6 +66,15 @@
     "lint": {
       "executor": "@nx/eslint:lint"
     },
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "options": {
+        "tsConfig": "apps/pathfinder-app/tsconfig.spec.json",
+        "buildTarget": "pathfinder-app:build:development"
+      }
+    },
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",

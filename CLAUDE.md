@@ -18,7 +18,9 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Servir back: npx nx serve api
 - Ambos: npx nx run-many -t serve -p pathfinder-app api
 - Lint: npx nx run-many -t lint
-- Tests: npx nx run-many -t test
+- Tests: npx nx run-many -t test (api usa Jest; pathfinder-app y libs/shared
+  usan Vitest — el front vía @angular/build:unit-test)
+- E2E: npx nx e2e pathfinder-app-e2e (Cypress; arranca los servidores solo)
 
 ## Convenciones
 - Todo modelo o evento compartido entre front y back se define en
