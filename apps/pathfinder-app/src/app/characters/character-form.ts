@@ -13,6 +13,9 @@ import {
   Alineamiento,
   ATRIBUTO_LABELS,
   ATRIBUTOS,
+  bmc,
+  dmc,
+  OfensivoValores,
   Character,
   CharacterAtributos,
   CharacterSheetData,
@@ -163,6 +166,10 @@ export class CharacterForm {
     combateNotas: signal(''),
     salvaciones: crearSalvacionesForm(),
     salvacionesNotas: signal(''),
+    ataqueBase: signal<number | null>(null),
+    resistenciaConjuros: signal<number | null>(null),
+    modTamanoManiobras: signal<number | null>(null),
+    ofensivoNotas: signal(''),
     velocidad: crearVelocidadForm(),
     pgTotal: signal<number | null>(null),
     pgRd: signal(''),
@@ -202,6 +209,13 @@ export class CharacterForm {
   protected readonly modDestreza = computed(() =>
     conSigno(modificadorDeAtributo(this.buildSheetData(), 'destreza')),
   );
+  protected readonly modFuerza = computed(() =>
+    conSigno(modificadorDeAtributo(this.buildSheetData(), 'fuerza')),
+  );
+  protected readonly bmcTotal = computed(() =>
+    conSigno(bmc(this.buildSheetData())),
+  );
+  protected readonly dmcTotal = computed(() => dmc(this.buildSheetData()));
 
   constructor() {
     // Cada vez que cambia `initial` (abrir la edición de otro personaje,
@@ -329,6 +343,26 @@ export class CharacterForm {
       delete sheet.salvaciones;
     }
 
+    const ofensivo: OfensivoValores = {};
+    if (this.form.ataqueBase() !== null) {
+      ofensivo.ataqueBase = this.form.ataqueBase() as number;
+    }
+    if (this.form.resistenciaConjuros() !== null) {
+      ofensivo.resistenciaConjuros = this.form.resistenciaConjuros() as number;
+    }
+    if (this.form.modTamanoManiobras() !== null) {
+      ofensivo.modTamanoManiobras = this.form.modTamanoManiobras() as number;
+    }
+    const ofensivoNotas = this.form.ofensivoNotas().trim();
+    if (ofensivoNotas) {
+      ofensivo.notas = ofensivoNotas;
+    }
+    if (Object.keys(ofensivo).length > 0) {
+      sheet.ofensivo = ofensivo;
+    } else {
+      delete sheet.ofensivo;
+    }
+
     const pg: PgValores = {};
     const pgTotal = this.form.pgTotal();
     if (pgTotal !== null) {
@@ -451,6 +485,14 @@ export class CharacterForm {
       }
     }
     this.form.salvacionesNotas.set(sheet.salvaciones?.notas ?? '');
+    this.form.ataqueBase.set(sheet.ofensivo?.ataqueBase ?? null);
+    this.form.resistenciaConjuros.set(
+      sheet.ofensivo?.resistenciaConjuros ?? null,
+    );
+    this.form.modTamanoManiobras.set(
+      sheet.ofensivo?.modTamanoManiobras ?? null,
+    );
+    this.form.ofensivoNotas.set(sheet.ofensivo?.notas ?? '');
     for (const campo of CAMPOS_VELOCIDAD_PIES) {
       this.form.velocidad[campo].set(sheet.velocidad?.[campo] ?? null);
     }

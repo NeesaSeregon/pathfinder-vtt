@@ -64,6 +64,14 @@
                 Modificadores: {{ notas }}
               </p>
             }
+            @if (ofensivoResumen(character); as ofensivo) {
+              <p class="characters__modal-combate">{{ ofensivo }}</p>
+            }
+            @if (character.sheetData.ofensivo?.notas; as notasOfensivo) {
+              <p class="characters__modal-velocidad">
+                Modificadores ofensivos: {{ notasOfensivo }}
+              </p>
+            }
             @if (salvacionesResumen(character); as salvaciones) {
               <p class="characters__modal-combate">{{ salvaciones }}</p>
             }

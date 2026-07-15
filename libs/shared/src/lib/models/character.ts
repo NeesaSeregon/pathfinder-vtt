@@ -185,6 +185,47 @@ export function iniciativa(sheet: CharacterSheetData): number {
   );
 }
 
+/**
+ * Bloque ofensivo. El BMC y la DMC no se guardan: se derivan con bmc() y
+ * dmc(). OJO: modTamanoManiobras está INVERTIDO respecto al de la CA
+ * (pequeño: +1 a CA pero -1 aquí); para tamaño Mediano ambos son 0.
+ */
+export interface OfensivoValores {
+  ataqueBase?: number;
+  resistenciaConjuros?: number;
+  modTamanoManiobras?: number;
+  notas?: string;
+}
+
+/** BMC (bonif. de maniobra de combate) = BAB + mod. Fuerza + mod. tamaño. */
+export function bmc(sheet: CharacterSheetData): number {
+  const ofensivo = sheet.ofensivo ?? {};
+  return (
+    (ofensivo.ataqueBase ?? 0) +
+    modificadorDeAtributo(sheet, 'fuerza') +
+    (ofensivo.modTamanoManiobras ?? 0)
+  );
+}
+
+/**
+ * DMC (defensa de maniobra de combate) = 10 + BAB + mod. Fuerza +
+ * mod. Destreza + mod. tamaño, MÁS los bonificadores de desvío y esquiva
+ * de la CA (regla completa que la ficha de papel omite).
+ */
+export function dmc(sheet: CharacterSheetData): number {
+  const ofensivo = sheet.ofensivo ?? {};
+  const combate = sheet.combate ?? {};
+  return (
+    10 +
+    (ofensivo.ataqueBase ?? 0) +
+    modificadorDeAtributo(sheet, 'fuerza') +
+    modificadorDeAtributo(sheet, 'destreza') +
+    (ofensivo.modTamanoManiobras ?? 0) +
+    (combate.modDesvio ?? 0) +
+    (combate.modEsquiva ?? 0)
+  );
+}
+
 export const SALVACIONES = ['fortaleza', 'reflejos', 'voluntad'] as const;
 
 export type Salvacion = (typeof SALVACIONES)[number];
@@ -311,6 +352,7 @@ export interface CharacterSheetData {
   velocidad?: VelocidadValores;
   pg?: PgValores;
   salvaciones?: SalvacionesValores;
+  ofensivo?: OfensivoValores;
   jugador?: string;
   clase?: string;
   alineamiento?: Alineamiento;

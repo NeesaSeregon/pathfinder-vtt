@@ -59,6 +59,17 @@ describe('pathfinder-app-e2e', () => {
       '+3',
     );
 
+    // Ofensivo: FUE efectiva 22 (+6) → BMC 3+6 = +9; DMC 10+3+6-1 = 18
+    cy.get('input[name="ataque-base"]').type('3');
+    cy.contains('.character-form__formula-total', 'BMC').should(
+      'contain',
+      '+9',
+    );
+    cy.contains('.character-form__formula-total', 'DMC').should(
+      'contain',
+      '18',
+    );
+
     cy.get('button[type="submit"]').click();
     cy.contains('li', name).should('contain', 'Nivel 7');
 
@@ -94,6 +105,12 @@ describe('pathfinder-app-e2e', () => {
 
     // Salvaciones derivadas de lo guardado
     cy.get('.characters__modal').should('contain', 'Reflejos +3');
+
+    // Bloque ofensivo derivado de lo guardado
+    cy.get('.characters__modal')
+      .should('contain', 'Ataque base +3')
+      .should('contain', 'BMC +9')
+      .should('contain', 'DMC 18');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();

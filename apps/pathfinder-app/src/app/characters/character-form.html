@@ -185,6 +185,50 @@
     </div>
   </fieldset>
 
+  <fieldset class="character-form__ofensivo">
+    <legend>Ofensivo</legend>
+
+    <div class="character-form__formula">
+      <label>
+        Ataque base
+        <input type="number" name="ataque-base" min="0" [(ngModel)]="form.ataqueBase" />
+      </label>
+      <label>
+        Resist. a conjuros
+        <input type="number" name="resistencia-conjuros" min="0" [(ngModel)]="form.resistenciaConjuros" />
+      </label>
+      <label>
+        Modif. tamaño (maniobras)
+        <input type="number" name="tamano-maniobras" [(ngModel)]="form.modTamanoManiobras" />
+      </label>
+    </div>
+
+    <div class="character-form__formula">
+      <span class="character-form__formula-total">
+        BMC <output>{{ bmcTotal() }}</output>
+      </span>
+      <span class="character-form__formula-fija">
+        = ataque base + Fuerza {{ modFuerza() }} + tamaño
+      </span>
+      <span class="character-form__formula-total">
+        DMC <output>{{ dmcTotal() }}</output>
+      </span>
+      <span class="character-form__formula-fija">
+        = 10 + ataque base + Fuerza + Destreza {{ modDestreza() }} + tamaño + desvío + esquiva
+      </span>
+    </div>
+
+    <label class="character-form__velocidad-temporales">
+      Modificadores (origen de cada bonif.)
+      <input
+        type="text"
+        name="ofensivo-notas"
+        maxlength="200"
+        [(ngModel)]="form.ofensivoNotas"
+      />
+    </label>
+  </fieldset>
+
   <fieldset class="character-form__salvaciones">
     <legend>Tiradas de salvación</legend>
     @for (salvacion of salvaciones; track salvacion) {

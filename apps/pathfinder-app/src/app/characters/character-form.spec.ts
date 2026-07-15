@@ -27,8 +27,12 @@ type CharacterFormInterno = {
       string,
       Record<string, { set(v: number | null): void }>
     >;
+    ataqueBase: { set(v: number | null): void };
+    modTamanoManiobras: { set(v: number | null): void };
   };
   totalSalvacion(salvacion: string): string;
+  bmcTotal(): string;
+  dmcTotal(): number;
   caTotal(): number;
   iniciativaTotal(): string;
   enCasillasYMetros(pies: number | null): string;
@@ -150,6 +154,23 @@ describe('CharacterForm', () => {
     interno.submit();
     expect(emitido?.sheetData.salvaciones).toEqual({
       fortaleza: { base: 4, modMagico: 1 },
+    });
+  });
+
+  it('BMC y DMC se derivan en vivo de BAB, atributos y tamaño', () => {
+    interno.form.atributos['fuerza'].puntuacion.set(18); // +4
+    interno.form.atributos['destreza'].puntuacion.set(14); // +2
+    interno.form.ataqueBase.set(3);
+    interno.form.modTamanoManiobras.set(1);
+
+    expect(interno.bmcTotal()).toBe('+8'); // 3 + 4 + 1
+    expect(interno.dmcTotal()).toBe(20); // 10 + 3 + 4 + 2 + 1
+
+    interno.form.name.set('Valeros');
+    interno.submit();
+    expect(emitido?.sheetData.ofensivo).toEqual({
+      ataqueBase: 3,
+      modTamanoManiobras: 1,
     });
   });
 

@@ -2,6 +2,8 @@ import { Component, inject, signal, viewChild } from '@angular/core';
 import {
   ATRIBUTO_LABELS,
   ATRIBUTOS,
+  bmc,
+  dmc,
   caDesprevenido,
   caDeToque,
   casillas,
@@ -154,6 +156,24 @@ export class CharactersPage {
     return Boolean(
       character.sheetData.combate || character.sheetData.atributos?.destreza,
     );
+  }
+
+  /** "Ataque base +3 · RC 13 · BMC +9 · DMC 18" si hay bloque ofensivo. */
+  protected ofensivoResumen(character: Character): string {
+    const ofensivo = character.sheetData.ofensivo;
+    if (!ofensivo) {
+      return '';
+    }
+    const partes: string[] = [];
+    if (ofensivo.ataqueBase !== undefined) {
+      partes.push(`Ataque base ${conSigno(ofensivo.ataqueBase)}`);
+    }
+    if (ofensivo.resistenciaConjuros !== undefined) {
+      partes.push(`RC ${ofensivo.resistenciaConjuros}`);
+    }
+    partes.push(`BMC ${conSigno(bmc(character.sheetData))}`);
+    partes.push(`DMC ${dmc(character.sheetData)}`);
+    return partes.join(' · ');
   }
 
   /** "Fortaleza +9 · Reflejos -1 · Voluntad +1" si hay datos de salvación. */

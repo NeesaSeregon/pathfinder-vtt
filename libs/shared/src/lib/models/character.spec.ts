@@ -1,6 +1,8 @@
 import {
+  bmc,
   caDeToque,
   caDesprevenido,
+  dmc,
   casillas,
   claseDeArmadura,
   formatearModificador,
@@ -184,6 +186,54 @@ describe('iniciativa', () => {
 
   it('ignora los modificadores varios de la CA', () => {
     expect(iniciativa({ combate: { modVarioCa: 4 } })).toBe(0);
+  });
+});
+
+describe('bmc', () => {
+  it('es 0 para una ficha sin datos', () => {
+    expect(bmc({})).toBe(0);
+  });
+
+  it('suma BAB, mod. de Fuerza y mod. de tamaño', () => {
+    // 3 (BAB) + 4 (FUE 18) + 1 (tamaño Grande) = +8
+    expect(
+      bmc({
+        atributos: { fuerza: { puntuacion: 18 } },
+        ofensivo: { ataqueBase: 3, modTamanoManiobras: 1 },
+      }),
+    ).toBe(8);
+  });
+
+  it('el tamaño pequeño RESTA (inverso al de la CA)', () => {
+    expect(bmc({ ofensivo: { ataqueBase: 3, modTamanoManiobras: -1 } })).toBe(2);
+  });
+});
+
+describe('dmc', () => {
+  it('es 10 para una ficha sin datos (como la CA)', () => {
+    expect(dmc({})).toBe(10);
+  });
+
+  it('suma 10 + BAB + Fuerza + Destreza + tamaño', () => {
+    // 10 + 3 + 4 (FUE 18) + 2 (DES 14) + 1 = 20
+    expect(
+      dmc({
+        atributos: {
+          fuerza: { puntuacion: 18 },
+          destreza: { puntuacion: 14 },
+        },
+        ofensivo: { ataqueBase: 3, modTamanoManiobras: 1 },
+      }),
+    ).toBe(20);
+  });
+
+  it('incluye desvío y esquiva de la CA (regla completa)', () => {
+    expect(
+      dmc({
+        ofensivo: { ataqueBase: 3 },
+        combate: { modDesvio: 2, modEsquiva: 1 },
+      }),
+    ).toBe(16);
   });
 });
 
