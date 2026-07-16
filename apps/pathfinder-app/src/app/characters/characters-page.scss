@@ -2,7 +2,6 @@
   max-width: 48rem;
   margin: 2rem auto;
   padding: 0 1rem;
-  font-family: system-ui, sans-serif;
 
   app-character-form {
     display: block;
@@ -10,7 +9,7 @@
   }
 
   &__error {
-    color: #b00020;
+    color: var(--danger);
   }
 
   &__list {
@@ -22,7 +21,7 @@
       align-items: center;
       gap: 1rem;
       padding: 0.5rem 0;
-      border-bottom: 1px solid #ddd;
+      border-bottom: 1px solid var(--border);
     }
   }
 
@@ -32,18 +31,18 @@
   }
 
   &__clase {
-    color: #444;
+    color: var(--text-muted);
     font-style: italic;
   }
 
   &__level {
-    color: #666;
+    color: var(--text-faint);
   }
 
   &__overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(4, 6, 10, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -52,14 +51,15 @@
   }
 
   &__modal {
-    background: #fff;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
     border-radius: 0.5rem;
     padding: 1.25rem;
     max-width: 42rem;
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
-    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.6);
 
     header {
       display: flex;
@@ -74,24 +74,24 @@
   }
 
   &__modal-summary {
-    color: #555;
+    color: var(--text-muted);
     margin-top: 0;
   }
 
   &__modal-combate {
     font-weight: 600;
-    color: #333;
+    color: var(--text);
   }
 
   &__modal-velocidad {
-    color: #555;
+    color: var(--text-muted);
   }
 
   &__modal-armas {
     list-style: none;
     padding: 0;
     margin: 0 0 0.75rem;
-    color: #333;
+    color: var(--text);
 
     li {
       padding: 0.15rem 0;
@@ -106,17 +106,17 @@
     td {
       padding: 0.25rem 0.75rem;
       text-align: center;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid var(--border);
     }
 
     thead th {
       font-size: 0.75rem;
-      color: #666;
+      color: var(--text-faint);
     }
 
     tbody th {
       text-align: left;
-      color: #444;
+      color: var(--text-muted);
     }
 
     td:nth-child(3),
@@ -138,7 +138,7 @@
 
     dt {
       font-weight: 600;
-      color: #555;
+      color: var(--text-muted);
 
       &::after {
         content: ':';

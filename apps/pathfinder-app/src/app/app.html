@@ -1,1 +1,43 @@
+<header class="navbar">
+  <a class="navbar__marca" routerLink="/">Pathfinder <span>VTT</span></a>
+
+  <nav class="navbar__enlaces" aria-label="Principal">
+    <a
+      class="navbar__enlace"
+      routerLink="/personajes"
+      routerLinkActive="navbar__enlace--activo"
+      >Personajes</a
+    >
+    <details class="navbar__menu" #menuPartidas>
+      <summary class="navbar__enlace">Partidas</summary>
+      <div class="navbar__submenu">
+        <a
+          class="navbar__enlace"
+          routerLink="/partidas/buscar"
+          routerLinkActive="navbar__enlace--activo"
+          (click)="menuPartidas.removeAttribute('open')"
+          >Buscar partida</a
+        >
+        <a
+          class="navbar__enlace"
+          routerLink="/partidas/crear"
+          routerLinkActive="navbar__enlace--activo"
+          (click)="menuPartidas.removeAttribute('open')"
+          >Crear partida</a
+        >
+      </div>
+    </details>
+  </nav>
+
+  <div class="navbar__sesion">
+    <a
+      class="navbar__enlace"
+      routerLink="/entrar"
+      routerLinkActive="navbar__enlace--activo"
+      >Iniciar sesión</a
+    >
+    <a class="navbar__boton" routerLink="/registro">Crear cuenta</a>
+  </div>
+</header>
+
 <router-outlet></router-outlet>

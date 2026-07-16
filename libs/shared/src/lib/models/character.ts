@@ -856,6 +856,34 @@ export function piesAMetros(pies: number): number {
 }
 
 /**
+ * Una dote de la ficha. Solo texto, como en el papel: los EFECTOS de las
+ * dotes no se modelan (hay miles y la mayoría son situacionales o puramente
+ * normativas); la descripción existe para poder consultarla en la mesa.
+ * Se guarda como ARRAY en sheetData.
+ */
+export interface DoteValores {
+  nombre?: string;
+  descripcion?: string;
+}
+
+/**
+ * Compatibilidad: hasta 2026-07 "dotes" era un textarea (una dote por línea)
+ * y las fichas guardadas antes conservan ese string en el JSONB. Convierte
+ * cualquiera de los dos formatos al array actual; leer SIEMPRE con esta
+ * función, nunca sheet.dotes directamente.
+ */
+export function normalizarDotes(dotes: unknown): DoteValores[] {
+  if (typeof dotes === 'string') {
+    return dotes
+      .split('\n')
+      .map((linea) => linea.trim())
+      .filter((linea) => linea.length > 0)
+      .map((nombre) => ({ nombre }));
+  }
+  return Array.isArray(dotes) ? (dotes as DoteValores[]) : [];
+}
+
+/**
  * Contenido flexible de la ficha de personaje. Se guarda como JSONB en
  * PostgreSQL, así que añadir campos aquí NO requiere migraciones ni cambios
  * en la API: solo tipado (este fichero) y formulario (front).
@@ -872,8 +900,8 @@ export interface CharacterSheetData {
   armas?: ArmaValores[];
   objetosCa?: ObjetoCaValores[];
   equipo?: EquipoItem[];
-  /** Una dote por línea, como en el papel. */
-  dotes?: string;
+  /** Leer siempre vía normalizarDotes: las fichas antiguas guardan string. */
+  dotes?: DoteValores[];
   aptitudesEspeciales?: string;
   dinero?: DineroValores;
   experiencia?: ExperienciaValores;

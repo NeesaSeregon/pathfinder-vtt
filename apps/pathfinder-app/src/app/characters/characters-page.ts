@@ -10,6 +10,7 @@ import {
   dmc,
   experienciaFaltante,
   HABILIDADES,
+  normalizarDotes,
   pesoTotal,
   totalEnOro,
   caDesprevenido,
@@ -291,6 +292,14 @@ export class CharactersPage {
       partes.push(`carga ${carga}`);
     }
     return partes.join(' · ');
+  }
+
+  /** "Esquiva · Soltura con el arma" para la modal; admite fichas antiguas. */
+  protected dotesResumen(character: Character): string {
+    return normalizarDotes(character.sheetData.dotes)
+      .map((dote) => dote.nombre)
+      .filter(Boolean)
+      .join(' · ');
   }
 
   /** Habilidades con datos, con su bonificador total derivado. */

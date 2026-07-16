@@ -108,7 +108,7 @@
             @if (equipoResumen(character); as equipo) {
               <p class="characters__modal-velocidad">Equipo: {{ equipo }}</p>
             }
-            @if (character.sheetData.dotes; as dotes) {
+            @if (dotesResumen(character); as dotes) {
               <p class="characters__modal-velocidad">Dotes: {{ dotes }}</p>
             }
             @if (character.sheetData.aptitudesEspeciales; as aptitudes) {

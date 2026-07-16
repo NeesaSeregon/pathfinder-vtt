@@ -646,10 +646,28 @@
 
   <fieldset class="character-form__armas">
     <legend>Dotes y aptitudes especiales</legend>
-    <label class="character-form__velocidad-temporales">
-      Dotes (una por línea)
-      <textarea name="dotes" rows="5" maxlength="2000" [(ngModel)]="form.dotes"></textarea>
-    </label>
+    @for (dote of form.dotes(); track dote; let i = $index) {
+      <div class="character-form__arma">
+        <label class="character-form__arma-nombre">
+          Dote
+          <input type="text" maxlength="100"
+            [name]="'dote' + i + '-nombre'"
+            [attr.name]="'dote' + i + '-nombre'"
+            [(ngModel)]="dote.nombre" />
+        </label>
+        <label class="character-form__arma-nombre">
+          Descripción
+          <input type="text" maxlength="500"
+            [name]="'dote' + i + '-descripcion'"
+            [attr.name]="'dote' + i + '-descripcion'"
+            [(ngModel)]="dote.descripcion" />
+        </label>
+        <button type="button" (click)="quitarDote(i)">Quitar</button>
+      </div>
+    }
+    <button type="button" class="character-form__arma-agregar" (click)="agregarDote()">
+      Añadir dote
+    </button>
     <label class="character-form__velocidad-temporales">
       Aptitudes especiales (una por línea)
       <textarea name="aptitudes-especiales" rows="5" maxlength="2000" [(ngModel)]="form.aptitudesEspeciales"></textarea>

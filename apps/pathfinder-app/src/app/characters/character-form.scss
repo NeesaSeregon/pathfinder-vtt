@@ -9,7 +9,7 @@
     flex-direction: column;
     gap: 0.25rem;
     font-size: 0.85rem;
-    color: #444;
+    color: var(--text-muted);
   }
 
   input,
@@ -23,13 +23,13 @@
 
   &__atributos {
     grid-column: 1 / -1;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     padding: 0.75rem;
 
     legend {
       font-size: 0.85rem;
-      color: #444;
+      color: var(--text-muted);
       padding: 0 0.25rem;
     }
   }
@@ -48,25 +48,25 @@
     output {
       text-align: center;
       font-weight: 600;
-      color: #333;
+      color: var(--text);
     }
   }
 
   &__atributos-head {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--text-faint);
     text-align: center;
   }
 
   &__atributo-nombre {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #444;
+    color: var(--text-muted);
   }
 
   &__combate {
     grid-column: 1 / -1;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     padding: 0.75rem;
     display: flex;
@@ -75,7 +75,7 @@
 
     legend {
       font-size: 0.85rem;
-      color: #444;
+      color: var(--text-muted);
       padding: 0 0.25rem;
     }
   }
@@ -99,7 +99,7 @@
     output {
       display: block;
       font-weight: 600;
-      color: #333;
+      color: var(--text);
       padding: 0.35rem 0;
     }
   }
@@ -107,33 +107,35 @@
   &__formula-total {
     font-weight: 700;
     font-size: 1rem;
-    color: #222;
+    color: var(--text);
     display: flex;
     align-items: center;
     gap: 0.4rem;
 
     output {
       font-size: 1.25rem;
-      border: 2px solid #222;
+      color: var(--accent);
+      border: 2px solid var(--accent);
+      box-shadow: var(--glow);
       border-radius: 0.25rem;
       padding: 0.2rem 0.6rem;
     }
   }
 
   &__formula-fija {
-    color: #666;
+    color: var(--text-faint);
     padding-bottom: 0.5rem;
   }
 
   &__pg {
     grid-column: 1 / -1;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     padding: 0.75rem;
 
     legend {
       font-size: 0.85rem;
-      color: #444;
+      color: var(--text-muted);
       padding: 0 0.25rem;
     }
   }
@@ -152,7 +154,7 @@
 
   &__ofensivo {
     grid-column: 1 / -1;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     padding: 0.75rem;
     display: flex;
@@ -161,14 +163,14 @@
 
     legend {
       font-size: 0.85rem;
-      color: #444;
+      color: var(--text-muted);
       padding: 0 0.25rem;
     }
   }
 
   &__salvaciones {
     grid-column: 1 / -1;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     padding: 0.75rem;
     display: flex;
@@ -177,7 +179,7 @@
 
     legend {
       font-size: 0.85rem;
-      color: #444;
+      color: var(--text-muted);
       padding: 0 0.25rem;
     }
   }
@@ -187,13 +189,13 @@
 
     small {
       font-weight: 400;
-      color: #666;
+      color: var(--text-faint);
     }
   }
 
   &__armas {
     grid-column: 1 / -1;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     padding: 0.75rem;
     display: flex;
@@ -202,7 +204,7 @@
 
     legend {
       font-size: 0.85rem;
-      color: #444;
+      color: var(--text-muted);
       padding: 0 0.25rem;
     }
   }
@@ -213,7 +215,7 @@
     flex-wrap: wrap;
     gap: 0.5rem;
     padding-bottom: 0.75rem;
-    border-bottom: 1px dashed #ddd;
+    border-bottom: 1px dashed var(--border);
 
     label {
       width: 7rem;
@@ -245,15 +247,15 @@
       flex-direction: column;
       gap: 0.25rem;
       font-size: 0.8rem;
-      color: #555;
+      color: var(--text-muted);
       text-align: center;
       width: 8rem;
     }
 
     output {
       font-weight: 600;
-      color: #222;
-      border: 1px solid #999;
+      color: var(--text);
+      border: 1px solid var(--border-strong);
       border-radius: 0.25rem;
       padding: 0.25rem;
     }
@@ -279,13 +281,13 @@
     output {
       text-align: center;
       font-weight: 600;
-      color: #333;
+      color: var(--text);
     }
   }
 
   &__habilidades {
     grid-column: 1 / -1;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     padding: 0.75rem;
     display: flex;
@@ -294,7 +296,7 @@
 
     legend {
       font-size: 0.85rem;
-      color: #444;
+      color: var(--text-muted);
       padding: 0 0.25rem;
     }
   }
@@ -313,13 +315,13 @@
     output {
       text-align: center;
       font-weight: 600;
-      color: #333;
+      color: var(--text);
     }
   }
 
   &__habilidades-head {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--text-faint);
     text-align: center;
 
     &--nombre {
@@ -329,14 +331,14 @@
 
   &__habilidad-nombre {
     font-size: 0.85rem;
-    color: #444;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     gap: 0.4rem;
 
     abbr {
       text-decoration: none;
-      color: #a00;
+      color: var(--danger);
     }
 
     input {
@@ -347,19 +349,19 @@
 
   &__habilidad-atributo {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-faint);
     text-align: center;
   }
 
   &__habilidades-nota {
     margin: 0;
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-faint);
   }
 
   &__velocidad {
     grid-column: 1 / -1;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
     padding: 0.75rem;
     display: flex;
@@ -368,7 +370,7 @@
 
     legend {
       font-size: 0.85rem;
-      color: #444;
+      color: var(--text-muted);
       padding: 0 0.25rem;
     }
   }
@@ -378,7 +380,7 @@
     flex-direction: column;
     gap: 0.25rem;
     font-size: 0.85rem;
-    color: #444;
+    color: var(--text-muted);
 
     input {
       padding: 0.35rem 0.5rem;

@@ -1,0 +1,49 @@
+<main class="home">
+  <section class="home__hero">
+    <h1 class="home__titulo">
+      Tu mesa de Pathfinder,<br />
+      <span>en cualquier parte</span>
+    </h1>
+    <p class="home__lema">
+      Crea tus fichas de personaje, reúne a tu grupo y jugad sobre un tablero
+      virtual compartido, de máster a jugadores.
+    </p>
+  </section>
+
+  <section class="home__tarjetas">
+    <a class="home__tarjeta" routerLink="/personajes">
+      <h2>Personajes</h2>
+      <p>
+        La ficha completa de PF1e: atributos, combate, salvaciones,
+        habilidades, conjuros, dotes y equipo, con los cálculos hechos.
+      </p>
+      <span class="home__tarjeta-accion">Ir a mis personajes →</span>
+    </a>
+
+    <div class="home__tarjeta home__tarjeta--pasiva">
+      <h2>Partidas</h2>
+      <p>
+        Únete a la mesa de tu máster o dirige la tuya con el tablero
+        compartido.
+      </p>
+      <div class="home__tarjeta-botones">
+        <a routerLink="/partidas/buscar">Buscar partida</a>
+        <a routerLink="/partidas/crear">Crear partida</a>
+      </div>
+      <span class="home__pronto">En construcción</span>
+    </div>
+
+    <div class="home__tarjeta home__tarjeta--pasiva">
+      <h2>Tu cuenta</h2>
+      <p>
+        Con tu perfil, tus personajes y partidas te esperan en cualquier
+        dispositivo.
+      </p>
+      <div class="home__tarjeta-botones">
+        <a routerLink="/entrar">Iniciar sesión</a>
+        <a routerLink="/registro">Crear cuenta</a>
+      </div>
+      <span class="home__pronto">En construcción</span>
+    </div>
+  </section>
+</main>

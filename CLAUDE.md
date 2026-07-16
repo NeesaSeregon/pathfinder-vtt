@@ -51,12 +51,27 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   partida cuando exista el tablero compartido. Decidido el 2026-07-15
   para trabajar con vistas a la integración ficha-tablero.
 
+## Mejoras futuras
+- Catálogo de dotes con autocompletar: importar un JSON de dotes del
+  contenido OGL de PF1e (nombre, tipo, prerrequisitos, beneficio; fuentes
+  candidatas: compendios del sistema PF1 de Foundry u otros datasets OGL de
+  GitHub) para rellenar las entradas DoteValores en vez de escribirlas a
+  mano. Requisitos: página de créditos con la licencia OGL 1.0a; el texto
+  OGL es el inglés (la traducción de Devir tiene copyright — usar tabla
+  propia de nombres traducidos). Mantener siempre la entrada libre para
+  dotes fuera del catálogo. NO automatizar efectos mecánicos de las dotes
+  (decidido el 2026-07-16: demasiado heterogéneos).
+
 ## Estado actual
 - Estructura del monorepo creada y subida a GitHub.
 - Persistencia funcionando: PostgreSQL 17 (Docker) + TypeORM con
   synchronize: true (solo desarrollo; pasar a migraciones antes de producción).
 - Primer recurso CRUD: /api/characters (entidad Character con columna JSONB
   sheetData). Modelo compartido Character en libs/shared.
-- El front tiene una página de personajes (listar, crear, borrar) en la ruta
-  raíz, servida contra /api/characters vía proxy. E2E con Cypress verificando
-  el flujo completo (npx nx e2e pathfinder-app-e2e).
+- El front tiene home (ruta raíz) con navbar común y tema oscuro global
+  (variables CSS en styles.scss; los componentes no declaran colores propios).
+  La página de personajes (listar, crear, borrar) vive en /personajes,
+  servida contra /api/characters vía proxy. E2E con Cypress verificando
+  navegación y el flujo completo (npx nx e2e pathfinder-app-e2e).
+- Maquetas sin funcionalidad, pendientes de sus sistemas: /partidas/buscar,
+  /partidas/crear (modelo de partida) y /entrar, /registro (usuarios).

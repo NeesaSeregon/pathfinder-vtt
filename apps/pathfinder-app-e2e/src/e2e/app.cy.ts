@@ -1,5 +1,23 @@
+describe('home y navegación', () => {
+  it('la home muestra las tres secciones y navega a personajes', () => {
+    cy.visit('/');
+    cy.get('.home__tarjeta').should('have.length', 3);
+    cy.contains('.home__tarjeta', 'Personajes').click();
+    cy.get('h1').contains('Personajes');
+  });
+
+  it('el menú Partidas de la navbar lleva a las maquetas', () => {
+    cy.visit('/');
+    cy.contains('summary', 'Partidas').click();
+    cy.contains('a', 'Buscar partida').click();
+    cy.get('h1').contains('Buscar partida');
+    cy.contains('a', 'Iniciar sesión').click();
+    cy.get('h1').contains('Iniciar sesión');
+  });
+});
+
 describe('pathfinder-app-e2e', () => {
-  beforeEach(() => cy.visit('/'));
+  beforeEach(() => cy.visit('/personajes'));
 
   it('should display the characters page', () => {
     cy.get('h1').contains('Personajes');
@@ -75,8 +93,12 @@ describe('pathfinder-app-e2e', () => {
     );
     cy.get('.character-form__carga').should('contain', '520');
 
-    // Dotes
-    cy.get('textarea[name="dotes"]').type('Soltura con el arma{enter}Esquiva');
+    // Dotes: lista dinámica, como armas y equipo
+    cy.contains('button', 'Añadir dote').click();
+    cy.get('input[name="dote0-nombre"]').type('Soltura con el arma');
+    cy.get('input[name="dote0-descripcion"]').type('+1 ataque con el arma elegida');
+    cy.contains('button', 'Añadir dote').click();
+    cy.get('input[name="dote1-nombre"]').type('Esquiva');
 
     // Conjuros: INT 16 base (+2 de elfo → 18, +4) como atributo de lanzamiento
     cy.get('input[name="inteligencia-puntuacion"]').type('16');

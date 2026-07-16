@@ -27,6 +27,7 @@ import {
   modificadorDeCaracteristica,
   modificadorTamano,
   modificadorTamanoManiobras,
+  normalizarDotes,
   piesAMetros,
   puntuacionEfectiva,
   tiradaDeSalvacion,
@@ -595,5 +596,32 @@ describe('velocidad', () => {
     expect(MODIFICADOR_MANIOBRABILIDAD.torpe).toBe(-8);
     expect(MODIFICADOR_MANIOBRABILIDAD.normal).toBe(0);
     expect(MODIFICADOR_MANIOBRABILIDAD.perfecta).toBe(8);
+  });
+});
+
+describe('normalizarDotes', () => {
+  it('el array actual pasa tal cual', () => {
+    const dotes = [{ nombre: 'Esquiva', descripcion: '+1 CA' }];
+    expect(normalizarDotes(dotes)).toEqual(dotes);
+  });
+
+  it('el string antiguo (una dote por línea) se convierte en entradas', () => {
+    expect(normalizarDotes('Soltura con el arma\nEsquiva')).toEqual([
+      { nombre: 'Soltura con el arma' },
+      { nombre: 'Esquiva' },
+    ]);
+  });
+
+  it('en el string antiguo ignora líneas en blanco y recorta espacios', () => {
+    expect(normalizarDotes('  Esquiva  \n\n\nAlerta\n')).toEqual([
+      { nombre: 'Esquiva' },
+      { nombre: 'Alerta' },
+    ]);
+  });
+
+  it('sin dotes (undefined o basura) devuelve lista vacía', () => {
+    expect(normalizarDotes(undefined)).toEqual([]);
+    expect(normalizarDotes(null)).toEqual([]);
+    expect(normalizarDotes(42)).toEqual([]);
   });
 });

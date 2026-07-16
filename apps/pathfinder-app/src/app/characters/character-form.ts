@@ -30,6 +30,7 @@ import {
   conjurosAdicionales,
   DineroValores,
   dmc,
+  DoteValores,
   EquipoItem,
   ExperienciaValores,
   experienciaFaltante,
@@ -56,6 +57,7 @@ import {
   modificadorTamano,
   modificadorTamanoManiobras,
   NivelDeConjuros,
+  normalizarDotes,
   ObjetoCaValores,
   pesoMonedas,
   pesoTotal,
@@ -188,6 +190,18 @@ function crearEquipoForm(inicial?: EquipoItem): EquipoForm {
   };
 }
 
+interface DoteForm {
+  nombre: WritableSignal<string>;
+  descripcion: WritableSignal<string>;
+}
+
+function crearDoteForm(inicial?: DoteValores): DoteForm {
+  return {
+    nombre: signal(inicial?.nombre ?? ''),
+    descripcion: signal(inicial?.descripcion ?? ''),
+  };
+}
+
 type HabilidadesForm = Record<
   string,
   {
@@ -317,7 +331,7 @@ export class CharacterForm {
     armas: signal<ArmaForm[]>([]),
     objetosCa: signal<ObjetoCaForm[]>([]),
     equipo: signal<EquipoForm[]>([]),
-    dotes: signal(''),
+    dotes: signal<DoteForm[]>([]),
     aptitudesEspeciales: signal(''),
     dinero: {
       pc: signal<number | null>(null),
@@ -415,6 +429,14 @@ export class CharacterForm {
 
   protected quitarEquipo(indice: number): void {
     this.form.equipo.update((equipo) => equipo.filter((_, i) => i !== indice));
+  }
+
+  protected agregarDote(): void {
+    this.form.dotes.update((dotes) => [...dotes, crearDoteForm()]);
+  }
+
+  protected quitarDote(indice: number): void {
+    this.form.dotes.update((dotes) => dotes.filter((_, i) => i !== indice));
   }
 
   /** Totales derivados de las tablas de objetos CA y equipo, en vivo. */
@@ -662,8 +684,8 @@ export class CharacterForm {
       delete sheet.equipo;
     }
 
-    const dotes = this.form.dotes().trim();
-    if (dotes) {
+    const dotes = this.buildDotes();
+    if (dotes.length > 0) {
       sheet.dotes = dotes;
     } else {
       delete sheet.dotes;
@@ -812,6 +834,19 @@ export class CharacterForm {
         return item;
       })
       .filter((item) => Object.keys(item).length > 0);
+  }
+
+  private buildDotes(): DoteValores[] {
+    return this.form.dotes()
+      .map((fila) => {
+        const dote: DoteValores = {};
+        const nombre = fila.nombre().trim();
+        if (nombre) dote.nombre = nombre;
+        const descripcion = fila.descripcion().trim();
+        if (descripcion) dote.descripcion = descripcion;
+        return dote;
+      })
+      .filter((dote) => Object.keys(dote).length > 0);
   }
 
   private buildHabilidades(): Record<string, HabilidadValores> {
@@ -968,7 +1003,10 @@ export class CharacterForm {
     this.form.equipo.set(
       (sheet.equipo ?? []).map((item) => crearEquipoForm(item)),
     );
-    this.form.dotes.set(sheet.dotes ?? '');
+    // normalizarDotes admite el string antiguo del textarea (una por línea)
+    this.form.dotes.set(
+      normalizarDotes(sheet.dotes).map((dote) => crearDoteForm(dote)),
+    );
     this.form.aptitudesEspeciales.set(sheet.aptitudesEspeciales ?? '');
     for (const moneda of CAMPOS_DINERO) {
       this.form.dinero[moneda].set(sheet.dinero?.[moneda] ?? null);
