@@ -11,10 +11,10 @@ describe('pathfinder-app-e2e', () => {
     // Alta con varios campos de ficha
     cy.get('input[name="name"]').type(name);
     cy.get('input[name="jugador"]').type('Luis');
-    cy.get('input[name="clase"]').type('Pícaro');
+    cy.get('select[name="clase"]').select('Pícaro');
     cy.get('select[name="alineamiento"]').select('legal bueno');
     cy.get('select[name="tamano"]').select('Mediano');
-    cy.get('input[name="raza"]').type('Elfo');
+    cy.get('select[name="raza"]').select('Elfo');
     cy.get('input[name="level"]').clear();
     cy.get('input[name="level"]').type('7');
 
@@ -25,24 +25,23 @@ describe('pathfinder-app-e2e', () => {
     cy.get('input[name="fuerza-ajuste"]').type('4');
     cy.get('input[name="destreza-puntuacion"]').type('9');
 
-    // Combate: CA = 10 + 5 + 2 + (-1 de Des 9) = 16; iniciativa = -1 + 2 = +1
+    // Combate con Des final 11 (9 base +2 de elfo → mod +0):
+    // CA = 10+5+2+0 = 17; toque 10; desprevenido 17; iniciativa 0+2 = +2
     cy.get('input[name="ca-bonif-armadura"]').type('5');
     cy.get('input[name="ca-bonif-escudo"]').type('2');
     cy.get('input[name="iniciativa-vario"]').type('2');
-    cy.contains('.character-form__formula-total', 'CA').should('contain', '16');
-    // Toque ignora armadura y escudo: 10 + (-1 Des) = 9.
-    // Desprevenido conserva el mod NEGATIVO de Des: 10+5+2-1 = 16.
+    cy.contains('.character-form__formula-total', 'CA').should('contain', '17');
     cy.contains('.character-form__formula-total', 'Toque').should(
       'contain',
-      '9',
+      '10',
     );
     cy.contains('.character-form__formula-total', 'Desprevenido').should(
       'contain',
-      '16',
+      '17',
     );
     cy.contains('.character-form__formula-total', 'Iniciativa').should(
       'contain',
-      '+1',
+      '+2',
     );
 
     // Velocidad: 30 pies → 6 casillas / 9 m, derivado en vivo
@@ -53,11 +52,11 @@ describe('pathfinder-app-e2e', () => {
     cy.get('input[name="pg-total"]').type('45');
     cy.get('input[name="pg-rd"]').type('5/hierro frío');
 
-    // Salvaciones: Reflejos base 4 + (-1 de Des 9) = +3, en vivo
+    // Salvaciones: Reflejos base 4 + (+0 de Des final 11) = +4, en vivo
     cy.get('input[name="reflejos-base"]').type('4');
     cy.contains('.character-form__salvacion-nombre', 'Reflejos').should(
       'contain',
-      '+3',
+      '+4',
     );
 
     // Armas: fila dinámica
@@ -79,7 +78,7 @@ describe('pathfinder-app-e2e', () => {
     // Dotes
     cy.get('textarea[name="dotes"]').type('Soltura con el arma{enter}Esquiva');
 
-    // Conjuros: INT 16 (+3) como lanzador → CD nivel 1 = 14, +1 adicional
+    // Conjuros: INT 16 base (+2 de elfo → 18, +4) como atributo de lanzamiento
     cy.get('input[name="inteligencia-puntuacion"]').type('16');
     cy.get('select[name="atributo-lanzamiento"]').select('Inteligencia');
     cy.get('input[name="conjuros1-pordia"]').type('2');
@@ -99,15 +98,15 @@ describe('pathfinder-app-e2e', () => {
       '1600',
     );
 
-    // Habilidades: Acrobacias clase + 3 rangos + (-1 Des) + 3 = +5
+    // Habilidades: Acrobacias 3 rangos + (+0 Des) + 3 de clase = +6
     cy.get('input[name="acrobacias-clase"]').check();
     cy.get('input[name="acrobacias-rangos"]').type('3');
-    cy.contains('.character-form__habilidades-grid output', '+5');
+    cy.contains('.character-form__habilidades-grid output', '+6');
     cy.get('input[name="artesania1-especialidad"]').type('Herrería');
     cy.get('input[name="artesania1-rangos"]').type('1');
     cy.get('input[name="idiomas"]').type('común, élfico');
 
-    // Ofensivo: FUE efectiva 22 (+6) → BMC 3+6 = +9; DMC 10+3+6-1 = 18
+    // Ofensivo: FUE final 22 (+6) → BMC 3+6 = +9; DMC 10+3+6+0 = 19
     cy.get('input[name="ataque-base"]').type('3');
     cy.contains('.character-form__formula-total', 'BMC').should(
       'contain',
@@ -115,7 +114,7 @@ describe('pathfinder-app-e2e', () => {
     );
     cy.contains('.character-form__formula-total', 'DMC').should(
       'contain',
-      '18',
+      '19',
     );
 
     cy.get('button[type="submit"]').click();
@@ -128,21 +127,23 @@ describe('pathfinder-app-e2e', () => {
     cy.get('.characters__modal').should('contain', 'Elfo');
     cy.get('.characters__modal').should('contain', 'Mediano');
 
-    // Atributos: FUE 18 (+4) con ajuste +4 → modif. temporal +6
+    // Atributos: FUE 18 (+4) con ajuste +4 → modif. temporal +6;
+    // Destreza élfica: 9 base +2 racial → +0
     cy.contains('.characters__modal-atributos tr', 'Fuerza')
       .should('contain', '18')
       .should('contain', '+4')
       .should('contain', '+6');
     cy.contains('.characters__modal-atributos tr', 'Destreza')
       .should('contain', '9')
-      .should('contain', '-1');
+      .should('contain', '+2')
+      .should('contain', '+0');
 
     // Totales de combate derivados de lo guardado, más PG y RD
     cy.get('.characters__modal-combate')
-      .should('contain', 'CA 16')
-      .should('contain', 'toque 9')
-      .should('contain', 'desprevenido 16')
-      .should('contain', 'Iniciativa +1')
+      .should('contain', 'CA 17')
+      .should('contain', 'toque 10')
+      .should('contain', 'desprevenido 17')
+      .should('contain', 'Iniciativa +2')
       .should('contain', 'PG 45')
       .should('contain', 'RD 5/hierro frío');
 
@@ -153,19 +154,19 @@ describe('pathfinder-app-e2e', () => {
     );
 
     // Salvaciones derivadas de lo guardado
-    cy.get('.characters__modal').should('contain', 'Reflejos +3');
+    cy.get('.characters__modal').should('contain', 'Reflejos +4');
 
     // Bloque ofensivo derivado de lo guardado
     cy.get('.characters__modal')
       .should('contain', 'Ataque base +3')
       .should('contain', 'BMC +9')
-      .should('contain', 'DMC 18');
+      .should('contain', 'DMC 19');
 
     // Habilidades derivadas de lo guardado, con especialidad e idiomas
-    // Artesanía es +4: 1 rango + 3 de la INT 16 que pusimos para conjuros
+    // Artesanía es +5: 1 rango + 4 de INT final 18 (16 + 2 de elfo)
     cy.get('.characters__modal')
-      .should('contain', 'Acrobacias +5')
-      .should('contain', 'Artesanía (Herrería) +4')
+      .should('contain', 'Acrobacias +6')
+      .should('contain', 'Artesanía (Herrería) +5')
       .should('contain', 'Idiomas: común, élfico');
 
     // El arma guardada como array en el JSONB
@@ -185,15 +186,14 @@ describe('pathfinder-app-e2e', () => {
       .should('contain', 'total 15 po')
       .should('contain', 'PX 3400 / 5000 (faltan 1600)');
 
-    // Conjuros: CD y adicionales derivados de INT 16
+    // Conjuros: CD derivada de INT final 18 (16 + 2 racial) → 10+1+4 = 15
     cy.get('.characters__modal')
-      .should('contain', 'Nivel 1: CD 14 · 2/día · +1 adicionales')
+      .should('contain', 'Nivel 1: CD 15 · 2/día · +1 adicionales')
       .should('contain', 'proyectil mágico');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
     cy.get('.characters__modal').contains('button', 'Editar').click();
-    cy.get('.characters__modal input[name="raza"]').clear();
-    cy.get('.characters__modal input[name="raza"]').type('Enano');
+    cy.get('.characters__modal select[name="raza"]').select('Enano');
     cy.get('.characters__modal input[name="level"]').clear();
     cy.get('.characters__modal input[name="level"]').type('8');
     cy.get('.characters__modal').contains('button', 'Guardar').click();

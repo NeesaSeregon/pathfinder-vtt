@@ -3,16 +3,106 @@
  * tupla de literales: sirve a la vez como lista para el desplegable del
  * front y como tipo (Alineamiento) que impide valores fuera de la lista.
  */
+/** Los 9 alineamientos oficiales de PF1e: la parrilla ley/caos x bien/mal. */
 export const ALINEAMIENTOS = [
-  'bueno',
-  'malo',
   'legal bueno',
-  'legal malo',
-  'caótico',
+  'neutral bueno',
+  'caótico bueno',
+  'legal neutral',
   'neutral',
+  'caótico neutral',
+  'legal malo',
+  'neutral malo',
+  'caótico malo',
 ] as const;
 
 export type Alineamiento = (typeof ALINEAMIENTOS)[number];
+
+/** Las 11 clases del Core Rulebook de PF1e. */
+export const CLASES = [
+  'Bárbaro',
+  'Bardo',
+  'Clérigo',
+  'Druida',
+  'Explorador',
+  'Guerrero',
+  'Hechicero',
+  'Mago',
+  'Monje',
+  'Paladín',
+  'Pícaro',
+] as const;
+
+export type Clase = (typeof CLASES)[number];
+
+/** Las 7 razas del Core Rulebook de PF1e. */
+export const RAZAS = [
+  'Humano',
+  'Elfo',
+  'Enano',
+  'Gnomo',
+  'Mediano',
+  'Semielfo',
+  'Semiorco',
+] as const;
+
+export type Raza = (typeof RAZAS)[number];
+
+/**
+ * Bonificadores raciales a atributos (Core). Las razas que no aparecen
+ * aquí (Humano, Semielfo, Semiorco) eligen +2 a UN atributo: la elección
+ * se guarda en sheet.atributoRacial.
+ */
+export const BONIFICADORES_RACIALES: Partial<
+  Record<Raza, Partial<Record<Atributo, number>>>
+> = {
+  Elfo: { destreza: 2, inteligencia: 2, constitucion: -2 },
+  Enano: { constitucion: 2, sabiduria: 2, carisma: -2 },
+  Gnomo: { constitucion: 2, carisma: 2, fuerza: -2 },
+  Mediano: { destreza: 2, carisma: 2, fuerza: -2 },
+};
+
+export const RAZAS_CON_ELECCION: readonly Raza[] = [
+  'Humano',
+  'Semielfo',
+  'Semiorco',
+];
+
+export function bonificadorRacial(
+  sheet: CharacterSheetData,
+  atributo: Atributo,
+): number {
+  const raza = sheet.raza;
+  if (!raza) {
+    return 0;
+  }
+  const fijos = BONIFICADORES_RACIALES[raza];
+  if (fijos) {
+    return fijos[atributo] ?? 0;
+  }
+  return sheet.atributoRacial === atributo ? 2 : 0;
+}
+
+/**
+ * Puntuación final de un atributo: base anotada (la comprada/tirada, SIN
+ * raza) + bonificador racial + ajuste temporal. La base ausente cuenta
+ * como 10 si hay raza o ajuste que aplicar.
+ */
+export function puntuacionFinal(
+  sheet: CharacterSheetData,
+  atributo: Atributo,
+): number | undefined {
+  const valor = sheet.atributos?.[atributo] ?? {};
+  const racial = bonificadorRacial(sheet, atributo);
+  if (
+    valor.puntuacion === undefined &&
+    valor.ajusteTemporal === undefined &&
+    racial === 0
+  ) {
+    return undefined;
+  }
+  return (valor.puntuacion ?? 10) + racial + (valor.ajusteTemporal ?? 0);
+}
 
 export const ATRIBUTOS = [
   'fuerza',
@@ -166,15 +256,15 @@ export interface CombateValores {
 }
 
 /**
- * Modificador efectivo de un atributo: el de la puntuación CON el ajuste
- * temporal sumado. Sin datos cuenta como 0.
+ * Modificador efectivo de un atributo: el de la puntuación final
+ * (base + racial + ajuste temporal). Sin datos cuenta como 0.
  */
 export function modificadorDeAtributo(
   sheet: CharacterSheetData,
   atributo: Atributo,
 ): number {
-  const efectiva = puntuacionEfectiva(sheet.atributos?.[atributo]);
-  return efectiva === undefined ? 0 : modificadorDeCaracteristica(efectiva);
+  const final = puntuacionFinal(sheet, atributo);
+  return final === undefined ? 0 : modificadorDeCaracteristica(final);
 }
 
 /**
@@ -505,7 +595,7 @@ export interface CapacidadDeCarga {
 export function capacidadDeCarga(
   sheet: CharacterSheetData,
 ): CapacidadDeCarga | null {
-  const fuerza = puntuacionEfectiva(sheet.atributos?.fuerza);
+  const fuerza = puntuacionFinal(sheet, 'fuerza');
   if (fuerza === undefined || fuerza < 1) {
     return null;
   }
@@ -792,11 +882,13 @@ export interface CharacterSheetData {
   habilidadesNotas?: string;
   idiomas?: string;
   jugador?: string;
-  clase?: string;
+  clase?: Clase;
+  /** El +2 elegido por Humanos, Semielfos y Semiorcos. */
+  atributoRacial?: Atributo;
   alineamiento?: Alineamiento;
   paisNatal?: string;
   dios?: string;
-  raza?: string;
+  raza?: Raza;
   tamano?: Tamano;
   edad?: number;
   altura?: string;

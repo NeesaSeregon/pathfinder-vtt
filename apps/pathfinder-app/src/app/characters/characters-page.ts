@@ -20,10 +20,11 @@ import {
   CharacterUpsert,
   claseDeArmadura,
   conSigno,
+  bonificadorRacial,
   formatearModificador,
   iniciativa,
   piesAMetros,
-  puntuacionEfectiva,
+  puntuacionFinal,
   SALVACION_LABELS,
   SALVACIONES,
   TAMANO_LABELS,
@@ -366,28 +367,39 @@ export class CharactersPage {
   protected atributosDe(character: Character): {
     label: string;
     puntuacion: number | null;
+    racial: string;
+    modificador: string;
     ajusteTemporal: string;
     modTemporal: string;
   }[] {
-    const atributos = character.sheetData.atributos;
-    if (!atributos) {
+    const sheet = character.sheetData;
+    const atributos = sheet.atributos;
+    if (!atributos && !sheet.raza) {
       return [];
     }
-    return ATRIBUTOS.filter((atributo) => atributos[atributo]).map(
-      (atributo) => {
-        const valor = atributos[atributo];
-        const ajuste = valor?.ajusteTemporal;
-        return {
-          label: ATRIBUTO_LABELS[atributo],
-          puntuacion: valor?.puntuacion ?? null,
-          ajusteTemporal: ajuste !== undefined ? conSigno(ajuste) : '—',
-          modTemporal:
-            ajuste !== undefined
-              ? formatearModificador(puntuacionEfectiva(valor))
-              : '—',
-        };
-      },
-    );
+    return ATRIBUTOS.filter(
+      (atributo) =>
+        atributos?.[atributo] || bonificadorRacial(sheet, atributo) !== 0,
+    ).map((atributo) => {
+      const valor = atributos?.[atributo];
+      const ajuste = valor?.ajusteTemporal;
+      const racial = bonificadorRacial(sheet, atributo);
+      const base = valor?.puntuacion;
+      return {
+        label: ATRIBUTO_LABELS[atributo],
+        puntuacion: base ?? null,
+        racial: racial === 0 ? '—' : conSigno(racial),
+        modificador:
+          base === undefined && racial === 0
+            ? '—'
+            : formatearModificador((base ?? 10) + racial),
+        ajusteTemporal: ajuste !== undefined ? conSigno(ajuste) : '—',
+        modTemporal:
+          ajuste !== undefined
+            ? formatearModificador(puntuacionFinal(sheet, atributo))
+            : '—',
+      };
+    });
   }
 
   /** Campos de la ficha que el personaje tiene rellenos, con su etiqueta. */

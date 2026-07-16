@@ -19,6 +19,9 @@ import {
   ATRIBUTOS_LANZAMIENTO,
   bmc,
   bonificadorHabilidad,
+  bonificadorRacial,
+  puntuacionFinal,
+  RAZAS_CON_ELECCION,
   capacidadDeCarga,
   CapacidadDeCarga,
   cargaActual,
@@ -40,6 +43,8 @@ import {
   caDesprevenido,
   caDeToque,
   casillas,
+  Clase,
+  CLASES,
   claseDeArmadura,
   CombateValores,
   conSigno,
@@ -57,6 +62,8 @@ import {
   PgValores,
   piesAMetros,
   puntuacionEfectiva,
+  Raza,
+  RAZAS,
   Tamano,
   TAMANO_LABELS,
   TAMANOS,
@@ -274,6 +281,14 @@ export class CharacterForm {
   readonly save = output<CharacterUpsert>();
 
   protected readonly alineamientos = ALINEAMIENTOS;
+  protected readonly clases = CLASES;
+  protected readonly razas = RAZAS;
+
+  /** Humano, Semielfo y Semiorco eligen a qué atributo va su +2. */
+  protected readonly razaConEleccion = computed(() => {
+    const raza = this.form.raza();
+    return raza !== '' && RAZAS_CON_ELECCION.includes(raza);
+  });
   protected readonly atributos = ATRIBUTOS;
   protected readonly atributoLabels = ATRIBUTO_LABELS;
   protected readonly modificador = formatearModificador;
@@ -322,11 +337,12 @@ export class CharacterForm {
     name: signal(''),
     level: signal(1),
     jugador: signal(''),
-    clase: signal(''),
+    clase: signal<Clase | ''>(''),
     alineamiento: signal<Alineamiento | ''>(''),
     paisNatal: signal(''),
     dios: signal(''),
-    raza: signal(''),
+    raza: signal<Raza | ''>(''),
+    atributoRacial: signal<(typeof ATRIBUTOS)[number] | ''>(''),
     tamano: signal<Tamano | ''>(''),
     edad: signal<number | null>(null),
     altura: signal(''),
@@ -468,20 +484,33 @@ export class CharacterForm {
     return ATRIBUTO_LABELS[SALVACION_ATRIBUTO[salvacion]];
   }
 
+  /** Bonificador racial de un atributo, o — si la raza no lo toca. */
+  protected racialDe(atributo: (typeof ATRIBUTOS)[number]): string {
+    const racial = bonificadorRacial(this.buildSheetData(), atributo);
+    return racial === 0 ? '—' : conSigno(racial);
+  }
+
+  /** Modificador de (base + racial), sin ajustes temporales. */
+  protected modConRacial(atributo: (typeof ATRIBUTOS)[number]): string {
+    const sheet = this.buildSheetData();
+    const puntuacion = sheet.atributos?.[atributo]?.puntuacion;
+    const racial = bonificadorRacial(sheet, atributo);
+    if (puntuacion === undefined && racial === 0) {
+      return '—';
+    }
+    return formatearModificador((puntuacion ?? 10) + racial);
+  }
+
   /**
-   * Modif. temporal de un atributo: el modificador de (puntuación + ajuste).
-   * Sin ajuste no hay efecto activo, así que se muestra —.
+   * Modif. temporal de un atributo: el modificador de la puntuación final
+   * (base + racial + ajuste). Sin ajuste no hay efecto activo: se muestra —.
    */
   protected modTemporal(atributo: (typeof ATRIBUTOS)[number]): string {
     const ajuste = this.form.atributos[atributo].ajusteTemporal();
     if (ajuste === null) {
       return '—';
     }
-    const efectiva = puntuacionEfectiva({
-      puntuacion: this.form.atributos[atributo].puntuacion() ?? undefined,
-      ajusteTemporal: ajuste,
-    });
-    return formatearModificador(efectiva);
+    return formatearModificador(puntuacionFinal(this.buildSheetData(), atributo));
   }
 
   /** "6 cas. / 9 m" a partir de pies, o — si la casilla está vacía. */
@@ -522,11 +551,16 @@ export class CharacterForm {
 
     const campos: Record<string, string | number | undefined> = {
       jugador: texto(this.form.jugador()),
-      clase: texto(this.form.clase()),
+      clase: this.form.clase() || undefined,
       alineamiento: this.form.alineamiento() || undefined,
       paisNatal: texto(this.form.paisNatal()),
       dios: texto(this.form.dios()),
-      raza: texto(this.form.raza()),
+      raza: this.form.raza() || undefined,
+      // La elección de +2 solo tiene sentido en las razas flexibles
+      atributoRacial:
+        this.razaConEleccion() && this.form.atributoRacial()
+          ? (this.form.atributoRacial() as (typeof ATRIBUTOS)[number])
+          : undefined,
       tamano: this.form.tamano() || undefined,
       edad: this.form.edad() ?? undefined,
       altura: texto(this.form.altura()),
@@ -885,6 +919,7 @@ export class CharacterForm {
     this.form.paisNatal.set(sheet.paisNatal ?? '');
     this.form.dios.set(sheet.dios ?? '');
     this.form.raza.set(sheet.raza ?? '');
+    this.form.atributoRacial.set(sheet.atributoRacial ?? '');
     this.form.tamano.set(sheet.tamano ?? '');
     this.form.edad.set(sheet.edad ?? null);
     this.form.altura.set(sheet.altura ?? '');

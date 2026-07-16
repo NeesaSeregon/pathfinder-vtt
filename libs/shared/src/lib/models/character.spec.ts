@@ -1,6 +1,11 @@
 import {
+  ALINEAMIENTOS,
   bmc,
   bonificadorHabilidad,
+  bonificadorRacial,
+  puntuacionFinal,
+  CLASES,
+  RAZAS,
   caDeToque,
   caDesprevenido,
   capacidadDeCarga,
@@ -458,6 +463,56 @@ describe('pesoTotal y cargaActual', () => {
         ],
       }),
     ).toEqual({ bonif: 8, penalizador: -6, peso: 55 });
+  });
+});
+
+describe('bonificadorRacial y puntuacionFinal', () => {
+  it('el elfo suma +2 DES, +2 INT y resta -2 CON', () => {
+    const elfo = { raza: 'Elfo' as const };
+    expect(bonificadorRacial(elfo, 'destreza')).toBe(2);
+    expect(bonificadorRacial(elfo, 'inteligencia')).toBe(2);
+    expect(bonificadorRacial(elfo, 'constitucion')).toBe(-2);
+    expect(bonificadorRacial(elfo, 'fuerza')).toBe(0);
+  });
+
+  it('las razas flexibles aplican +2 solo al atributo elegido', () => {
+    const humano = { raza: 'Humano' as const, atributoRacial: 'carisma' as const };
+    expect(bonificadorRacial(humano, 'carisma')).toBe(2);
+    expect(bonificadorRacial(humano, 'fuerza')).toBe(0);
+    // Sin elección hecha, nada
+    expect(bonificadorRacial({ raza: 'Semiorco' }, 'fuerza')).toBe(0);
+  });
+
+  it('la puntuación final encadena base + racial + ajuste temporal', () => {
+    expect(
+      puntuacionFinal(
+        {
+          raza: 'Elfo',
+          atributos: { destreza: { puntuacion: 12, ajusteTemporal: 4 } },
+        },
+        'destreza',
+      ),
+    ).toBe(18); // 12 + 2 racial + 4
+  });
+
+  it('la raza se propaga a toda la ficha: la CA del elfo sube sola', () => {
+    const base = { atributos: { destreza: { puntuacion: 14 } } };
+    expect(claseDeArmadura(base)).toBe(12); // Des 14 → +2
+    expect(claseDeArmadura({ ...base, raza: 'Elfo' })).toBe(13); // 16 → +3
+  });
+});
+
+describe('listas oficiales del Core', () => {
+  it('9 alineamientos, 11 clases, 7 razas', () => {
+    expect(ALINEAMIENTOS).toHaveLength(9);
+    expect(CLASES).toHaveLength(11);
+    expect(RAZAS).toHaveLength(7);
+  });
+
+  it('la parrilla de alineamientos incluye el neutral puro', () => {
+    expect(ALINEAMIENTOS).toContain('neutral');
+    expect(ALINEAMIENTOS).toContain('caótico bueno');
+    expect(ALINEAMIENTOS).toContain('neutral malo');
   });
 });
 

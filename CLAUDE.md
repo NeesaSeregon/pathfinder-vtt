@@ -31,6 +31,17 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   (nx g @nx/nest:resource, nx g @angular/...), no a mano.
 - Los comandos se ejecutan en PowerShell (Windows).
 
+## Seguridad de dependencias
+- ignore-scripts=true en ~/.npmrc (global, decidido el 2026-07-16 por los
+  ataques de cadena de suministro en npm): npm install NO ejecuta los scripts
+  preinstall/postinstall de los paquetes.
+- Consecuencia: tras un install limpio (node_modules borrado) hay que ejecutar
+  manualmente: npm rebuild esbuild nx unrs-resolver && npx cypress install
+  (son los únicos paquetes del proyecto con postinstall legítimo).
+- No usar comodines "*" en versiones de dependencias; fijar rangos concretos.
+- Preferir npm ci cuando no se cambian dependencias, y no adoptar versiones
+  recién publicadas (esperar unos días) al añadir o actualizar paquetes.
+
 ## Decisiones de diseño
 - sheetData (JSONB) guarda solo DATOS ORIGEN del personaje; los derivados
   (modificadores, CA/toque/desprevenido, iniciativa, casillas/metros) se

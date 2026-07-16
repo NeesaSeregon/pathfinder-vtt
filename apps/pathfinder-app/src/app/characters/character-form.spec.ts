@@ -123,13 +123,13 @@ describe('CharacterForm', () => {
   it('precarga los campos cuando recibe un personaje en initial', async () => {
     fixture.componentRef.setInput(
       'initial',
-      personaje({ clase: 'Maga', atributos: { fuerza: { puntuacion: 12 } } }),
+      personaje({ clase: 'Mago', atributos: { fuerza: { puntuacion: 12 } } }),
     );
     await fixture.whenStable();
 
     interno.submit();
     expect(emitido?.name).toBe('Ezren');
-    expect(emitido?.sheetData.clase).toBe('Maga');
+    expect(emitido?.sheetData.clase).toBe('Mago');
     expect(emitido?.sheetData.atributos).toEqual({
       fuerza: { puntuacion: 12 },
     });

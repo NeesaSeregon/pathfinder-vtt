@@ -9,7 +9,12 @@
   </label>
   <label>
     Clase
-    <input type="text" name="clase" maxlength="50" [(ngModel)]="form.clase" />
+    <select name="clase" [(ngModel)]="form.clase">
+      <option value="">—</option>
+      @for (clase of clases; track clase) {
+        <option [value]="clase">{{ clase }}</option>
+      }
+    </select>
   </label>
   <label>
     Alineamiento
@@ -30,8 +35,24 @@
   </label>
   <label>
     Raza
-    <input type="text" name="raza" maxlength="50" [(ngModel)]="form.raza" />
+    <select name="raza" [(ngModel)]="form.raza">
+      <option value="">—</option>
+      @for (raza of razas; track raza) {
+        <option [value]="raza">{{ raza }}</option>
+      }
+    </select>
   </label>
+  @if (razaConEleccion()) {
+    <label>
+      +2 racial a…
+      <select name="atributo-racial" [(ngModel)]="form.atributoRacial">
+        <option value="">—</option>
+        @for (atributo of atributos; track atributo) {
+          <option [value]="atributo">{{ atributoLabels[atributo] }}</option>
+        }
+      </select>
+    </label>
+  }
   <label>
     Tamaño
     <select name="tamano" [(ngModel)]="form.tamano">
@@ -69,7 +90,8 @@
     <legend>Atributos</legend>
     <div class="character-form__atributos-grid">
       <span></span>
-      <span class="character-form__atributos-head">Punt.</span>
+      <span class="character-form__atributos-head">Punt. base</span>
+      <span class="character-form__atributos-head">Racial</span>
       <span class="character-form__atributos-head">Modif.</span>
       <span class="character-form__atributos-head">Ajuste temp.</span>
       <span class="character-form__atributos-head">Modif. temp.</span>
@@ -86,7 +108,8 @@
           [attr.name]="atributo + '-puntuacion'"
           [(ngModel)]="form.atributos[atributo].puntuacion"
         />
-        <output>{{ modificador(form.atributos[atributo].puntuacion()) }}</output>
+        <output>{{ racialDe(atributo) }}</output>
+        <output>{{ modConRacial(atributo) }}</output>
         <!-- Ajuste temporal: SUMA/RESTA a la puntuación (fuerza de toro: +4) -->
         <input
           type="number"

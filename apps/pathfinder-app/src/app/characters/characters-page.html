@@ -159,7 +159,8 @@
               <thead>
                 <tr>
                   <th></th>
-                  <th>Punt.</th>
+                  <th>Punt. base</th>
+                  <th>Racial</th>
                   <th>Modif.</th>
                   <th>Ajuste temp.</th>
                   <th>Modif. temp.</th>
@@ -170,7 +171,8 @@
                   <tr>
                     <th>{{ fila.label }}</th>
                     <td>{{ fila.puntuacion ?? '—' }}</td>
-                    <td>{{ modificador(fila.puntuacion) }}</td>
+                    <td>{{ fila.racial }}</td>
+                    <td>{{ fila.modificador }}</td>
                     <td>{{ fila.ajusteTemporal }}</td>
                     <td>{{ fila.modTemporal }}</td>
                   </tr>
