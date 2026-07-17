@@ -5,16 +5,72 @@
       Únete a la mesa de tu máster con un código de invitación o buscando la
       partida por su nombre.
     </p>
-    <form class="partida__form">
+    <form class="partida__form" (ngSubmit)="buscar()">
       <label>
         Código o nombre de la partida
-        <input type="text" name="busqueda" placeholder="p. ej. La corona carmesí" />
+        <input
+          type="text"
+          name="busqueda"
+          placeholder="p. ej. La corona carmesí"
+          [(ngModel)]="busqueda"
+        />
       </label>
-      <button type="button" class="boton-primario" disabled>Buscar</button>
+      <button type="submit" class="boton-primario">Buscar</button>
     </form>
-    <p class="aviso-construccion">
-      Las partidas están en construcción: esta pantalla es una maqueta y la
-      búsqueda aún no funciona.
-    </p>
+
+    @if (misPersonajes().length > 0) {
+      <label class="partida__selector">
+        Unirse con
+        <select name="personaje" [(ngModel)]="personajeElegido">
+          <option value="">— elige personaje —</option>
+          @for (personaje of misPersonajes(); track personaje.id) {
+            <option [value]="personaje.id">{{ personaje.name }}</option>
+          }
+        </select>
+      </label>
+    } @else {
+      <p class="partida__texto">
+        No tienes personajes todavía: crea uno en Personajes para poder
+        unirte a una mesa.
+      </p>
+    }
+
+    @if (mensaje()) {
+      <p class="partida__exito">{{ mensaje() }}</p>
+    }
+    @if (error()) {
+      <p class="acceso__error">{{ error() }}</p>
+    }
+
+    <ul class="partida__resultados">
+      @for (partida of resultados(); track partida.id) {
+        <li>
+          <div class="partida__resultado-info">
+            <strong>{{ partida.nombre }}</strong>
+            <small>
+              máster {{ partida.master }} ·
+              {{ estadoLabels[partida.estado] }} ·
+              {{ partida.numPersonajes }}
+              {{ partida.numPersonajes === 1 ? 'personaje' : 'personajes' }}
+              @if (partida.codigo) {
+                · código {{ partida.codigo }}
+              }
+            </small>
+            @if (partida.descripcion) {
+              <small>{{ partida.descripcion }}</small>
+            }
+          </div>
+          <button
+            type="button"
+            [disabled]="!personajeElegido()"
+            (click)="unirse(partida)"
+          >
+            Unirse
+          </button>
+        </li>
+      } @empty {
+        <li class="partida__texto">Sin resultados.</li>
+      }
+    </ul>
   </section>
 </main>

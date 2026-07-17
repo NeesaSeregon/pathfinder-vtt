@@ -32,6 +32,47 @@ describe('autenticación', () => {
   });
 });
 
+describe('partidas', () => {
+  it('crear una mesa, encontrarla por nombre y unirse con un personaje', () => {
+    const nombre = `Mesa-${Date.now()}`;
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+
+    // Un personaje con PG para comprobar el estado de sesión inicial
+    cy.request('POST', '/api/characters', {
+      name: `Heroe-${Date.now()}`,
+      level: 3,
+      sheetData: { pg: { total: 31 } },
+    });
+
+    // El máster crea la mesa y recibe su código de invitación
+    cy.visit('/partidas/crear');
+    cy.get('input[name="nombre"]').type(nombre);
+    cy.contains('button', 'Crear partida').click();
+    cy.get('.partida__codigo')
+      .invoke('text')
+      .should('match', /^[A-HJ-KM-NP-Z2-9]{6}$/);
+
+    // El jugador la encuentra por nombre y se une con su personaje
+    cy.visit('/partidas/buscar');
+    cy.get('input[name="busqueda"]').type(nombre);
+    cy.contains('button', 'Buscar').click();
+    cy.contains('.partida__resultados li', nombre).should(
+      'contain',
+      '0 personajes',
+    );
+
+    cy.get('select[name="personaje"]').select(1); // el primero de la lista
+    cy.contains('.partida__resultados li', nombre)
+      .contains('button', 'Unirse')
+      .click();
+    cy.get('.partida__exito').should('contain', nombre);
+    cy.contains('.partida__resultados li', nombre).should(
+      'contain',
+      '1 personaje',
+    );
+  });
+});
+
 describe('home y navegación', () => {
   it('la home muestra las tres secciones y navega a personajes', () => {
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');

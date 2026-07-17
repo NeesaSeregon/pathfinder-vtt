@@ -2,3 +2,52 @@
   color: var(--text-muted);
   margin-top: 0;
 }
+
+.partida__selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+
+  select {
+    max-width: 20rem;
+  }
+}
+
+.partida__exito {
+  color: #7bd88f;
+  margin: 0.75rem 0 0;
+}
+
+.acceso__error {
+  margin: 0.75rem 0 0;
+  color: #ff6b6b;
+  font-size: 0.9rem;
+}
+
+.partida__resultados {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+.partida__resultado-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+
+  small {
+    color: var(--text-muted);
+  }
+}

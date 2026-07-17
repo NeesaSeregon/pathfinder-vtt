@@ -1,20 +1,57 @@
 <main class="pagina-estrecha">
   <section class="panel">
     <h1>Crear partida</h1>
-    <p class="partida__texto">
-      Prepara una mesa como máster: dale nombre a la partida e invita a tus
-      jugadores con sus fichas.
-    </p>
-    <form class="partida__form">
-      <label>
-        Nombre de la partida
-        <input type="text" name="nombre" placeholder="p. ej. El auge de los señores de las runas" />
-      </label>
-      <button type="button" class="boton-primario" disabled>Crear partida</button>
-    </form>
-    <p class="aviso-construccion">
-      Las partidas están en construcción: esta pantalla es una maqueta y la
-      creación aún no funciona.
-    </p>
+
+    @if (creada(); as partida) {
+      <div class="partida__creada">
+        <p class="partida__texto">
+          <strong>{{ partida.nombre }}</strong> está lista. Comparte este
+          código de invitación con tus jugadores:
+        </p>
+        <p class="partida__codigo">{{ partida.codigo }}</p>
+        <p class="partida__texto">
+          Podrán encontrarla en
+          <a routerLink="/partidas/buscar">Buscar partida</a> con el código o
+          por su nombre.
+        </p>
+      </div>
+    } @else {
+      <p class="partida__texto">
+        Prepara una mesa como máster: dale nombre a la partida e invita a tus
+        jugadores con sus fichas.
+      </p>
+      <form class="partida__form" (ngSubmit)="crear()">
+        <label>
+          Nombre de la partida
+          <input
+            type="text"
+            name="nombre"
+            maxlength="100"
+            placeholder="p. ej. El auge de los señores de las runas"
+            [(ngModel)]="nombre"
+          />
+        </label>
+        <label>
+          Descripción (opcional)
+          <input
+            type="text"
+            name="descripcion"
+            maxlength="500"
+            placeholder="ambientación, día de juego..."
+            [(ngModel)]="descripcion"
+          />
+        </label>
+        <button
+          type="submit"
+          class="boton-primario"
+          [disabled]="cargando() || nombre().trim().length < 3"
+        >
+          {{ cargando() ? 'Creando…' : 'Crear partida' }}
+        </button>
+      </form>
+      @if (error()) {
+        <p class="acceso__error">{{ error() }}</p>
+      }
+    }
   </section>
 </main>

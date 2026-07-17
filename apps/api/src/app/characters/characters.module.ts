@@ -8,5 +8,7 @@ import { Character } from './entities/character.entity';
   imports: [TypeOrmModule.forFeature([Character])],
   controllers: [CharactersController],
   providers: [CharactersService],
+  // PartidasModule valida la propiedad del personaje al unirse a una mesa
+  exports: [CharactersService],
 })
 export class CharactersModule {}

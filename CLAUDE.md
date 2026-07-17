@@ -88,5 +88,11 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   La página de personajes (listar, crear, borrar) vive en /personajes,
   servida contra /api/characters vía proxy. E2E con Cypress verificando
   navegación y el flujo completo (npx nx e2e pathfinder-app-e2e).
-- Maquetas sin funcionalidad, pendientes de sus sistemas: /partidas/buscar,
-  /partidas/crear (modelo de partida) y /entrar, /registro (usuarios).
+- Usuarios funcionando: /entrar y /registro con JWT en cookie httpOnly
+  (ver sección Autenticación); los personajes tienen dueño.
+- Partidas: entidad Partida (el creador es el máster; código de invitación
+  de 6 caracteres, visible solo para él) y PersonajeEnPartida (tabla
+  intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la
+  ficha al unirse—, danoNoLetal, condiciones, posX/posY). /partidas/crear
+  y /partidas/buscar (por nombre o código) + unirse funcionan en el front.
+- Pendiente: vista de partida con tablero y tiempo real (WebSockets).

@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { CharactersModule } from './characters/characters.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { PartidasModule } from './partidas/partidas.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AuthModule } from './auth/auth.module';
     CharactersModule,
     UsersModule,
     AuthModule,
+    PartidasModule,
   ],
   controllers: [AppController],
   providers: [AppService],
