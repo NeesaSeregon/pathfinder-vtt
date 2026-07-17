@@ -30,13 +30,20 @@
   </nav>
 
   <div class="navbar__sesion">
-    <a
-      class="navbar__enlace"
-      routerLink="/entrar"
-      routerLinkActive="navbar__enlace--activo"
-      >Iniciar sesión</a
-    >
-    <a class="navbar__boton" routerLink="/registro">Crear cuenta</a>
+    @if (sesion.username(); as username) {
+      <span class="navbar__usuario">{{ username }}</span>
+      <button type="button" class="navbar__boton" (click)="salir()">
+        Salir
+      </button>
+    } @else {
+      <a
+        class="navbar__enlace"
+        routerLink="/entrar"
+        routerLinkActive="navbar__enlace--activo"
+        >Iniciar sesión</a
+      >
+      <a class="navbar__boton" routerLink="/registro">Crear cuenta</a>
+    }
   </div>
 </header>
 

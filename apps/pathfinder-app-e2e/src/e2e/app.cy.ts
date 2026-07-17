@@ -1,5 +1,40 @@
+describe('autenticación', () => {
+  it('sin sesión, /personajes redirige a /entrar', () => {
+    cy.visit('/personajes');
+    cy.location('pathname').should('eq', '/entrar');
+    cy.get('h1').contains('Iniciar sesión');
+  });
+
+  it('registro por la interfaz: crea cuenta, entra y puede salir', () => {
+    const sufijo = Date.now();
+    cy.visit('/registro');
+    cy.get('input[name="usuario"]').type(`tester-${sufijo}`);
+    cy.get('input[name="email"]').type(`tester-${sufijo}@mesa.es`);
+    cy.get('input[name="password"]').type('contraseña-larga');
+    cy.get('input[name="password2"]').type('contraseña-larga');
+    cy.contains('button', 'Crear cuenta').click();
+
+    // Registrarse deja dentro: aterriza en personajes con su nombre arriba
+    cy.get('h1').contains('Personajes');
+    cy.get('.navbar__usuario').should('contain', `tester-${sufijo}`);
+
+    cy.contains('button', 'Salir').click();
+    cy.contains('a', 'Iniciar sesión');
+  });
+
+  it('el login rechaza una contraseña incorrecta explicando el motivo', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.visit('/entrar');
+    cy.get('input[name="email"]').type('tester-fijo@mesa.es');
+    cy.get('input[name="password"]').type('equivocada-aposta');
+    cy.contains('button', 'Entrar').click();
+    cy.get('.acceso__error').should('contain', 'incorrectos');
+  });
+});
+
 describe('home y navegación', () => {
   it('la home muestra las tres secciones y navega a personajes', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
     cy.visit('/');
     cy.get('.home__tarjeta').should('have.length', 3);
     cy.contains('.home__tarjeta', 'Personajes').click();
@@ -7,17 +42,19 @@ describe('home y navegación', () => {
   });
 
   it('el menú Partidas de la navbar lleva a las maquetas', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
     cy.visit('/');
     cy.contains('summary', 'Partidas').click();
     cy.contains('a', 'Buscar partida').click();
     cy.get('h1').contains('Buscar partida');
-    cy.contains('a', 'Iniciar sesión').click();
-    cy.get('h1').contains('Iniciar sesión');
   });
 });
 
 describe('pathfinder-app-e2e', () => {
-  beforeEach(() => cy.visit('/personajes'));
+  beforeEach(() => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.visit('/personajes');
+  });
 
   it('should display the characters page', () => {
     cy.get('h1').contains('Personajes');
@@ -26,7 +63,10 @@ describe('pathfinder-app-e2e', () => {
   it('should create, view, edit and delete a character', () => {
     const name = `Cypress-${Date.now()}`;
 
-    // Alta con varios campos de ficha
+    // El alta vive en una modal, tras el botón "Nuevo personaje"
+    cy.contains('button', 'Nuevo personaje').click();
+
+    // Alta con varios campos de ficha (sección "Datos" abierta por defecto)
     cy.get('input[name="name"]').type(name);
     cy.get('input[name="jugador"]').type('Luis');
     cy.get('select[name="clase"]').select('Pícaro');
@@ -37,6 +77,7 @@ describe('pathfinder-app-e2e', () => {
     cy.get('input[name="level"]').type('7');
 
     // Atributos: el modificador se calcula en vivo al escribir
+    cy.contains('summary', 'Atributos').click();
     cy.get('input[name="fuerza-puntuacion"]').type('18');
     cy.get('.character-form__atributos-grid').should('contain', '+4');
     // Fuerza de toro: ajuste +4 → efectiva 22 → modif. temporal +6
@@ -45,6 +86,7 @@ describe('pathfinder-app-e2e', () => {
 
     // Combate con Des final 11 (9 base +2 de elfo → mod +0):
     // CA = 10+5+2+0 = 17; toque 10; desprevenido 17; iniciativa 0+2 = +2
+    cy.contains('summary', 'Combate').click();
     cy.get('input[name="ca-bonif-armadura"]').type('5');
     cy.get('input[name="ca-bonif-escudo"]').type('2');
     cy.get('input[name="iniciativa-vario"]').type('2');
@@ -63,14 +105,17 @@ describe('pathfinder-app-e2e', () => {
     );
 
     // Velocidad: 30 pies → 6 casillas / 9 m, derivado en vivo
+    cy.contains('summary', 'Velocidad').click();
     cy.get('input[name="velocidad-base"]').type('30');
     cy.get('.character-form__velocidad').should('contain', '6 cas. / 9 m');
 
     // Puntos de golpe y reducción de daño
+    cy.contains('summary', 'Puntos de golpe').click();
     cy.get('input[name="pg-total"]').type('45');
     cy.get('input[name="pg-rd"]').type('5/hierro frío');
 
     // Salvaciones: Reflejos base 4 + (+0 de Des final 11) = +4, en vivo
+    cy.contains('summary', 'Tiradas de salvación').click();
     cy.get('input[name="reflejos-base"]').type('4');
     cy.contains('.character-form__salvacion-nombre', 'Reflejos').should(
       'contain',
@@ -78,12 +123,14 @@ describe('pathfinder-app-e2e', () => {
     );
 
     // Armas: fila dinámica
+    cy.contains('summary', 'Armas').click();
     cy.contains('button', 'Añadir arma').click();
     cy.get('input[name="arma0-nombre"]').type('Espada larga');
     cy.get('input[name="arma0-ataque"]').type('+9/+4');
     cy.get('input[name="arma0-dano"]').type('1d8+4');
 
     // Equipo: con FUE efectiva 22 (fuerza de toro) la carga pesada es 520
+    cy.contains('summary', 'Equipo').click();
     cy.contains('button', 'Añadir equipo').click();
     cy.get('input[name="equipo0-nombre"]').type('Mochila');
     cy.get('input[name="equipo0-peso"]').type('2');
@@ -94,6 +141,7 @@ describe('pathfinder-app-e2e', () => {
     cy.get('.character-form__carga').should('contain', '520');
 
     // Dotes: lista dinámica, como armas y equipo
+    cy.contains('summary', 'Dotes y aptitudes especiales').click();
     cy.contains('button', 'Añadir dote').click();
     cy.get('input[name="dote0-nombre"]').type('Soltura con el arma');
     cy.get('input[name="dote0-descripcion"]').type('+1 ataque con el arma elegida');
@@ -102,11 +150,13 @@ describe('pathfinder-app-e2e', () => {
 
     // Conjuros: INT 16 base (+2 de elfo → 18, +4) como atributo de lanzamiento
     cy.get('input[name="inteligencia-puntuacion"]').type('16');
+    cy.contains('summary', 'Conjuros').click();
     cy.get('select[name="atributo-lanzamiento"]').select('Inteligencia');
     cy.get('input[name="conjuros1-pordia"]').type('2');
     cy.get('input[name="conjuros1-anotados"]').type('proyectil mágico');
 
     // Dinero y experiencia con derivados en vivo
+    cy.contains('summary', 'Dinero y experiencia').click();
     cy.get('input[name="dinero-po"]').type('12');
     cy.get('input[name="dinero-pp"]').type('30');
     cy.contains('.character-form__formula-fija', 'valor total').should(
@@ -121,6 +171,7 @@ describe('pathfinder-app-e2e', () => {
     );
 
     // Habilidades: Acrobacias 3 rangos + (+0 Des) + 3 de clase = +6
+    cy.contains('summary', 'Habilidades').click();
     cy.get('input[name="acrobacias-clase"]').check();
     cy.get('input[name="acrobacias-rangos"]').type('3');
     cy.contains('.character-form__habilidades-grid output', '+6');
@@ -129,6 +180,7 @@ describe('pathfinder-app-e2e', () => {
     cy.get('input[name="idiomas"]').type('común, élfico');
 
     // Ofensivo: FUE final 22 (+6) → BMC 3+6 = +9; DMC 10+3+6+0 = 19
+    cy.contains('summary', 'Ofensivo').click();
     cy.get('input[name="ataque-base"]').type('3');
     cy.contains('.character-form__formula-total', 'BMC').should(
       'contain',

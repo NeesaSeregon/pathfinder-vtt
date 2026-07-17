@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { authGuard } from './auth/auth.guard';
 
 export const appRoutes: Route[] = [
   {
@@ -7,12 +8,14 @@ export const appRoutes: Route[] = [
   },
   {
     path: 'personajes',
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./characters/characters-page').then((m) => m.CharactersPage),
   },
-  // Maquetas sin funcionalidad todavía: partidas y cuentas de usuario
+  // Maquetas sin funcionalidad todavía: partidas
   {
     path: 'partidas/buscar',
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./partidas/buscar-partida-page').then(
         (m) => m.BuscarPartidaPage,
@@ -20,6 +23,7 @@ export const appRoutes: Route[] = [
   },
   {
     path: 'partidas/crear',
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./partidas/crear-partida-page').then((m) => m.CrearPartidaPage),
   },

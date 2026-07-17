@@ -1,4 +1,7 @@
 <form class="character-form" (ngSubmit)="submit()">
+  <details class="character-form__datos" open>
+    <summary>Datos del personaje</summary>
+    <div class="character-form__datos-grid">
   <label>
     Nombre
     <input type="text" name="name" required maxlength="100" [(ngModel)]="form.name" />
@@ -86,8 +89,11 @@
     Nivel
     <input type="number" name="level" min="1" max="20" [(ngModel)]="form.level" />
   </label>
-  <fieldset class="character-form__atributos">
-    <legend>Atributos</legend>
+    </div>
+  </details>
+
+  <details class="character-form__atributos">
+    <summary>Atributos</summary>
     <div class="character-form__atributos-grid">
       <span></span>
       <span class="character-form__atributos-head">Punt. base</span>
@@ -121,10 +127,10 @@
         <output>{{ modTemporal(atributo) }}</output>
       }
     </div>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__combate">
-    <legend>Combate</legend>
+  <details class="character-form__combate">
+    <summary>Combate</summary>
 
     <div class="character-form__formula">
       <span class="character-form__formula-total">
@@ -197,10 +203,10 @@
         <input type="number" name="iniciativa-vario" [(ngModel)]="form.combate.modVarioIniciativa" />
       </label>
     </div>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__pg">
-    <legend>Puntos de golpe</legend>
+  <details class="character-form__pg">
+    <summary>Puntos de golpe</summary>
     <div class="character-form__formula">
       <label>
         Total
@@ -211,10 +217,10 @@
         <input type="text" name="pg-rd" maxlength="50" [(ngModel)]="form.pgRd" />
       </label>
     </div>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__ofensivo">
-    <legend>Ofensivo</legend>
+  <details class="character-form__ofensivo">
+    <summary>Ofensivo</summary>
 
     <div class="character-form__formula">
       <label>
@@ -263,10 +269,10 @@
         [(ngModel)]="form.ofensivoNotas"
       />
     </label>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__salvaciones">
-    <legend>Tiradas de salvación</legend>
+  <details class="character-form__salvaciones">
+    <summary>Tiradas de salvación</summary>
     @for (salvacion of salvaciones; track salvacion) {
       <div class="character-form__formula">
         <span class="character-form__formula-total character-form__salvacion-nombre">
@@ -326,10 +332,10 @@
         [(ngModel)]="form.salvacionesNotas"
       />
     </label>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__velocidad">
-    <legend>Velocidad (tierra)</legend>
+  <details class="character-form__velocidad">
+    <summary>Velocidad (tierra)</summary>
 
     <div class="character-form__formula">
       <label>
@@ -387,10 +393,10 @@
         [(ngModel)]="form.velocidad.modTemporales"
       />
     </label>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__armas">
-    <legend>Armas</legend>
+  <details class="character-form__armas">
+    <summary>Armas</summary>
     @for (arma of form.armas(); track arma; let i = $index) {
       <div class="character-form__arma">
         <label class="character-form__arma-nombre">
@@ -477,10 +483,10 @@
     >
       Añadir arma
     </button>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__armas">
-    <legend>Objetos CA</legend>
+  <details class="character-form__armas">
+    <summary>Objetos CA</summary>
     @for (objeto of form.objetosCa(); track objeto; let i = $index) {
       <div class="character-form__arma">
         <label class="character-form__arma-nombre">
@@ -550,10 +556,10 @@
     <button type="button" class="character-form__arma-agregar" (click)="agregarObjetoCa()">
       Añadir objeto CA
     </button>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__armas">
-    <legend>Equipo</legend>
+  <details class="character-form__armas">
+    <summary>Equipo</summary>
     @for (item of form.equipo(); track item; let i = $index) {
       <div class="character-form__arma">
         <label class="character-form__arma-nombre">
@@ -601,10 +607,10 @@
         Anota la Fuerza para calcular los límites de carga.
       </p>
     }
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__armas">
-    <legend>Dinero y experiencia</legend>
+  <details class="character-form__armas">
+    <summary>Dinero y experiencia</summary>
     <div class="character-form__formula">
       <label>
         PC (cobre)
@@ -642,10 +648,10 @@
         </span>
       }
     </div>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__armas">
-    <legend>Dotes y aptitudes especiales</legend>
+  <details class="character-form__armas">
+    <summary>Dotes y aptitudes especiales</summary>
     @for (dote of form.dotes(); track dote; let i = $index) {
       <div class="character-form__arma">
         <label class="character-form__arma-nombre">
@@ -672,10 +678,10 @@
       Aptitudes especiales (una por línea)
       <textarea name="aptitudes-especiales" rows="5" maxlength="2000" [(ngModel)]="form.aptitudesEspeciales"></textarea>
     </label>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__habilidades">
-    <legend>Habilidades</legend>
+  <details class="character-form__habilidades">
+    <summary>Habilidades</summary>
     <div class="character-form__habilidades-grid">
       <span class="character-form__habilidades-head">Clase</span>
       <span class="character-form__habilidades-head character-form__habilidades-head--nombre">
@@ -743,10 +749,10 @@
       Idiomas
       <input type="text" name="idiomas" maxlength="300" [(ngModel)]="form.idiomas" />
     </label>
-  </fieldset>
+  </details>
 
-  <fieldset class="character-form__armas">
-    <legend>Conjuros</legend>
+  <details class="character-form__armas">
+    <summary>Conjuros</summary>
 
     <div class="character-form__formula">
       <label>
@@ -798,9 +804,9 @@
       Modificadores condicionales
       <input type="text" maxlength="300" name="conjuros-condicionales" [(ngModel)]="form.conjurosCondicionales" />
     </label>
-  </fieldset>
+  </details>
 
-  <button type="submit" [disabled]="!form.name().trim()">
+  <button type="submit" class="boton-primario" [disabled]="!form.name().trim()">
     {{ submitLabel() }}
   </button>
 </form>

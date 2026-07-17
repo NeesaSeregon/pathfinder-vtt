@@ -42,6 +42,21 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Preferir npm ci cuando no se cambian dependencias, y no adoptar versiones
   recién publicadas (esperar unos días) al añadir o actualizar paquetes.
 
+## Autenticación
+- JWT emitido por /api/auth/register y /api/auth/login (se entra con email);
+  secreto en JWT_SECRET (.env), expiración 8h, hash de contraseñas con
+  bcryptjs (puro JS, compatible con ignore-scripts).
+- El token viaja en una cookie httpOnly + SameSite=Strict (pf_sesion);
+  secure solo en producción (en dev y LAN vamos por http). JS nunca ve el
+  token. Logout = POST /api/auth/logout (borra la cookie en el servidor).
+- La API es segura por defecto: AuthGuard global (APP_GUARD) que lee la
+  cookie (con Bearer como respaldo para scripts); solo @Public() abierto.
+- Front: SesionStore guarda solo el username; la sesión se restaura
+  preguntando a GET /api/auth/me (el authGuard lo hace la primera vez).
+  El authInterceptor ante un 401 limpia y redirige a /entrar.
+- Los personajes tienen dueño (Character.ownerId → users): cada usuario
+  solo ve y toca los suyos; el personaje de otro devuelve 404, no 403.
+
 ## Decisiones de diseño
 - sheetData (JSONB) guarda solo DATOS ORIGEN del personaje; los derivados
   (modificadores, CA/toque/desprevenido, iniciativa, casillas/metros) se

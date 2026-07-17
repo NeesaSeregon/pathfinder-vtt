@@ -1,35 +1,27 @@
 /// <reference types="cypress" />
 
-// ***********************************************
-// This example commands.ts shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare namespace Cypress {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface Chainable<Subject> {
-    login(email: string, password: string): void;
+    /**
+     * Crea (o reutiliza) una cuenta vía API. El servidor responde con la
+     * cookie httpOnly de sesión y Cypress la guarda solo, como haría el
+     * navegador: no hay que tocar nada más.
+     */
+    login(username: string, email: string, password: string): void;
   }
 }
 
-// -- This is a parent command --
-Cypress.Commands.add('login', (email, password) => {
-  console.log('Custom command example: Login', email, password);
+Cypress.Commands.add('login', (username, email, password) => {
+  cy.request({
+    method: 'POST',
+    url: '/api/auth/register',
+    body: { username, email, password },
+    failOnStatusCode: false, // si ya existe (409), hacemos login
+  }).then((respuesta) => {
+    if (respuesta.status !== 201) {
+      cy.request('POST', '/api/auth/login', { email, password });
+    }
+  });
 });
-//
-// -- This is a child command --
-// Cypress.Commands.add("drag", { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add("dismiss", { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })

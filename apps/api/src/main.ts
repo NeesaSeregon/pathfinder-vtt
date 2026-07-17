@@ -5,12 +5,15 @@
 
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
+  // Necesario para leer la cookie de sesión (req.cookies)
+  app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
       // whitelist: descarta propiedades que no estén en el DTO.

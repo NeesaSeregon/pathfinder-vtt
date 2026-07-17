@@ -1,21 +1,38 @@
 <main class="pagina-estrecha">
   <section class="panel">
     <h1>Iniciar sesión</h1>
-    <form class="acceso__form">
+    <form class="acceso__form" (ngSubmit)="entrar()">
       <label>
         Correo electrónico
-        <input type="email" name="email" autocomplete="email" />
+        <input
+          type="email"
+          name="email"
+          autocomplete="email"
+          required
+          [(ngModel)]="email"
+        />
       </label>
       <label>
         Contraseña
-        <input type="password" name="password" autocomplete="current-password" />
+        <input
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          required
+          [(ngModel)]="password"
+        />
       </label>
-      <button type="button" class="boton-primario" disabled>Entrar</button>
+      <button
+        type="submit"
+        class="boton-primario"
+        [disabled]="cargando() || !email().trim() || !password()"
+      >
+        {{ cargando() ? 'Entrando…' : 'Entrar' }}
+      </button>
     </form>
-    <p class="aviso-construccion">
-      El sistema de cuentas está en construcción: esta pantalla es una maqueta
-      y todavía no se puede iniciar sesión.
-    </p>
+    @if (error()) {
+      <p class="acceso__error">{{ error() }}</p>
+    }
     <p class="acceso__alternativa">
       ¿Aún no tienes cuenta?
       <a routerLink="/registro">Regístrate</a>

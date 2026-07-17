@@ -1,7 +1,10 @@
 <section class="characters">
-  <h1>Personajes</h1>
-
-  <app-character-form #createForm (save)="create($event)" />
+  <header class="characters__cabecera">
+    <h1>Personajes</h1>
+    <button type="button" class="boton-primario" (click)="creating.set(true)">
+      Nuevo personaje
+    </button>
+  </header>
 
   @if (error()) {
     <p class="characters__error">{{ error() }}</p>
@@ -25,6 +28,24 @@
         </li>
       }
     </ul>
+  }
+
+  @if (creating()) {
+    <div
+      class="characters__overlay"
+      (click)="onOverlayClick($event)"
+      role="presentation"
+    >
+      <div class="characters__modal" role="dialog" aria-modal="true">
+        <header>
+          <h2>Nuevo personaje</h2>
+          <button type="button" aria-label="Cerrar" (click)="creating.set(false)">
+            ✕
+          </button>
+        </header>
+        <app-character-form (save)="create($event)" />
+      </div>
+    </div>
   }
 
   @if (selected(); as character) {

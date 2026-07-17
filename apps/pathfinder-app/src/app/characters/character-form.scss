@@ -4,6 +4,48 @@
   gap: 0.75rem;
   align-items: end;
 
+  /* Secciones plegables: cada bloque de la ficha es un details */
+  details {
+    background: var(--surface);
+  }
+
+  summary {
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      color: var(--accent);
+    }
+  }
+
+  &__datos,
+  &__atributos,
+  &__pg {
+    &[open] > summary {
+      margin-bottom: 0.75rem;
+    }
+  }
+
+  &__datos {
+    grid-column: 1 / -1;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+
+    summary {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 0 0.25rem;
+    }
+  }
+
+  &__datos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: 0.75rem;
+    align-items: end;
+  }
+
   label {
     display: flex;
     flex-direction: column;
@@ -27,7 +69,7 @@
     border-radius: 0.25rem;
     padding: 0.75rem;
 
-    legend {
+    summary {
       font-size: 0.85rem;
       color: var(--text-muted);
       padding: 0 0.25rem;
@@ -73,7 +115,7 @@
     flex-direction: column;
     gap: 0.75rem;
 
-    legend {
+    summary {
       font-size: 0.85rem;
       color: var(--text-muted);
       padding: 0 0.25rem;
@@ -133,7 +175,7 @@
     border-radius: 0.25rem;
     padding: 0.75rem;
 
-    legend {
+    summary {
       font-size: 0.85rem;
       color: var(--text-muted);
       padding: 0 0.25rem;
@@ -161,7 +203,7 @@
     flex-direction: column;
     gap: 0.75rem;
 
-    legend {
+    summary {
       font-size: 0.85rem;
       color: var(--text-muted);
       padding: 0 0.25rem;
@@ -177,7 +219,7 @@
     flex-direction: column;
     gap: 0.75rem;
 
-    legend {
+    summary {
       font-size: 0.85rem;
       color: var(--text-muted);
       padding: 0 0.25rem;
@@ -202,7 +244,7 @@
     flex-direction: column;
     gap: 0.75rem;
 
-    legend {
+    summary {
       font-size: 0.85rem;
       color: var(--text-muted);
       padding: 0 0.25rem;
@@ -294,7 +336,7 @@
     flex-direction: column;
     gap: 0.75rem;
 
-    legend {
+    summary {
       font-size: 0.85rem;
       color: var(--text-muted);
       padding: 0 0.25rem;
@@ -368,7 +410,7 @@
     flex-direction: column;
     gap: 0.75rem;
 
-    legend {
+    summary {
       font-size: 0.85rem;
       color: var(--text-muted);
       padding: 0 0.25rem;

@@ -12,17 +12,30 @@ export class CharactersService {
     private readonly charactersRepository: Repository<Character>,
   ) {}
 
-  create(createCharacterDto: CreateCharacterDto): Promise<Character> {
-    const character = this.charactersRepository.create(createCharacterDto);
+  create(
+    createCharacterDto: CreateCharacterDto,
+    ownerId: string,
+  ): Promise<Character> {
+    const character = this.charactersRepository.create({
+      ...createCharacterDto,
+      ownerId,
+    });
     return this.charactersRepository.save(character);
   }
 
-  findAll(): Promise<Character[]> {
-    return this.charactersRepository.find();
+  findAll(ownerId: string): Promise<Character[]> {
+    return this.charactersRepository.findBy({ ownerId });
   }
 
-  async findOne(id: string): Promise<Character> {
-    const character = await this.charactersRepository.findOneBy({ id });
+  /**
+   * Busca por id Y por dueño: pedir el personaje de otro usuario da el
+   * mismo 404 que uno inexistente — no revelamos qué ids existen.
+   */
+  async findOne(id: string, ownerId: string): Promise<Character> {
+    const character = await this.charactersRepository.findOneBy({
+      id,
+      ownerId,
+    });
     if (!character) {
       throw new NotFoundException(`Character with id ${id} not found`);
     }
@@ -32,7 +45,10 @@ export class CharactersService {
   async update(
     id: string,
     updateCharacterDto: UpdateCharacterDto,
+    ownerId: string,
   ): Promise<Character> {
+    // findOne ya valida la propiedad; preload fusiona los cambios
+    await this.findOne(id, ownerId);
     const character = await this.charactersRepository.preload({
       id,
       ...updateCharacterDto,
@@ -43,8 +59,8 @@ export class CharactersService {
     return this.charactersRepository.save(character);
   }
 
-  async remove(id: string): Promise<void> {
-    const character = await this.findOne(id);
+  async remove(id: string, ownerId: string): Promise<void> {
+    const character = await this.findOne(id, ownerId);
     await this.charactersRepository.remove(character);
   }
 }

@@ -1,29 +1,70 @@
 <main class="pagina-estrecha">
   <section class="panel">
     <h1>Crear cuenta</h1>
-    <form class="acceso__form">
+    <form class="acceso__form" (ngSubmit)="crearCuenta()">
       <label>
         Nombre de usuario
-        <input type="text" name="usuario" autocomplete="username" />
+        <input
+          type="text"
+          name="usuario"
+          autocomplete="username"
+          required
+          minlength="3"
+          maxlength="30"
+          [(ngModel)]="usuario"
+        />
       </label>
       <label>
         Correo electrónico
-        <input type="email" name="email" autocomplete="email" />
+        <input
+          type="email"
+          name="email"
+          autocomplete="email"
+          required
+          [(ngModel)]="email"
+        />
       </label>
       <label>
         Contraseña
-        <input type="password" name="password" autocomplete="new-password" />
+        <input
+          type="password"
+          name="password"
+          autocomplete="new-password"
+          required
+          minlength="8"
+          [(ngModel)]="password"
+        />
       </label>
       <label>
         Repite la contraseña
-        <input type="password" name="password2" autocomplete="new-password" />
+        <input
+          type="password"
+          name="password2"
+          autocomplete="new-password"
+          required
+          [(ngModel)]="password2"
+        />
       </label>
-      <button type="button" class="boton-primario" disabled>Crear cuenta</button>
+      @if (password2() && !contrasenasCoinciden()) {
+        <p class="acceso__error">Las contraseñas no coinciden</p>
+      }
+      <button
+        type="submit"
+        class="boton-primario"
+        [disabled]="
+          cargando() ||
+          !usuario().trim() ||
+          !email().trim() ||
+          !password() ||
+          !contrasenasCoinciden()
+        "
+      >
+        {{ cargando() ? 'Creando cuenta…' : 'Crear cuenta' }}
+      </button>
     </form>
-    <p class="aviso-construccion">
-      El sistema de cuentas está en construcción: esta pantalla es una maqueta
-      y el registro todavía no funciona.
-    </p>
+    @if (error()) {
+      <p class="acceso__error">{{ error() }}</p>
+    }
     <p class="acceso__alternativa">
       ¿Ya tienes cuenta?
       <a routerLink="/entrar">Inicia sesión</a>

@@ -81,6 +81,11 @@
     gap: 0.5rem;
   }
 
+  &__usuario {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
   &__boton {
     color: var(--accent);
     background: var(--accent-soft);

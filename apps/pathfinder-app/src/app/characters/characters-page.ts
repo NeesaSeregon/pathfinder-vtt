@@ -1,4 +1,4 @@
-import { Component, inject, signal, viewChild } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import {
   ATRIBUTO_LABELS,
   ATRIBUTOS,
@@ -62,8 +62,6 @@ const ETIQUETAS_FICHA: [keyof CharacterSheetData & string, string][] = [
 export class CharactersPage {
   private readonly api = inject(CharactersApi);
 
-  private readonly createForm = viewChild.required<CharacterForm>('createForm');
-
   protected readonly characters = signal<Character[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -71,6 +69,8 @@ export class CharactersPage {
   // Estado de la modal: personaje seleccionado y si está en modo edición.
   protected readonly selected = signal<Character | null>(null);
   protected readonly editing = signal(false);
+  // Modal de alta: el formulario se crea al abrir, así siempre nace vacío.
+  protected readonly creating = signal(false);
 
   constructor() {
     this.load();
@@ -95,7 +95,7 @@ export class CharactersPage {
     this.api.create(payload).subscribe({
       next: (created) => {
         this.characters.update((list) => [...list, created]);
-        this.createForm().reset();
+        this.creating.set(false);
       },
       error: (err) =>
         this.error.set(`No se pudo crear el personaje: ${mensajeDeError(err)}`),
@@ -110,6 +110,7 @@ export class CharactersPage {
   protected closeModal(): void {
     this.selected.set(null);
     this.editing.set(false);
+    this.creating.set(false);
   }
 
   /** Cierra solo si el clic fue en el fondo oscuro, no dentro de la ventana. */
