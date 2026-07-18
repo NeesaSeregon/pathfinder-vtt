@@ -7,6 +7,7 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { PartidaDetalle } from '@pathfinder/shared';
 import { PartidaDetallePage } from './partida-detalle-page';
+import { EscuchasDeMesa, PartidaSocket } from './partida-socket';
 
 const DETALLE: PartidaDetalle = {
   id: 'partida-1',
@@ -39,13 +40,21 @@ describe('PartidaDetallePage', () => {
   let component: PartidaDetallePage;
   let fixture: ComponentFixture<PartidaDetallePage>;
   let httpMock: HttpTestingController;
+  // Socket falso: capturamos las escuchas para simular eventos a mano
+  let escuchas: EscuchasDeMesa | null = null;
+  const socketFalso = {
+    conectar: (_id: string, e: EscuchasDeMesa) => (escuchas = e),
+    desconectar: () => undefined,
+  };
 
   beforeEach(async () => {
+    escuchas = null;
     await TestBed.configureTestingModule({
       imports: [PartidaDetallePage],
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        { provide: PartidaSocket, useValue: socketFalso },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -106,5 +115,20 @@ describe('PartidaDetallePage', () => {
     expect(
       fixture.nativeElement.querySelector('.tablero .tablero__token'),
     ).toBeTruthy();
+  });
+
+  it('un evento del socket actualiza la mesa sin petición HTTP', async () => {
+    // Simula que OTRO usuario le bajó los PG a Valeros
+    escuchas?.onEstadoPersonaje({
+      pepId: 'pep-1',
+      cambios: { pgActuales: 12 },
+    });
+    await fixture.whenStable();
+
+    const pgInput: HTMLInputElement =
+      fixture.nativeElement.querySelector('.mesa__pg input');
+    expect(pgInput.value).toBe('12');
+    // Sin ninguna petición HTTP de por medio: fue push puro
+    httpMock.expectNone('/api/partidas/partida-1');
   });
 });

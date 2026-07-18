@@ -1,12 +1,14 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import {
+  EstadoPersonajeEvento,
   PartidaDetalle,
   PersonajeEnPartidaResumen,
   TABLERO_ALTO,
   TABLERO_ANCHO,
 } from '@pathfinder/shared';
 import { PartidasApi } from './partidas-api';
+import { PartidaSocket } from './partida-socket';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
 @Component({
@@ -38,9 +40,16 @@ export class PartidaDetallePage {
 
   constructor() {
     this.cargar();
+    // Tiempo real: los cambios de otros llegan solos por el socket
+    const socket = inject(PartidaSocket);
+    socket.conectar(this.partidaId, {
+      onEstadoPersonaje: (evento) => this.aplicarEvento(evento),
+      onMesaCambiada: () => this.cargar(),
+    });
+    inject(DestroyRef).onDestroy(() => socket.desconectar());
   }
 
-  /** Sin WebSockets todavía: el botón Actualizar es nuestro "tiempo real". */
+  /** Recarga completa (también botón Actualizar, como respaldo manual). */
   protected cargar(): void {
     this.error.set(null);
     this.api.detalle(this.partidaId).subscribe({
@@ -133,6 +142,20 @@ export class PartidaDetallePage {
       error: (err) =>
         this.error.set(`No se pudo actualizar: ${mensajeDeError(err)}`),
     });
+  }
+
+  /** Evento del socket: fusiona los cambios parciales en nuestra copia. */
+  private aplicarEvento(evento: EstadoPersonajeEvento): void {
+    this.partida.update((partida) =>
+      partida
+        ? {
+            ...partida,
+            personajes: partida.personajes.map((pep) =>
+              pep.id === evento.pepId ? { ...pep, ...evento.cambios } : pep,
+            ),
+          }
+        : partida,
+    );
   }
 
   /** Sustituye el personaje en la señal por la versión del servidor. */

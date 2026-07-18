@@ -20,6 +20,7 @@ import {
   UpdatePartidaDto,
 } from './dto/create-partida.dto';
 import { CharactersService } from '../characters/characters.service';
+import { PartidasGateway } from './partidas.gateway';
 
 /** Sin caracteres ambiguos (0/O, 1/I/L) para dictarlo en voz alta en mesa. */
 const ALFABETO_CODIGO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -33,6 +34,7 @@ export class PartidasService {
     @InjectRepository(PersonajeEnPartida)
     private readonly personajes: Repository<PersonajeEnPartida>,
     private readonly characters: CharactersService,
+    private readonly gateway: PartidasGateway,
   ) {}
 
   async crear(
@@ -122,6 +124,8 @@ export class PartidasService {
         pgActuales: character.sheetData.pg?.total ?? null,
       }),
     );
+    // Primero persistir, después avisar a la sala
+    this.gateway.emitirMesaCambiada(partidaId);
     return this.aPersonajeResumen({ ...pep, character }, userId);
   }
 
@@ -146,6 +150,7 @@ export class PartidasService {
     }
     Object.assign(pep, dto);
     await this.personajes.save(pep);
+    this.gateway.emitirEstadoPersonaje(partidaId, pepId, dto);
     return this.aPersonajeResumen(pep, userId);
   }
 
@@ -168,6 +173,7 @@ export class PartidasService {
       );
     }
     await this.personajes.remove(pep);
+    this.gateway.emitirMesaCambiada(partidaId);
   }
 
   private async buscarEntidad(id: string): Promise<Partida> {

@@ -9,9 +9,14 @@ import { PartidasService } from './partidas.service';
 import { Partida } from './entities/partida.entity';
 import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
 import { CharactersService } from '../characters/characters.service';
+import { PartidasGateway } from './partidas.gateway';
 
 describe('PartidasService', () => {
   let service: PartidasService;
+  const gateway = {
+    emitirEstadoPersonaje: jest.fn(),
+    emitirMesaCambiada: jest.fn(),
+  };
   const partidasRepo = {
     create: jest.fn((x) => x),
     save: jest.fn(async (x) => ({
@@ -46,6 +51,7 @@ describe('PartidasService', () => {
         { provide: getRepositoryToken(Partida), useValue: partidasRepo },
         { provide: getRepositoryToken(PersonajeEnPartida), useValue: pepsRepo },
         { provide: CharactersService, useValue: characters },
+        { provide: PartidasGateway, useValue: gateway },
       ],
     }).compile();
 
@@ -193,6 +199,13 @@ describe('PartidasService', () => {
     );
     expect(herido.pgActuales).toBe(18);
     expect(herido.esMio).toBe(false); // para el máster no es "suyo"
+
+    // Cada cambio guardado se emite a la sala de la partida
+    expect(gateway.emitirEstadoPersonaje).toHaveBeenCalledWith(
+      'partida-1',
+      'pep-1',
+      { pgActuales: 18 },
+    );
   });
 
   it('sacar a alguien que no está da 404', async () => {

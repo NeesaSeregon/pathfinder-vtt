@@ -84,6 +84,7 @@
               <input
                 type="number"
                 [value]="pep.pgActuales"
+                [attr.data-pep]="pep.id"
                 [disabled]="!puedeMover(pep)"
                 (change)="guardarPg(pep, $any($event.target).value)"
               />

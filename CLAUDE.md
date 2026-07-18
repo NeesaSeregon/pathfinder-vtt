@@ -100,5 +100,10 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   colocados), panel de mesa con PG actuales/condiciones editables y CA
   derivada POR EL SERVIDOR con las reglas compartidas. Permisos: máster
   toca todo, cada jugador lo suyo (PATCH /api/partidas/:id/personajes/:pepId).
-- Pendiente: tiempo real (WebSockets); hoy el tablero se refresca con el
-  botón Actualizar.
+- Tiempo real con Socket.IO: PartidasGateway autentica el handshake con la
+  cookie httpOnly, una sala por partida (partida:<id>), eventos tipados en
+  libs/shared (eventos-partida.ts): estado-personaje (cambios parciales,
+  se fusionan en cliente) y mesa-cambiada (recargar detalle por HTTP).
+  El servicio emite DESPUÉS de persistir. El AuthGuard global ignora el
+  contexto ws (el gateway hace su propia auth). Proxy dev: /socket.io
+  con ws:true en proxy.conf.json.

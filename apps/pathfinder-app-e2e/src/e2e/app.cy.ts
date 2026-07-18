@@ -95,6 +95,23 @@ describe('partidas', () => {
     cy.get('.tablero .tablero__token').should('exist');
     cy.get('.tablero__banquillo').should('not.exist');
     cy.get('.mesa__pg input').should('have.value', '24');
+
+    // TIEMPO REAL: un cambio hecho "desde fuera" (cy.request simula a
+    // otro jugador) aparece en pantalla SIN recargar, empujado por el socket
+    cy.location('pathname').then((ruta) => {
+      const partidaId = ruta.split('/').pop();
+      cy.get('.mesa__pg input')
+        .invoke('attr', 'data-pep')
+        .then((pepId) => {
+          cy.request(
+            'PATCH',
+            `/api/partidas/${partidaId}/personajes/${pepId}`,
+            { pgActuales: 7, condiciones: 'aturdido' },
+          );
+        });
+    });
+    cy.get('.mesa__pg input').should('have.value', '7');
+    cy.get('.mesa__condiciones input').should('have.value', 'aturdido');
   });
 });
 

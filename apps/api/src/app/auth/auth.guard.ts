@@ -19,6 +19,11 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Los mensajes WebSocket no pasan por aquí: el gateway autentica su
+    // propio handshake (la cookie viaja en él) y este guard es HTTP.
+    if (context.getType() === 'ws') {
+      return true;
+    }
     // ¿El handler (o su controlador) está marcado con @Public()?
     const esPublico = this.reflector.getAllAndOverride<boolean>(ES_PUBLICO, [
       context.getHandler(),
