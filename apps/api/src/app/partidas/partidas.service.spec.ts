@@ -148,6 +148,53 @@ describe('PartidasService', () => {
     expect(ajenas[0].codigo).toBeUndefined();
   });
 
+  it('actualizarPersonaje mueve el token y respeta los permisos', async () => {
+    const pep = {
+      id: 'pep-1',
+      characterId: 'char-1',
+      character: { ownerId: 'dueno', name: 'Valeros', level: 3, sheetData: {} },
+      pgActuales: 30,
+      danoNoLetal: 0,
+      condiciones: '',
+      posX: null,
+      posY: null,
+    };
+    partidasRepo.findOne.mockResolvedValue({
+      id: 'partida-1',
+      masterId: 'master',
+      personajes: [pep],
+    });
+
+    // Un tercero no puede tocar el token ajeno
+    await expect(
+      service.actualizarPersonaje('partida-1', 'pep-1', { posX: 3 }, 'otro'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    // El dueño mueve su token y el resumen refleja la posición nueva
+    const movido = await service.actualizarPersonaje(
+      'partida-1',
+      'pep-1',
+      { posX: 3, posY: 5 },
+      'dueno',
+    );
+    expect(pepsRepo.save).toHaveBeenCalled();
+    expect(movido.posX).toBe(3);
+    expect(movido.posY).toBe(5);
+    expect(movido.esMio).toBe(true);
+    // La CA la deriva el servidor con las reglas compartidas (ficha vacía → 10)
+    expect(movido.ca).toBe(10);
+
+    // El máster también puede (p. ej. bajarle los PG tras un golpe)
+    const herido = await service.actualizarPersonaje(
+      'partida-1',
+      'pep-1',
+      { pgActuales: 18 },
+      'master',
+    );
+    expect(herido.pgActuales).toBe(18);
+    expect(herido.esMio).toBe(false); // para el máster no es "suyo"
+  });
+
   it('sacar a alguien que no está da 404', async () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',

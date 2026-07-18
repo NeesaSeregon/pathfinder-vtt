@@ -7,13 +7,18 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import {
+  claseDeArmadura,
   PartidaDetalle,
   PartidaResumen,
   PersonajeEnPartidaResumen,
 } from '@pathfinder/shared';
 import { Partida } from './entities/partida.entity';
 import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
-import { CreatePartidaDto, UpdatePartidaDto } from './dto/create-partida.dto';
+import {
+  ActualizarPersonajeEnPartidaDto,
+  CreatePartidaDto,
+  UpdatePartidaDto,
+} from './dto/create-partida.dto';
 import { CharactersService } from '../characters/characters.service';
 
 /** Sin caracteres ambiguos (0/O, 1/I/L) para dictarlo en voz alta en mesa. */
@@ -67,7 +72,9 @@ export class PartidasService {
     return {
       ...this.aResumen(partida, userId),
       esMaster: partida.masterId === userId,
-      personajes: partida.personajes.map((pep) => this.aPersonajeResumen(pep)),
+      personajes: partida.personajes.map((pep) =>
+        this.aPersonajeResumen(pep, userId),
+      ),
     };
   }
 
@@ -115,7 +122,31 @@ export class PartidasService {
         pgActuales: character.sheetData.pg?.total ?? null,
       }),
     );
-    return this.aPersonajeResumen({ ...pep, character });
+    return this.aPersonajeResumen({ ...pep, character }, userId);
+  }
+
+  /** Estado de sesión: mover el token, ajustar PG... Máster o dueño. */
+  async actualizarPersonaje(
+    partidaId: string,
+    pepId: string,
+    dto: ActualizarPersonajeEnPartidaDto,
+    userId: string,
+  ): Promise<PersonajeEnPartidaResumen> {
+    const partida = await this.buscarEntidad(partidaId);
+    const pep = partida.personajes.find((p) => p.id === pepId);
+    if (!pep) {
+      throw new NotFoundException('Ese personaje no está en la partida');
+    }
+    const esMaster = partida.masterId === userId;
+    const esDueno = pep.character.ownerId === userId;
+    if (!esMaster && !esDueno) {
+      throw new ForbiddenException(
+        'Solo el máster o el dueño pueden tocar a este personaje',
+      );
+    }
+    Object.assign(pep, dto);
+    await this.personajes.save(pep);
+    return this.aPersonajeResumen(pep, userId);
   }
 
   /** Puede sacar un personaje: el máster de la mesa o el dueño de la ficha. */
@@ -173,6 +204,7 @@ export class PartidasService {
 
   private aPersonajeResumen(
     pep: PersonajeEnPartida,
+    userId: string,
   ): PersonajeEnPartidaResumen {
     return {
       id: pep.id,
@@ -180,12 +212,15 @@ export class PartidasService {
       nombre: pep.character?.name ?? '',
       jugador: pep.character?.sheetData?.jugador,
       nivel: pep.character?.level ?? 1,
+      // El servidor deriva la CA con LAS MISMAS reglas que el formulario
+      ca: claseDeArmadura(pep.character?.sheetData ?? {}),
       pgTotal: pep.character?.sheetData?.pg?.total,
       pgActuales: pep.pgActuales,
       danoNoLetal: pep.danoNoLetal,
       condiciones: pep.condiciones,
       posX: pep.posX,
       posY: pep.posY,
+      esMio: pep.character?.ownerId === userId,
     };
   }
 

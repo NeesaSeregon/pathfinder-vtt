@@ -14,6 +14,7 @@ import {
 import { JwtPayload } from '@pathfinder/shared';
 import { PartidasService } from './partidas.service';
 import {
+  ActualizarPersonajeEnPartidaDto,
   CreatePartidaDto,
   UnirsePartidaDto,
   UpdatePartidaDto,
@@ -70,6 +71,16 @@ export class PartidasController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.partidas.unir(id, dto.characterId, user.sub);
+  }
+
+  @Patch(':id/personajes/:pepId')
+  actualizarPersonaje(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('pepId', ParseUUIDPipe) pepId: string,
+    @Body() dto: ActualizarPersonajeEnPartidaDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.actualizarPersonaje(id, pepId, dto, user.sub);
   }
 
   @Delete(':id/personajes/:pepId')

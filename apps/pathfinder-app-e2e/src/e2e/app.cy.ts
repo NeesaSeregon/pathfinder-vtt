@@ -70,6 +70,31 @@ describe('partidas', () => {
       'contain',
       '1 personaje',
     );
+
+    // Entrar a la mesa: el personaje espera en el banquillo con sus PG
+    cy.contains('.partida__resultados li', nombre)
+      .contains('a', 'Entrar')
+      .click();
+    cy.get('h1').should('contain', nombre);
+    cy.get('.tablero__banquillo').should('exist');
+    cy.get('.mesa__pg input').should('have.value', '31');
+
+    // Colocar el token: clic en el token del banquillo + clic en casilla
+    cy.get('.tablero__banquillo .tablero__token').click();
+    cy.get('.tablero__celda').first().click();
+    cy.get('.tablero__banquillo').should('not.exist');
+    cy.get('.tablero .tablero__token').should('exist');
+
+    // El máster ajusta los PG tras un golpe
+    cy.get('.mesa__pg input').clear();
+    cy.get('.mesa__pg input').type('24');
+    cy.get('.mesa__pg input').blur();
+
+    // Recarga: posición y PG vienen de PostgreSQL, no de la memoria
+    cy.reload();
+    cy.get('.tablero .tablero__token').should('exist');
+    cy.get('.tablero__banquillo').should('not.exist');
+    cy.get('.mesa__pg input').should('have.value', '24');
   });
 });
 

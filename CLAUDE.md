@@ -95,4 +95,10 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la
   ficha al unirse—, danoNoLetal, condiciones, posX/posY). /partidas/crear
   y /partidas/buscar (por nombre o código) + unirse funcionan en el front.
-- Pendiente: vista de partida con tablero y tiempo real (WebSockets).
+- Vista de partida en /partidas/:id: tablero de 20x15 casillas (TABLERO_*
+  en libs/shared), tokens con mover en dos clics (banquillo para los no
+  colocados), panel de mesa con PG actuales/condiciones editables y CA
+  derivada POR EL SERVIDOR con las reglas compartidas. Permisos: máster
+  toca todo, cada jugador lo suyo (PATCH /api/partidas/:id/personajes/:pepId).
+- Pendiente: tiempo real (WebSockets); hoy el tablero se refresca con el
+  botón Actualizar.

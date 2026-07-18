@@ -2,6 +2,7 @@ import { inject, Service } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
+  ActualizarPersonajeEnPartida,
   CrearPartida,
   PartidaDetalle,
   PartidaResumen,
@@ -35,6 +36,23 @@ export class PartidasApi {
     return this.http.post<PersonajeEnPartidaResumen>(
       `${this.baseUrl}/${partidaId}/personajes`,
       { characterId },
+    );
+  }
+
+  actualizarPersonaje(
+    partidaId: string,
+    pepId: string,
+    cambios: ActualizarPersonajeEnPartida,
+  ): Observable<PersonajeEnPartidaResumen> {
+    return this.http.patch<PersonajeEnPartidaResumen>(
+      `${this.baseUrl}/${partidaId}/personajes/${pepId}`,
+      cambios,
+    );
+  }
+
+  sacar(partidaId: string, pepId: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.baseUrl}/${partidaId}/personajes/${pepId}`,
     );
   }
 }

@@ -67,6 +67,9 @@
           >
             Unirse
           </button>
+          <a class="partida__entrar" [routerLink]="['/partidas', partida.id]">
+            Entrar
+          </a>
         </li>
       } @empty {
         <li class="partida__texto">Sin resultados.</li>

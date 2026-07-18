@@ -1,0 +1,119 @@
+<main class="mesa">
+  @if (error()) {
+    <p class="acceso__error">{{ error() }}</p>
+  }
+
+  @if (partida(); as p) {
+    <header class="mesa__cabecera">
+      <div>
+        <h1>{{ p.nombre }}</h1>
+        <p class="mesa__meta">
+          máster {{ p.master }}
+          @if (p.codigo) {
+            · código <strong>{{ p.codigo }}</strong>
+          }
+        </p>
+      </div>
+      <button type="button" (click)="cargar()">Actualizar</button>
+    </header>
+
+    @if (banquillo().length > 0) {
+      <section class="mesa__banquillo tablero__banquillo">
+        <h2>Banquillo</h2>
+        <p class="mesa__meta">
+          Selecciona un token y haz clic en una casilla para colocarlo.
+        </p>
+        @for (pep of banquillo(); track pep.id) {
+          <button
+            type="button"
+            class="tablero__token"
+            [class.tablero__token--seleccionado]="seleccionado() === pep.id"
+            [class.tablero__token--ajeno]="!puedeMover(pep)"
+            (click)="seleccionarDelBanquillo(pep)"
+          >
+            {{ pep.nombre }}
+          </button>
+        }
+      </section>
+    }
+
+    <div class="mesa__contenido">
+      <div class="tablero" role="grid">
+        @for (y of filas; track y) {
+          @for (x of columnas; track x) {
+            <button
+              type="button"
+              class="tablero__celda"
+              [class.tablero__celda--destino]="
+                seleccionado() && !personajeEn(x, y)
+              "
+              (click)="clickCelda(x, y)"
+            >
+              @if (personajeEn(x, y); as pep) {
+                <span
+                  class="tablero__token"
+                  [class.tablero__token--seleccionado]="
+                    seleccionado() === pep.id
+                  "
+                  [class.tablero__token--ajeno]="!puedeMover(pep)"
+                  [title]="pep.nombre"
+                >
+                  {{ iniciales(pep.nombre) }}
+                </span>
+              }
+            </button>
+          }
+        }
+      </div>
+
+      <aside class="mesa__panel">
+        <h2>Mesa ({{ p.personajes.length }})</h2>
+        @for (pep of p.personajes; track pep.id) {
+          <article class="mesa__personaje">
+            <header>
+              <strong>{{ pep.nombre }}</strong>
+              <small>
+                nivel {{ pep.nivel }} · CA {{ pep.ca }}
+                @if (pep.jugador) {
+                  · {{ pep.jugador }}
+                }
+              </small>
+            </header>
+            <label class="mesa__pg">
+              PG
+              <input
+                type="number"
+                [value]="pep.pgActuales"
+                [disabled]="!puedeMover(pep)"
+                (change)="guardarPg(pep, $any($event.target).value)"
+              />
+              @if (pep.pgTotal !== undefined) {
+                <span>/ {{ pep.pgTotal }}</span>
+              }
+            </label>
+            <label class="mesa__condiciones">
+              Condiciones
+              <input
+                type="text"
+                maxlength="300"
+                placeholder="aturdido, enredado..."
+                [value]="pep.condiciones"
+                [disabled]="!puedeMover(pep)"
+                (change)="guardarCondiciones(pep, $any($event.target).value)"
+              />
+            </label>
+            @if (puedeMover(pep)) {
+              <button type="button" (click)="sacar(pep)">
+                Sacar de la mesa
+              </button>
+            }
+          </article>
+        } @empty {
+          <p class="mesa__meta">Nadie se ha unido todavía.</p>
+        }
+      </aside>
+    </div>
+  } @else if (!error()) {
+    <p class="mesa__meta">Cargando…</p>
+  }
+</main>

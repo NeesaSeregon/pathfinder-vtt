@@ -27,6 +27,15 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./partidas/crear-partida-page').then((m) => m.CrearPartidaPage),
   },
+  // Tras las rutas fijas: 'partidas/buscar' debe ganar a 'partidas/:id'
+  {
+    path: 'partidas/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./partidas/partida-detalle-page').then(
+        (m) => m.PartidaDetallePage,
+      ),
+  },
   {
     path: 'entrar',
     loadComponent: () => import('./auth/login-page').then((m) => m.LoginPage),

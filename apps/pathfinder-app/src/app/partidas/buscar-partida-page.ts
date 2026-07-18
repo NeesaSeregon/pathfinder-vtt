@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import {
   Character,
   ESTADO_PARTIDA_LABELS,
@@ -11,7 +12,7 @@ import { mensajeDeError } from '../characters/mensaje-de-error';
 
 @Component({
   selector: 'app-buscar-partida-page',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './buscar-partida-page.html',
   styleUrl: './buscar-partida-page.scss',
 })

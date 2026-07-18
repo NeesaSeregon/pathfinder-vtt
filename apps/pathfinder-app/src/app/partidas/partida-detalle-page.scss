@@ -1,0 +1,156 @@
+.mesa {
+  padding: 1rem 1.25rem;
+
+  &__cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+
+    h1 {
+      margin: 0;
+    }
+  }
+
+  &__meta {
+    color: var(--text-muted);
+    margin: 0.25rem 0 0;
+  }
+
+  &__banquillo {
+    margin: 1rem 0;
+    padding: 0.75rem;
+    border: 1px dashed var(--border);
+    border-radius: 0.5rem;
+
+    h2 {
+      margin: 0 0 0.25rem;
+      font-size: 1rem;
+    }
+
+    .tablero__token {
+      width: auto;
+      height: auto;
+      border-radius: 1rem;
+      padding: 0.35rem 0.9rem;
+      margin: 0.25rem 0.5rem 0 0;
+    }
+  }
+
+  &__contenido {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+
+  &__panel {
+    flex: 1;
+    min-width: 16rem;
+    max-width: 24rem;
+
+    h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.1rem;
+    }
+  }
+
+  &__personaje {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    header {
+      display: flex;
+      flex-direction: column;
+
+      small {
+        color: var(--text-muted);
+      }
+    }
+
+    button {
+      align-self: start;
+    }
+  }
+
+  &__pg {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+
+    input {
+      width: 5rem;
+    }
+  }
+
+  &__condiciones {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+}
+
+.tablero {
+  display: grid;
+  grid-template-columns: repeat(20, 2rem);
+  grid-auto-rows: 2rem;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  width: fit-content;
+
+  &__celda {
+    background: rgba(18, 23, 36, 0.85);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &--destino:hover {
+      background: rgba(80, 120, 90, 0.4);
+    }
+  }
+
+  &__token {
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #10131c;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+
+    &--seleccionado {
+      outline: 3px solid #7bd88f;
+      outline-offset: 1px;
+    }
+
+    &--ajeno {
+      background: var(--text-muted);
+      cursor: default;
+    }
+  }
+}
+
+.acceso__error {
+  margin: 0.75rem 0;
+  color: #ff6b6b;
+  font-size: 0.9rem;
+}
