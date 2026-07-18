@@ -21,6 +21,11 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Tests: npx nx run-many -t test (api usa Jest; pathfinder-app y libs/shared
   usan Vitest — el front vía @angular/build:unit-test)
 - E2E: npx nx e2e pathfinder-app-e2e (Cypress; arranca los servidores solo)
+- Migraciones (esquema de la BD):
+  - Aplicar las pendientes: npm run migration:run
+  - Generar una tras cambiar entidades: npm run migration:generate -- apps/api/src/migrations/NombreDescriptivo
+  - Deshacer la última: npm run migration:revert
+  - Ver estado: npm run migration:show
 
 ## Convenciones
 - Todo modelo o evento compartido entre front y back se define en
@@ -65,6 +70,27 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Los personajes tienen dueño (Character.ownerId → users): cada usuario
   solo ve y toca los suyos; el personaje de otro devuelve 404, no 403.
 
+## Migraciones (TypeORM)
+- El esquema de la base de datos SOLO cambia mediante migraciones
+  versionadas en git; synchronize está en false (app.module.ts). Nunca
+  volver a activarlo: adivinaba diffs y podía destruir datos (nos falló
+  dos veces, p. ej. al añadir la columna email NOT NULL a una tabla con
+  filas). Las migraciones llevan el SQL exacto, revisado y reversible.
+- DataSource propio del CLI en apps/api/src/data-source.ts (fuera de Nest:
+  carga el .env con dotenv, lista las entidades a mano y synchronize:false).
+  Usa el tsconfig apps/api/tsconfig.migrations.json (commonjs + node +
+  emitDecoratorMetadata) seleccionado con TS_NODE_PROJECT vía cross-env.
+- Flujo al cambiar una entidad: editas la entidad → migration:generate te
+  escribe el diff → LO REVISAS (p. ej. rellenar columnas NOT NULL nuevas en
+  tres pasos: añadir nullable, poblar, poner NOT NULL; o añadir CREATE
+  EXTENSION si hace falta) → migration:run → commit del archivo.
+- La migración inicial (InitialSchema) es el baseline: crea todo el esquema
+  desde cero (incluye CREATE EXTENSION "uuid-ossp", que synchronize ponía
+  solo). La base de datos de desarrollo existente se marcó como aplicada
+  sin re-ejecutarla (fila en la tabla migrations).
+- CI aplica las migraciones (npm run migration:run) contra su Postgres vacío
+  antes del e2e, así el CI es fiel a producción.
+
 ## Decisiones de diseño
 - sheetData (JSONB) guarda solo DATOS ORIGEN del personaje; los derivados
   (modificadores, CA/toque/desprevenido, iniciativa, casillas/metros) se
@@ -88,7 +114,7 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 ## Estado actual
 - Estructura del monorepo creada y subida a GitHub.
 - Persistencia funcionando: PostgreSQL 17 (Docker) + TypeORM con
-  synchronize: true (solo desarrollo; pasar a migraciones antes de producción).
+  migraciones versionadas (synchronize: false; ver sección Migraciones).
 - Primer recurso CRUD: /api/characters (entidad Character con columna JSONB
   sheetData). Modelo compartido Character en libs/shared.
 - El front tiene home (ruta raíz) con navbar común y tema oscuro global

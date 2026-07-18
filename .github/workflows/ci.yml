@@ -65,5 +65,10 @@ jobs:
       - name: Lint y tests unitarios
         run: npx nx run-many -t lint test
 
+      # El Postgres del job arranca vacío: creamos el esquema con las
+      # migraciones (synchronize está desactivado, igual que en producción)
+      - name: Aplicar migraciones (crea el esquema en el Postgres del job)
+        run: npm run migration:run
+
       - name: E2E (Cypress arranca front y API contra el Postgres del job)
         run: npx nx e2e pathfinder-app-e2e

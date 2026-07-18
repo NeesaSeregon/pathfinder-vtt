@@ -2,7 +2,13 @@
   "name": "@pathfinder-vtt/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "typeorm": "cross-env TS_NODE_PROJECT=apps/api/tsconfig.migrations.json typeorm-ts-node-commonjs -d apps/api/src/data-source.ts",
+    "migration:generate": "cross-env TS_NODE_PROJECT=apps/api/tsconfig.migrations.json typeorm-ts-node-commonjs migration:generate -d apps/api/src/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "migration:show": "npm run typeorm -- migration:show"
+  },
   "private": true,
   "dependencies": {
     "@angular/common": "~22.0.4",
@@ -62,6 +68,7 @@
     "@types/pg": "^8.20.0",
     "@typescript-eslint/utils": "^8.58.0",
     "angular-eslint": "^22.0.0",
+    "cross-env": "7.0.3",
     "cypress": "^15.17.0",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",

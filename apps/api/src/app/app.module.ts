@@ -21,9 +21,11 @@ import { PartidasModule } from './partidas/partidas.module';
         password: config.get('DB_PASSWORD', 'pathfinder'),
         database: config.get('DB_NAME', 'pathfinder'),
         autoLoadEntities: true,
-        // Solo para desarrollo: sincroniza el esquema con las entidades.
-        // Antes de desplegar a producción hay que pasar a migraciones.
-        synchronize: true,
+        // El esquema NO se toca en el arranque: todos los cambios pasan
+        // por migraciones versionadas (ver apps/api/src/data-source.ts y
+        // los scripts migration:* en package.json). synchronize: true
+        // podía destruir datos al adivinar diffs; ya no lo usamos.
+        synchronize: false,
       }),
     }),
     CharactersModule,

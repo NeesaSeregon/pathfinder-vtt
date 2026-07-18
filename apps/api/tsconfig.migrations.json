@@ -1,0 +1,32 @@
+{
+  // tsconfig dedicado al CLI de TypeORM (ts-node). Necesita commonjs +
+  // resolución de módulos "node" (no "bundler") y, sobre todo,
+  // emitDecoratorMetadata para que los decoradores de las entidades
+  // funcionen fuera del build de webpack. Se selecciona con la variable
+  // TS_NODE_PROJECT en los scripts de package.json.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    // TS 6 marca la resolución "node" clásica como deprecada; la seguimos
+    // usando a propósito (es la correcta con module commonjs para el CLI).
+    "ignoreDeprecations": "6.0",
+    "target": "es2021",
+    "types": ["node"],
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "skipLibCheck": true
+  },
+  // transpileOnly: ts-node no hace comprobación de tipos completa al
+  // ejecutar el CLI (más rápido y evita falsos errores); el tipado ya lo
+  // valida el build normal de la API.
+  "ts-node": {
+    "transpileOnly": true
+  },
+  "include": [
+    "src/data-source.ts",
+    "src/migrations/**/*.ts",
+    "src/app/**/*.entity.ts"
+  ]
+}
