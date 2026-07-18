@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    # El equivalente CI de nuestro docker-compose: PostgreSQL para el e2e
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pathfinder
+          POSTGRES_PASSWORD: pathfinder
+          POSTGRES_DB: pathfinder
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pathfinder -d pathfinder"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      # La API lo exige (getOrThrow); solo vale para este runner efímero
+      JWT_SECRET: secreto-solo-para-ci-no-usar-en-produccion
+      # Coinciden con los valores por defecto de app.module, explícitos
+      # para que el workflow se documente solo
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER: pathfinder
+      DB_PASSWORD: pathfinder
+      DB_NAME: pathfinder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # El .npmrc del repo aplica ignore-scripts=true también aquí:
+      # ningún paquete ejecuta código al instalarse
+      - name: Instalar dependencias (sin scripts)
+        run: npm ci
+
+      # Los únicos postinstall legítimos, ejecutados a mano (ver CLAUDE.md)
+      - name: Reconstruir binarios nativos permitidos
+        run: npm rebuild esbuild nx unrs-resolver
+
+      - name: Caché del binario de Cypress
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Instalar el binario de Cypress
+        run: npx cypress install
+
+      - name: Lint y tests unitarios
+        run: npx nx run-many -t lint test
+
+      - name: E2E (Cypress arranca front y API contra el Postgres del job)
+        run: npx nx e2e pathfinder-app-e2e
