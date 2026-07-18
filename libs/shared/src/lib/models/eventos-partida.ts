@@ -1,4 +1,5 @@
 import { ActualizarPersonajeEnPartida } from './partida';
+import type { TiradaResultado } from './tirada';
 
 /**
  * Contrato de eventos WebSocket de la mesa. Front y back importan ESTOS
@@ -31,3 +32,12 @@ export interface EstadoPersonajeEvento {
  * campos como esMio o el código del máster.
  */
 export const EVENTO_MESA_CAMBIADA = 'mesa-cambiada';
+
+/**
+ * Servidor → sala: alguien tiró los dados. El resultado ya viene resuelto
+ * por el servidor (única fuente de azar); los clientes solo lo muestran.
+ * Es efímero: no se persiste, quien entre después no lo verá.
+ */
+export const EVENTO_TIRADA_DADOS = 'tirada-dados';
+
+export type TiradaDadosEvento = TiradaResultado;

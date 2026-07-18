@@ -16,6 +16,7 @@ import { PartidasService } from './partidas.service';
 import {
   ActualizarPersonajeEnPartidaDto,
   CreatePartidaDto,
+  TirarDadosDto,
   UnirsePartidaDto,
   UpdatePartidaDto,
 } from './dto/create-partida.dto';
@@ -81,6 +82,15 @@ export class PartidasController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.partidas.actualizarPersonaje(id, pepId, dto, user.sub);
+  }
+
+  @Post(':id/tiradas')
+  tirar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TirarDadosDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.tirarDados(id, dto, user);
   }
 
   @Delete(':id/personajes/:pepId')

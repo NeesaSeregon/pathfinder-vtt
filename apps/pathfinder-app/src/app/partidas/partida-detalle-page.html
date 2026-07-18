@@ -112,6 +112,54 @@
         } @empty {
           <p class="mesa__meta">Nadie se ha unido todavía.</p>
         }
+
+        <section class="mesa__dados">
+          <h2>Dados</h2>
+          @if (esParticipante()) {
+            <div class="mesa__dados-rapidos">
+              @for (caras of dadosRapidos; track caras) {
+                <button type="button" (click)="lanzar('1d' + caras)">
+                  d{{ caras }}
+                </button>
+              }
+            </div>
+            <div class="mesa__dados-libre">
+              <input
+                #dado
+                type="text"
+                placeholder="1d20+5"
+                maxlength="30"
+                (keyup.enter)="lanzar(dado.value); dado.value = ''"
+              />
+              <button
+                type="button"
+                (click)="lanzar(dado.value); dado.value = ''"
+              >
+                Tirar
+              </button>
+            </div>
+          } @else {
+            <p class="mesa__meta">
+              Únete a la mesa con un personaje para poder tirar.
+            </p>
+          }
+
+          <ol class="mesa__tiradas">
+            @for (t of tiradas(); track t.id) {
+              <li>
+                <strong>{{ t.autor }}</strong>
+                @if (t.etiqueta) {
+                  <em>{{ t.etiqueta }}</em>
+                }
+                <span class="mesa__tirada-notacion">{{ t.notacion }}</span>
+                → <strong class="mesa__tirada-total">{{ t.total }}</strong>
+                <small>[{{ t.dados.join(', ') }}]</small>
+              </li>
+            } @empty {
+              <li class="mesa__meta">Aún no se ha tirado nada.</li>
+            }
+          </ol>
+        </section>
       </aside>
     </div>
   } @else if (!error()) {

@@ -6,6 +6,7 @@ import {
   PersonajeEnPartidaResumen,
   TABLERO_ALTO,
   TABLERO_ANCHO,
+  TiradaResultado,
 } from '@pathfinder/shared';
 import { PartidasApi } from './partidas-api';
 import { PartidaSocket } from './partida-socket';
@@ -38,6 +39,17 @@ export class PartidaDetallePage {
     (this.partida()?.personajes ?? []).filter((pep) => pep.posX === null),
   );
 
+  /** Dados de acceso rápido (un clic = una tirada de ese dado). */
+  protected readonly dadosRapidos = [4, 6, 8, 10, 12, 20, 100];
+  /** Registro de tiradas recientes (efímero, lo más nuevo primero). */
+  protected readonly tiradas = signal<TiradaResultado[]>([]);
+
+  /** Solo el máster o el dueño de un personaje de la mesa pueden tirar. */
+  protected readonly esParticipante = computed(() => {
+    const p = this.partida();
+    return !!p && (p.esMaster || p.personajes.some((pep) => pep.esMio));
+  });
+
   constructor() {
     this.cargar();
     // Tiempo real: los cambios de otros llegan solos por el socket
@@ -45,6 +57,7 @@ export class PartidaDetallePage {
     socket.conectar(this.partidaId, {
       onEstadoPersonaje: (evento) => this.aplicarEvento(evento),
       onMesaCambiada: () => this.cargar(),
+      onTirada: (tirada) => this.agregarTirada(tirada),
     });
     inject(DestroyRef).onDestroy(() => socket.desconectar());
   }
@@ -116,6 +129,31 @@ export class PartidaDetallePage {
       error: (err) =>
         this.error.set(`No se pudo sacar: ${mensajeDeError(err)}`),
     });
+  }
+
+  /** Pide una tirada al servidor; el resultado llega por el socket. */
+  protected lanzar(notacion: string, etiqueta?: string): void {
+    const limpia = notacion.trim();
+    if (!limpia) {
+      return;
+    }
+    this.error.set(null);
+    this.api.tirar(this.partidaId, limpia, etiqueta?.trim() || undefined).subscribe({
+      // Añadimos también desde la respuesta HTTP para feedback inmediato;
+      // el eco del socket trae el mismo id y agregarTirada lo deduplica.
+      next: (tirada) => this.agregarTirada(tirada),
+      error: (err) =>
+        this.error.set(`No se pudo tirar: ${mensajeDeError(err)}`),
+    });
+  }
+
+  /** Añade una tirada al registro, sin duplicar (id compartido con el eco). */
+  private agregarTirada(tirada: TiradaResultado): void {
+    this.tiradas.update((prev) =>
+      prev.some((t) => t.id === tirada.id)
+        ? prev
+        : [tirada, ...prev].slice(0, 30),
+    );
   }
 
   protected iniciales(nombre: string): string {

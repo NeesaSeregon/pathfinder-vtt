@@ -5,6 +5,8 @@ import {
   EVENTO_ENTRAR_SALA,
   EVENTO_ESTADO_PERSONAJE,
   EVENTO_MESA_CAMBIADA,
+  EVENTO_TIRADA_DADOS,
+  TiradaResultado,
 } from '@pathfinder/shared';
 
 export interface EscuchasDeMesa {
@@ -12,6 +14,8 @@ export interface EscuchasDeMesa {
   onEstadoPersonaje: (evento: EstadoPersonajeEvento) => void;
   /** La composición de la mesa cambió: recarga el detalle por HTTP. */
   onMesaCambiada: () => void;
+  /** Alguien tiró los dados: añádelo al registro de la mesa. */
+  onTirada: (tirada: TiradaResultado) => void;
 }
 
 /**
@@ -32,6 +36,7 @@ export class PartidaSocket {
     });
     this.socket.on(EVENTO_ESTADO_PERSONAJE, escuchas.onEstadoPersonaje);
     this.socket.on(EVENTO_MESA_CAMBIADA, escuchas.onMesaCambiada);
+    this.socket.on(EVENTO_TIRADA_DADOS, escuchas.onTirada);
   }
 
   desconectar(): void {

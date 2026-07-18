@@ -113,6 +113,23 @@ describe('partidas', () => {
     cy.get('.mesa__pg input').should('have.value', '7');
     cy.get('.mesa__condiciones input').should('have.value', 'aturdido');
   });
+
+  it('un participante tira los dados y el total aparece en el registro', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    // El máster de la mesa ya es participante: puede tirar sin unir ficha
+    cy.request('POST', '/api/partidas', { nombre: `Dados-${Date.now()}` })
+      .its('body.id')
+      .then((id) => {
+        cy.visit(`/partidas/${id}`);
+        // 2d1+3 siempre suma 5: assert determinista sin depender del azar
+        cy.get('.mesa__dados-libre input').type('2d1+3');
+        cy.get('.mesa__dados-libre').contains('button', 'Tirar').click();
+        cy.get('.mesa__tiradas')
+          .should('contain', '2d1+3')
+          .and('contain', 'tester-fijo');
+        cy.get('.mesa__tirada-total').first().should('contain', '5');
+      });
+  });
 });
 
 describe('home y navegación', () => {

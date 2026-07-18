@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -16,6 +17,7 @@ describe('PartidasService', () => {
   const gateway = {
     emitirEstadoPersonaje: jest.fn(),
     emitirMesaCambiada: jest.fn(),
+    emitirTirada: jest.fn(),
   };
   const partidasRepo = {
     create: jest.fn((x) => x),
@@ -206,6 +208,55 @@ describe('PartidasService', () => {
       'pep-1',
       { pgActuales: 18 },
     );
+  });
+
+  it('tirar dados: solo participantes; el máster y los jugadores pueden', async () => {
+    const partida = {
+      id: 'partida-1',
+      masterId: 'master',
+      personajes: [{ id: 'pep-1', character: { ownerId: 'jugador' } }],
+    };
+    partidasRepo.findOne.mockResolvedValue(partida);
+    const user = (sub: string) => ({ sub, username: `nombre-${sub}` });
+
+    // Un extraño a la mesa no puede tirar
+    await expect(
+      service.tirarDados('partida-1', { notacion: '1d20' }, user('extrano')),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    // El máster tira: 2d1+3 siempre suma 5, así el test es determinista
+    const delMaster = await service.tirarDados(
+      'partida-1',
+      { notacion: '2d1+3', etiqueta: 'Iniciativa' },
+      user('master'),
+    );
+    expect(delMaster.total).toBe(5);
+    expect(delMaster.autor).toBe('nombre-master');
+    expect(delMaster.etiqueta).toBe('Iniciativa');
+    // El resultado se retransmite a la sala
+    expect(gateway.emitirTirada).toHaveBeenCalledWith('partida-1', delMaster);
+
+    // Un jugador con personaje en la mesa también puede
+    const delJugador = await service.tirarDados(
+      'partida-1',
+      { notacion: '2d1+3' },
+      user('jugador'),
+    );
+    expect(delJugador.total).toBe(5);
+  });
+
+  it('tirar una notación inválida da 400', async () => {
+    partidasRepo.findOne.mockResolvedValue({
+      id: 'partida-1',
+      masterId: 'master',
+      personajes: [],
+    });
+    await expect(
+      service.tirarDados('partida-1', { notacion: 'patata' }, {
+        sub: 'master',
+        username: 'neesa',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('sacar a alguien que no está da 404', async () => {

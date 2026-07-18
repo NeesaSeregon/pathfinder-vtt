@@ -16,6 +16,7 @@ import {
   EstadoPartida,
   TABLERO_ALTO,
   TABLERO_ANCHO,
+  TirarDados,
 } from '@pathfinder/shared';
 
 export class CreatePartidaDto implements CrearPartida {
@@ -84,4 +85,17 @@ export class ActualizarPersonajeEnPartidaDto
   @IsString()
   @MaxLength(300)
   condiciones?: string;
+}
+
+export class TirarDadosDto implements TirarDados {
+  // El parseo fino (formato, topes) lo valida lanzarDados en el servicio,
+  // única fuente de verdad; aquí solo acotamos que sea texto razonable.
+  @IsString()
+  @MaxLength(30)
+  notacion: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  etiqueta?: string;
 }

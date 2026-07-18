@@ -141,3 +141,10 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   El servicio emite DESPUÉS de persistir. El AuthGuard global ignora el
   contexto ws (el gateway hace su propia auth). Proxy dev: /socket.io
   con ws:true en proxy.conf.json.
+- Tiradas de dados: el SERVIDOR tira (única fuente de azar), no el cliente.
+  Función pura lanzarDados(notacion, rng?) en libs/shared (parsea "1d20+5",
+  con topes de seguridad). POST /api/partidas/:id/tiradas (solo
+  participantes: máster o dueño de un personaje de la mesa) resuelve la
+  tirada y la retransmite por el socket (EVENTO_TIRADA_DADOS). Son EFÍMERAS:
+  no se persisten (registro en memoria del cliente); quien entre tarde no
+  las ve. El cliente deduplica por id (respuesta HTTP + eco del socket).

@@ -15,7 +15,9 @@ import {
   EVENTO_ENTRAR_SALA,
   EVENTO_ESTADO_PERSONAJE,
   EVENTO_MESA_CAMBIADA,
+  EVENTO_TIRADA_DADOS,
   JwtPayload,
+  TiradaResultado,
 } from '@pathfinder/shared';
 import { COOKIE_SESION } from '../auth/auth.constants';
 
@@ -77,5 +79,10 @@ export class PartidasGateway implements OnGatewayConnection {
   /** Alguien entró o salió de la mesa: que los clientes recarguen. */
   emitirMesaCambiada(partidaId: string): void {
     this.server?.to(sala(partidaId)).emit(EVENTO_MESA_CAMBIADA);
+  }
+
+  /** Alguien tiró los dados: el resultado (ya resuelto) va a toda la sala. */
+  emitirTirada(partidaId: string, tirada: TiradaResultado): void {
+    this.server?.to(sala(partidaId)).emit(EVENTO_TIRADA_DADOS, tirada);
   }
 }

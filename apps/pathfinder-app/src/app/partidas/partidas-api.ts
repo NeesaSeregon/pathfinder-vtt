@@ -7,6 +7,7 @@ import {
   PartidaDetalle,
   PartidaResumen,
   PersonajeEnPartidaResumen,
+  TiradaResultado,
 } from '@pathfinder/shared';
 
 @Service()
@@ -53,6 +54,17 @@ export class PartidasApi {
   sacar(partidaId: string, pepId: string): Observable<void> {
     return this.http.delete<void>(
       `${this.baseUrl}/${partidaId}/personajes/${pepId}`,
+    );
+  }
+
+  tirar(
+    partidaId: string,
+    notacion: string,
+    etiqueta?: string,
+  ): Observable<TiradaResultado> {
+    return this.http.post<TiradaResultado>(
+      `${this.baseUrl}/${partidaId}/tiradas`,
+      { notacion, etiqueta },
     );
   }
 }

@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -8,15 +10,19 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import {
   claseDeArmadura,
+  JwtPayload,
+  lanzarDados,
   PartidaDetalle,
   PartidaResumen,
   PersonajeEnPartidaResumen,
+  TiradaResultado,
 } from '@pathfinder/shared';
 import { Partida } from './entities/partida.entity';
 import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
 import {
   ActualizarPersonajeEnPartidaDto,
   CreatePartidaDto,
+  TirarDadosDto,
   UpdatePartidaDto,
 } from './dto/create-partida.dto';
 import { CharactersService } from '../characters/characters.service';
@@ -176,6 +182,34 @@ export class PartidasService {
     this.gateway.emitirMesaCambiada(partidaId);
   }
 
+  /** Tira los dados en el servidor y retransmite el resultado a la sala. */
+  async tirarDados(
+    partidaId: string,
+    dto: TirarDadosDto,
+    user: JwtPayload,
+  ): Promise<TiradaResultado> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloParticipantes(partida, user.sub);
+
+    let tirada;
+    try {
+      tirada = lanzarDados(dto.notacion);
+    } catch (error) {
+      // Notación mal formada → 400 con el mensaje de la función pura
+      throw new BadRequestException((error as Error).message);
+    }
+
+    const resultado: TiradaResultado = {
+      ...tirada,
+      id: randomUUID(),
+      autor: user.username,
+      etiqueta: dto.etiqueta?.trim() || undefined,
+      timestamp: Date.now(),
+    };
+    this.gateway.emitirTirada(partidaId, resultado);
+    return resultado;
+  }
+
   private async buscarEntidad(id: string): Promise<Partida> {
     const partida = await this.partidas.findOne({
       where: { id },
@@ -185,6 +219,19 @@ export class PartidasService {
       throw new NotFoundException(`Partida ${id} no encontrada`);
     }
     return partida;
+  }
+
+  /** Participante = el máster o el dueño de algún personaje de la mesa. */
+  private soloParticipantes(partida: Partida, userId: string): void {
+    const esMaster = partida.masterId === userId;
+    const esJugador = partida.personajes.some(
+      (pep) => pep.character?.ownerId === userId,
+    );
+    if (!esMaster && !esJugador) {
+      throw new ForbiddenException(
+        'Solo los participantes de la mesa pueden tirar dados',
+      );
+    }
   }
 
   private soloElMaster(partida: Partida, userId: string): void {
