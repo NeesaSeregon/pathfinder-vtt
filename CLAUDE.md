@@ -50,7 +50,8 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   cualquier máquina nueva, no solo donde esté la config global.
 
 ## CI (GitHub Actions)
-- .github/workflows/ci.yml: en cada push a master y en cada PR ejecuta
+- .github/workflows/ci.yml: en cada push a main (la rama por defecto) y en
+  cada PR ejecuta
   npm ci (sin scripts) + rebuilds permitidos + lint + tests + e2e, con
   PostgreSQL 17 como service container y JWT_SECRET propio del runner.
 - El binario de Cypress se cachea por hash del package-lock.

@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  # main es la rama por defecto del repo; master por si algún clon la usa
   push:
-    branches: [master]
+    branches: [main, master]
   pull_request:
 
 jobs:
