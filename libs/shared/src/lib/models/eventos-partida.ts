@@ -1,4 +1,4 @@
-import { ActualizarPersonajeEnPartida } from './partida';
+import { PersonajeEnPartidaResumen } from './partida';
 import type { TiradaResultado } from './tirada';
 
 /**
@@ -16,14 +16,16 @@ export interface EntrarSala {
 
 /**
  * Servidor → sala: el estado de sesión de un personaje cambió (se movió,
- * PG, condiciones...). El payload es neutro (igual para todos los
- * clientes): cada uno lo fusiona con lo que ya tiene.
+ * PG, condiciones...). El payload es NEUTRO (el resumen recalculado SIN
+ * esMio, que es lo único que depende de quién pregunta): cada cliente lo
+ * fusiona conservando su propio esMio. Incluir el resumen entero hace que
+ * los derivados (CA con condiciones, etc.) lleguen también a los demás.
  */
 export const EVENTO_ESTADO_PERSONAJE = 'estado-personaje';
 
 export interface EstadoPersonajeEvento {
   pepId: string;
-  cambios: ActualizarPersonajeEnPartida;
+  cambios: Partial<Omit<PersonajeEnPartidaResumen, 'esMio'>>;
 }
 
 /**

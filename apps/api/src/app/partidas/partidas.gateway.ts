@@ -9,7 +9,6 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import {
-  ActualizarPersonajeEnPartida,
   EntrarSala,
   EstadoPersonajeEvento,
   EVENTO_ENTRAR_SALA,
@@ -17,6 +16,7 @@ import {
   EVENTO_MESA_CAMBIADA,
   EVENTO_TIRADA_DADOS,
   JwtPayload,
+  PersonajeEnPartidaResumen,
   TiradaResultado,
 } from '@pathfinder/shared';
 import { COOKIE_SESION } from '../auth/auth.constants';
@@ -70,7 +70,7 @@ export class PartidasGateway implements OnGatewayConnection {
   emitirEstadoPersonaje(
     partidaId: string,
     pepId: string,
-    cambios: ActualizarPersonajeEnPartida,
+    cambios: Partial<Omit<PersonajeEnPartidaResumen, 'esMio'>>,
   ): void {
     const evento: EstadoPersonajeEvento = { pepId, cambios };
     this.server?.to(sala(partidaId)).emit(EVENTO_ESTADO_PERSONAJE, evento);

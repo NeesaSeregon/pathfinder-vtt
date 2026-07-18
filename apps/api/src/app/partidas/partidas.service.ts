@@ -9,7 +9,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import {
+  caConCondiciones,
   claseDeArmadura,
+  efectoDeCondiciones,
   iniciativa,
   JwtPayload,
   lanzarDados,
@@ -162,8 +164,13 @@ export class PartidasService {
     }
     Object.assign(pep, dto);
     await this.personajes.save(pep);
-    this.gateway.emitirEstadoPersonaje(partidaId, pepId, dto);
-    return this.aPersonajeResumen(pep, userId);
+    const resumen = this.aPersonajeResumen(pep, userId);
+    this.gateway.emitirEstadoPersonaje(
+      partidaId,
+      pepId,
+      this.aEstadoNeutro(resumen),
+    );
+    return resumen;
   }
 
   /** Puede sacar un personaje: el máster de la mesa o el dueño de la ficha. */
@@ -203,10 +210,22 @@ export class PartidasService {
     pep.iniciativa = lanzarDados(notacion).total;
     await this.personajes.save(pep);
 
-    this.gateway.emitirEstadoPersonaje(partidaId, pepId, {
-      iniciativa: pep.iniciativa,
-    });
-    return this.aPersonajeResumen(pep, userId);
+    const resumen = this.aPersonajeResumen(pep, userId);
+    this.gateway.emitirEstadoPersonaje(
+      partidaId,
+      pepId,
+      this.aEstadoNeutro(resumen),
+    );
+    return resumen;
+  }
+
+  /** Quita esMio (lo único que depende de quién pregunta) para retransmitir. */
+  private aEstadoNeutro(
+    resumen: PersonajeEnPartidaResumen,
+  ): Partial<Omit<PersonajeEnPartidaResumen, 'esMio'>> {
+    const neutro = { ...resumen } as Partial<PersonajeEnPartidaResumen>;
+    delete neutro.esMio;
+    return neutro;
   }
 
   /** El máster arranca el combate: ordena por iniciativa y da el turno 1. */
@@ -410,14 +429,21 @@ export class PartidasService {
     pep: PersonajeEnPartida,
     userId: string,
   ): PersonajeEnPartidaResumen {
+    const sheet = pep.character?.sheetData ?? {};
+    const condiciones = pep.condiciones ?? [];
+    const efecto = efectoDeCondiciones(condiciones);
     return {
       id: pep.id,
       characterId: pep.characterId,
       nombre: pep.character?.name ?? '',
       jugador: pep.character?.sheetData?.jugador,
       nivel: pep.character?.level ?? 1,
-      // El servidor deriva la CA con LAS MISMAS reglas que el formulario
-      ca: claseDeArmadura(pep.character?.sheetData ?? {}),
+      // El servidor deriva la CA con LAS MISMAS reglas que el formulario,
+      // ya con el efecto de las condiciones activas (sistema de efectos).
+      ca: caConCondiciones(sheet, condiciones),
+      caBase: claseDeArmadura(sheet),
+      modAtaque: efecto.ataque,
+      modSalvaciones: efecto.salvaciones,
       pgTotal: pep.character?.sheetData?.pg?.total,
       pgActuales: pep.pgActuales,
       danoNoLetal: pep.danoNoLetal,

@@ -114,6 +114,9 @@ describe('partidas', () => {
     // La condición estructurada aparece con su nombre y su efecto (−2 CA)
     cy.get('.mesa__condiciones').should('contain', 'Aturdido');
     cy.get('.mesa__cond').should('contain', 'CA');
+    // SISTEMA DE EFECTOS: aturdido baja la CA (base 10 → 8) en tiempo real
+    cy.get('.mesa__personaje').should('contain', 'CA 8');
+    cy.get('.mesa__personaje').should('contain', 'base 10');
   });
 
   it('un participante tira los dados y el total aparece en el registro', () => {

@@ -74,10 +74,27 @@
               <strong>{{ pep.nombre }}</strong>
               <small>
                 nivel {{ pep.nivel }} · CA {{ pep.ca }}
+                @if (pep.ca !== pep.caBase) {
+                  <span class="mesa__ca-mod">(base {{ pep.caBase }})</span>
+                }
                 @if (pep.jugador) {
                   · {{ pep.jugador }}
                 }
               </small>
+              @if (pep.modAtaque || pep.modSalvaciones) {
+                <small class="mesa__efectos">
+                  Por condiciones:
+                  @if (pep.modAtaque) {
+                    ataque {{ pep.modAtaque }}
+                  }
+                  @if (pep.modAtaque && pep.modSalvaciones) {
+                    ·
+                  }
+                  @if (pep.modSalvaciones) {
+                    salvaciones {{ pep.modSalvaciones }}
+                  }
+                </small>
+              }
             </header>
             <label class="mesa__pg">
               PG

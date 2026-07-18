@@ -1,9 +1,13 @@
+import {
+  caDesprevenido,
+  claseDeArmadura,
+  CharacterSheetData,
+} from './character';
+
 /**
  * Catálogo de condiciones de Pathfinder 1e. La MECÁNICA es contenido de
  * juego abierto (OGL 1.0a); las descripciones en español son propias (no
- * la traducción de Devir, con copyright). Es el primer paso hacia el
- * sistema de efectos: de momento solo describe; más adelante cada
- * condición podrá declarar los modificadores que aplica (−2 CA, etc.).
+ * la traducción de Devir, con copyright).
  *
  * Nota de nombres: "Aturdido" = Stunned (−2 CA) y "Atontado" = Dazed
  * (sin penalización a la CA), para no confundir las dos condiciones.
@@ -216,3 +220,90 @@ export const CONDICION_POR_ID: Record<string, Condicion> = Object.fromEntries(
 
 /** Ids válidos, para validar en el DTO que no llegue basura. */
 export const CONDICION_IDS: readonly string[] = CONDICIONES.map((c) => c.id);
+
+// ---------------------------------------------------------------------------
+// Sistema de efectos: modificadores mecánicos de las condiciones.
+// ---------------------------------------------------------------------------
+
+/**
+ * Modificadores PLANOS y DIRECTOS que una condición aplica. A propósito NO
+ * se modelan aquí los efectos por cambio de característica (p. ej. −4 Des del
+ * enredado) ni los situacionales (derribado da −4/+4 a la CA según el tipo de
+ * ataque): esos siguen solo en la descripción para que el máster los aplique.
+ */
+export interface ModificadoresCondicion {
+  /** Modificador plano a la CA (además de perder Destreza, si aplica). */
+  ca?: number;
+  /** La criatura pierde su bonificador de Destreza (y esquiva) a la CA. */
+  pierdeDestrezaCA?: boolean;
+  /** Penalización a las tiradas de ataque. */
+  ataque?: number;
+  /** Penalización a todas las salvaciones. */
+  salvaciones?: number;
+}
+
+/**
+ * Modificadores por condición (solo las que tienen efecto plano en PF1e).
+ * Las condiciones que no aparecen aquí no alteran números automáticamente.
+ */
+export const MODIFICADORES_CONDICION: Record<string, ModificadoresCondicion> = {
+  aturdido: { ca: -2, pierdeDestrezaCA: true },
+  cegado: { ca: -2, pierdeDestrezaCA: true },
+  encogido: { ca: -2, pierdeDestrezaCA: true },
+  desprevenido: { pierdeDestrezaCA: true },
+  indefenso: { pierdeDestrezaCA: true },
+  paralizado: { pierdeDestrezaCA: true },
+  sacudido: { ataque: -2, salvaciones: -2 },
+  asustado: { ataque: -2, salvaciones: -2 },
+  'preso-panico': { salvaciones: -2 },
+  mareado: { ataque: -2, salvaciones: -2 },
+  enredado: { ataque: -2 },
+  deslumbrado: { ataque: -1 },
+};
+
+/** El efecto combinado de varias condiciones activas (se suman/acumulan). */
+export interface EfectoDeCondiciones {
+  ca: number;
+  pierdeDestrezaCA: boolean;
+  ataque: number;
+  salvaciones: number;
+}
+
+/** Suma los modificadores planos de una lista de condiciones activas. */
+export function efectoDeCondiciones(ids: string[]): EfectoDeCondiciones {
+  const efecto: EfectoDeCondiciones = {
+    ca: 0,
+    pierdeDestrezaCA: false,
+    ataque: 0,
+    salvaciones: 0,
+  };
+  for (const id of ids) {
+    const mod = MODIFICADORES_CONDICION[id];
+    if (!mod) {
+      continue;
+    }
+    efecto.ca += mod.ca ?? 0;
+    efecto.ataque += mod.ataque ?? 0;
+    efecto.salvaciones += mod.salvaciones ?? 0;
+    if (mod.pierdeDestrezaCA) {
+      efecto.pierdeDestrezaCA = true;
+    }
+  }
+  return efecto;
+}
+
+/**
+ * CA efectiva teniendo en cuenta las condiciones activas. Si alguna hace
+ * perder la Destreza a la CA, parte de la CA desprevenida (que ya quita la
+ * Destreza positiva y la esquiva) y le suma los modificadores planos.
+ */
+export function caConCondiciones(
+  sheet: CharacterSheetData,
+  ids: string[],
+): number {
+  const efecto = efectoDeCondiciones(ids);
+  const base = efecto.pierdeDestrezaCA
+    ? caDesprevenido(sheet)
+    : claseDeArmadura(sheet);
+  return base + efecto.ca;
+}

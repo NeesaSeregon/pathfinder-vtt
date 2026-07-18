@@ -140,8 +140,8 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   toca todo, cada jugador lo suyo (PATCH /api/partidas/:id/personajes/:pepId).
 - Tiempo real con Socket.IO: PartidasGateway autentica el handshake con la
   cookie httpOnly, una sala por partida (partida:<id>), eventos tipados en
-  libs/shared (eventos-partida.ts): estado-personaje (cambios parciales,
-  se fusionan en cliente) y mesa-cambiada (recargar detalle por HTTP).
+  libs/shared (eventos-partida.ts): estado-personaje (resumen neutro sin
+  esMio, se fusiona en cliente) y mesa-cambiada (recargar detalle por HTTP).
   El servicio emite DESPUÉS de persistir. El AuthGuard global ignora el
   contexto ws (el gateway hace su propia auth). Proxy dev: /socket.io
   con ws:true en proxy.conf.json.
@@ -155,9 +155,19 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   propias porque la traducción de Devir tiene copyright). La columna
   condiciones pasó de texto libre a jsonb string[] (migración
   CondicionesEstructuradas). El DTO valida que cada id sea del catálogo.
-  En la mesa se añaden/quitan con chips (nombre + efecto) y un
-  desplegable. Es el primer paso del futuro sistema de efectos (que un
-  día aplicará los modificadores: −2 CA del aturdido, etc.).
+  En la mesa se añaden/quitan con chips (nombre + efecto) y un desplegable.
+- Sistema de efectos (condiciones.ts): MODIFICADORES_CONDICION declara los
+  modificadores PLANOS y directos de cada condición (ca, pierdeDestrezaCA,
+  ataque, salvaciones); efectoDeCondiciones los suma y caConCondiciones da
+  la CA efectiva (parte de la desprevenida si se pierde la Destreza). El
+  servidor deriva ca (efectiva), caBase, modAtaque y modSalvaciones en el
+  resumen; la mesa muestra "CA 8 (base 10)" y "Por condiciones: ataque −2".
+  NO se auto-aplican los efectos por cambio de característica (−4 Des del
+  enredado) ni los situacionales (derribado): siguen en la descripción.
+- Tiempo real de estado: EVENTO_ESTADO_PERSONAJE lleva el resumen NEUTRO
+  completo (todo menos esMio, que depende de quién pregunta); así los
+  derivados (CA con condiciones) llegan a todos los clientes, no solo al
+  que actúa. Cada cliente fusiona conservando su propio esMio.
 - Rastreador de iniciativa y turnos: la iniciativa es estado de sesión
   (PersonajeEnPartida.iniciativa); el estado de combate vive en la partida
   (enCombate, ronda, turnoPepId). El orden lo da la función pura compartida

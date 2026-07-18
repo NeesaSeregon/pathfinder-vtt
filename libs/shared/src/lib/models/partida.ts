@@ -44,8 +44,14 @@ export interface PersonajeEnPartidaResumen {
   nombre: string;
   jugador?: string;
   nivel: number;
-  /** CA derivada de la ficha por el SERVIDOR, con las reglas compartidas. */
+  /** CA EFECTIVA (ficha + condiciones activas), derivada por el SERVIDOR. */
   ca: number;
+  /** CA de la ficha SIN condiciones, para mostrar "(base X)" si difieren. */
+  caBase: number;
+  /** Penalización de ataque acumulada por las condiciones activas (≤ 0). */
+  modAtaque: number;
+  /** Penalización de salvaciones acumulada por las condiciones activas (≤ 0). */
+  modSalvaciones: number;
   pgTotal?: number;
   pgActuales: number | null;
   danoNoLetal: number;

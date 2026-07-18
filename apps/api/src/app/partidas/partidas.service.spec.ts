@@ -202,12 +202,15 @@ describe('PartidasService', () => {
     expect(herido.pgActuales).toBe(18);
     expect(herido.esMio).toBe(false); // para el máster no es "suyo"
 
-    // Cada cambio guardado se emite a la sala de la partida
+    // Cada cambio guardado se emite a la sala con el resumen neutro (sin esMio)
     expect(gateway.emitirEstadoPersonaje).toHaveBeenCalledWith(
       'partida-1',
       'pep-1',
-      { pgActuales: 18 },
+      expect.objectContaining({ pgActuales: 18 }),
     );
+    const [, , neutro] = gateway.emitirEstadoPersonaje.mock.calls.at(-1);
+    expect(neutro).not.toHaveProperty('esMio');
+    expect(neutro).toHaveProperty('ca'); // los derivados viajan también
   });
 
   it('tirar dados: solo participantes; el máster y los jugadores pueden', async () => {
@@ -379,7 +382,7 @@ describe('PartidasService', () => {
     expect(gateway.emitirEstadoPersonaje).toHaveBeenCalledWith(
       'partida-1',
       'pep-a',
-      { iniciativa: resumen.iniciativa },
+      expect.objectContaining({ iniciativa: resumen.iniciativa }),
     );
   });
 
