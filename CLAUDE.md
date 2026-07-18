@@ -115,6 +115,20 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   dotes fuera del catálogo. NO automatizar efectos mecánicos de las dotes
   (decidido el 2026-07-16: demasiado heterogéneos).
 
+## Mejoras futuras (efectos)
+- Sistema de buffs/efectos temporales que CAMBIAN características (y con él,
+  las condiciones tipo fatigado/exhausto/enredado que hoy solo se describen).
+  Enfoque acordado: función pura fichaConEfectos(ficha, efectos) que devuelve
+  una COPIA de la ficha con el delta sumado al ajusteTemporal de cada atributo;
+  luego se llama a las funciones derivadas de siempre SIN tocarlas y cascadean
+  solas (CA, salvaciones, iniciativa, BMC/DMC, habilidades). Clave: −2 a una
+  puntuación es siempre −1 al modificador (mod(p−2)=mod(p)−1), así el delta es
+  exacto. Excluir Constitución→PG (retroactivo, se cruza con pgActuales) y las
+  puntuaciones a 0 (estados especiales). Merece la pena hacerlo JUNTO a los
+  buffs (Fuerza de toro, Furia, Heroísmo, inspiración del bardo), donde el
+  valor en mesa es alto y la fontanería es la misma; requiere además mostrar
+  en la mesa los valores efectivos (salvaciones, iniciativa, ataque, DMC).
+
 ## Estado actual
 - Estructura del monorepo creada y subida a GitHub.
 - Persistencia funcionando: PostgreSQL 17 (Docker) + TypeORM con
@@ -133,11 +147,16 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la
   ficha al unirse—, danoNoLetal, condiciones, posX/posY). /partidas/crear
   y /partidas/buscar (por nombre o código) + unirse funcionan en el front.
-- Vista de partida en /partidas/:id: tablero de 20x15 casillas (TABLERO_*
-  en libs/shared), tokens con mover en dos clics (banquillo para los no
-  colocados), panel de mesa con PG actuales/condiciones editables y CA
-  derivada POR EL SERVIDOR con las reglas compartidas. Permisos: máster
-  toca todo, cada jugador lo suyo (PATCH /api/partidas/:id/personajes/:pepId).
+- Vista de partida en /partidas/:id: layout a ancho completo (máx 100rem)
+  con tablero responsive (rejilla de casillas cuadradas por aspect-ratio,
+  acotada por el alto de la ventana) y panel lateral tipo tarjetas, pegajoso
+  y con scroll propio. Tokens = avatares circulares con color propio por
+  personaje (paleta --token-0..5 en styles.scss; colorToken() elige por hash
+  del nombre). Mover en dos clics (banquillo para los no colocados), PG y
+  condiciones editables y CA derivada POR EL SERVIDOR. Permisos: máster toca
+  todo, cada jugador lo suyo (PATCH /api/partidas/:id/personajes/:pepId).
+- Buscar partida: el backend devuelve solo las 12 más recientes (take: 12);
+  es para encontrar TU mesa por nombre/código, no un catálogo completo.
 - Tiempo real con Socket.IO: PartidasGateway autentica el handshake con la
   cookie httpOnly, una sala por partida (partida:<id>), eventos tipados en
   libs/shared (eventos-partida.ts): estado-personaje (resumen neutro sin

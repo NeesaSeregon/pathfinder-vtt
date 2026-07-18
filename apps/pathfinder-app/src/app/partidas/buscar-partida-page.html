@@ -1,4 +1,4 @@
-<main class="pagina-estrecha">
+<main class="busqueda">
   <section class="panel">
     <h1>Buscar partida</h1>
     <p class="partida__texto">
@@ -42,6 +42,10 @@
       <p class="acceso__error">{{ error() }}</p>
     }
 
+    <p class="partida__texto partida__hint">
+      Se muestran las últimas partidas. Escribe un nombre o código para
+      afinar la búsqueda.
+    </p>
     <ul class="partida__resultados">
       @for (partida of resultados(); track partida.id) {
         <li>

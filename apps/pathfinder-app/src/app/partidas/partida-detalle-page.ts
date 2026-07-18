@@ -275,6 +275,15 @@ export class PartidaDetallePage {
       .toUpperCase();
   }
 
+  /** Color estable del avatar según el nombre (paleta del tema, styles.scss). */
+  protected colorToken(nombre: string): string {
+    let suma = 0;
+    for (let i = 0; i < nombre.length; i++) {
+      suma += nombre.charCodeAt(i);
+    }
+    return `var(--token-${suma % 6})`;
+  }
+
   private mover(pepId: string, posX: number, posY: number): void {
     this.aplicarCambio(pepId, { posX, posY });
     this.seleccionado.set(null);

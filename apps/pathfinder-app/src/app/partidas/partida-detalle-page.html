@@ -10,7 +10,7 @@
         <p class="mesa__meta">
           máster {{ p.master }}
           @if (p.codigo) {
-            · código <strong>{{ p.codigo }}</strong>
+            <span class="mesa__codigo">código {{ p.codigo }}</span>
           }
         </p>
       </div>
@@ -27,6 +27,7 @@
           <button
             type="button"
             class="tablero__token"
+            [style.background]="colorToken(pep.nombre)"
             [class.tablero__token--seleccionado]="seleccionado() === pep.id"
             [class.tablero__token--ajeno]="!puedeMover(pep)"
             (click)="seleccionarDelBanquillo(pep)"
@@ -52,6 +53,7 @@
               @if (personajeEn(x, y); as pep) {
                 <span
                   class="tablero__token"
+                  [style.background]="colorToken(pep.nombre)"
                   [class.tablero__token--seleccionado]="
                     seleccionado() === pep.id
                   "

@@ -75,7 +75,9 @@ export class PartidasService {
         : {},
       relations: { master: true, personajes: true },
       order: { createdAt: 'DESC' },
-      take: 50,
+      // Con unas pocas basta: el buscador es para encontrar TU mesa, no un
+      // catálogo. Se afina escribiendo el nombre o el código.
+      take: 12,
     });
     return partidas.map((partida) => this.aResumen(partida, userId));
   }

@@ -1,88 +1,107 @@
 .mesa {
-  padding: 1rem 1.25rem;
+  max-width: 100rem;
+  margin: 0 auto;
+  padding: 1.25rem clamp(1rem, 3vw, 2rem) 2.5rem;
 
   &__cabecera {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    margin-bottom: 1.25rem;
 
     h1 {
       margin: 0;
+      font-size: 1.7rem;
     }
   }
 
   &__meta {
     color: var(--text-muted);
-    margin: 0.25rem 0 0;
+    margin: 0.35rem 0 0;
   }
 
+  &__codigo {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.4rem;
+    padding: 0.15rem 0.55rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+  }
+
+  // -- Banquillo: fichas aún sin colocar -----------------------------------
   &__banquillo {
-    margin: 1rem 0;
-    padding: 0.75rem;
-    border: 1px dashed var(--border);
-    border-radius: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding: 0.85rem 1rem;
+    border: 1px dashed var(--border-strong);
+    border-radius: 0.6rem;
+    background: var(--surface);
 
     h2 {
-      margin: 0 0 0.25rem;
+      margin: 0 0 0.15rem;
       font-size: 1rem;
     }
-
-    .tablero__token {
-      width: auto;
-      height: auto;
-      border-radius: 1rem;
-      padding: 0.35rem 0.9rem;
-      margin: 0.25rem 0.5rem 0 0;
-    }
   }
 
+  // -- Distribución principal: tablero + panel lateral ---------------------
   &__contenido {
-    display: flex;
-    gap: 1.25rem;
-    align-items: flex-start;
-    margin-top: 1rem;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 23rem;
+    gap: 1.5rem;
+    align-items: start;
   }
 
+  // -- Panel lateral: tarjetas apiladas, pegajoso y con scroll propio ------
   &__panel {
-    flex: 1;
-    min-width: 16rem;
-    max-width: 24rem;
-
-    h2 {
-      margin: 0 0 0.5rem;
-      font-size: 1.1rem;
-    }
-  }
-
-  &__personaje {
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 1rem;
+    padding-right: 0.35rem;
+
+    > h2 {
+      margin: 0;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-faint);
+    }
+  }
+
+  // -- Tarjeta de cada personaje en la mesa --------------------------------
+  &__personaje {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
 
     header {
       display: flex;
       flex-direction: column;
+      gap: 0.1rem;
+
+      strong {
+        font-size: 1.02rem;
+      }
 
       small {
         color: var(--text-muted);
       }
     }
-
-    button {
-      align-self: start;
-    }
   }
 
-  &__ca-mod {
-    color: var(--accent);
-  }
-
+  &__ca-mod,
   &__efectos {
     color: var(--accent);
   }
@@ -95,10 +114,12 @@
     color: var(--text-muted);
 
     input {
-      width: 5rem;
+      width: 4.5rem;
+      padding: 0.3rem 0.4rem;
     }
   }
 
+  // -- Condiciones estructuradas -------------------------------------------
   &__condiciones {
     display: flex;
     flex-direction: column;
@@ -108,7 +129,10 @@
   }
 
   &__cond-titulo {
-    font-size: 0.9rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
   }
 
   &__cond {
@@ -116,10 +140,10 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.5rem;
-    padding: 0.3rem 0.45rem;
-    background: rgba(255, 255, 255, 0.04);
+    padding: 0.35rem 0.5rem;
+    background: var(--surface-2);
     border-left: 2px solid var(--accent);
-    border-radius: 0.25rem;
+    border-radius: 0.3rem;
 
     strong {
       color: var(--text);
@@ -140,6 +164,7 @@
 
   &__cond-anadir {
     align-self: flex-start;
+    padding: 0.3rem 0.4rem;
   }
 
   &__iniciativa {
@@ -151,19 +176,39 @@
 
     input {
       width: 4rem;
+      padding: 0.3rem 0.4rem;
     }
   }
 
-  &__combate {
-    margin-top: 1.25rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
+  &__acciones {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+
+    button {
+      padding: 0.35rem 0.7rem;
+    }
+  }
+
+  // -- Rastreador de combate -----------------------------------------------
+  &__combate,
+  &__dados {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    padding: 0.85rem;
+
+    h2 {
+      margin: 0 0 0.6rem;
+      font-size: 1rem;
+    }
   }
 
   &__ronda {
     font-weight: 700;
     color: var(--accent);
     margin: 0 0 0.5rem;
+    font-size: 1.05rem;
   }
 
   &__orden {
@@ -175,34 +220,42 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.3rem 0.4rem;
-      border-radius: 0.3rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.35rem;
     }
 
     &--turno {
-      background: rgba(123, 216, 143, 0.18);
+      background: var(--accent-soft);
+      box-shadow: inset 2px 0 0 var(--accent);
+
+      strong {
+        color: var(--accent);
+        margin-left: auto;
+      }
     }
   }
 
   &__orden-ini {
     display: inline-flex;
     justify-content: center;
-    min-width: 1.8rem;
+    min-width: 1.9rem;
+    padding: 0.05rem 0;
     font-weight: 700;
     color: var(--text);
+    background: var(--surface-2);
+    border-radius: 0.3rem;
   }
 
-  &__dados {
-    margin-top: 1.25rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-  }
-
+  // -- Dados ---------------------------------------------------------------
   &__dados-rapidos {
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
     margin-bottom: 0.5rem;
+
+    button {
+      padding: 0.3rem 0.55rem;
+    }
   }
 
   &__dados-libre {
@@ -212,6 +265,7 @@
     input {
       flex: 1;
       min-width: 0;
+      padding: 0.35rem 0.5rem;
     }
   }
 
@@ -248,12 +302,7 @@
     font-size: 1.05rem;
   }
 
-  &__acciones {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
+  // -- Modal de ficha ------------------------------------------------------
   &__overlay {
     position: fixed;
     inset: 0;
@@ -289,57 +338,105 @@
   }
 }
 
+// -- Tablero: rejilla responsive de celdas cuadradas -----------------------
 .tablero {
   display: grid;
-  grid-template-columns: repeat(20, 2rem);
-  grid-auto-rows: 2rem;
-  gap: 1px;
+  grid-template-columns: repeat(20, 1fr);
+  grid-template-rows: repeat(15, 1fr);
+  aspect-ratio: 20 / 15;
+  width: 100%;
+  // El alto de la ventana acota el ancho (proporción 20:15 = 4:3)
+  max-width: calc((100vh - 10rem) * 4 / 3);
+  margin: 0 auto;
+  gap: 2px;
+  padding: 2px;
   background: var(--border);
-  border: 1px solid var(--border);
-  width: fit-content;
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
 
   &__celda {
-    background: rgba(18, 23, 36, 0.85);
+    background: var(--surface);
     border: none;
+    border-radius: 0;
     padding: 0;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
 
-    &--destino:hover {
-      background: rgba(80, 120, 90, 0.4);
+    &:hover:not(:disabled) {
+      background: var(--surface-2);
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    &--destino {
+      background: var(--accent-soft);
+    }
+
+    &--destino:hover:not(:disabled) {
+      background: rgba(76, 215, 229, 0.22);
     }
   }
 
+  // Ficha-avatar: círculo con iniciales y color propio (estilo inline)
   &__token {
-    width: 1.7rem;
-    height: 1.7rem;
+    width: 82%;
+    height: 82%;
     border-radius: 50%;
-    background: var(--accent);
-    color: #10131c;
-    font-size: 0.7rem;
-    font-weight: 700;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: none;
+    color: #0c1018;
+    font-weight: 800;
+    font-size: clamp(0.55rem, 1vw, 0.95rem);
+    border: 2px solid rgba(255, 255, 255, 0.28);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.45),
+      inset 0 1px 2px rgba(255, 255, 255, 0.35);
     cursor: pointer;
 
     &--seleccionado {
-      outline: 3px solid #7bd88f;
+      outline: 3px solid #ffffff;
       outline-offset: 1px;
+      box-shadow: var(--glow);
     }
 
     &--ajeno {
-      background: var(--text-muted);
+      filter: saturate(0.55) brightness(0.85);
       cursor: default;
     }
   }
 }
 
+// Fichas del banquillo: pastillas con el nombre completo (no círculos)
+.mesa__banquillo .tablero__token {
+  width: auto;
+  height: auto;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  margin: 0.35rem 0.4rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+@media (max-width: 60rem) {
+  .mesa__contenido {
+    grid-template-columns: 1fr;
+  }
+
+  .mesa__panel {
+    position: static;
+    max-height: none;
+  }
+
+  .tablero {
+    max-width: none;
+  }
+}
+
 .acceso__error {
   margin: 0.75rem 0;
-  color: #ff6b6b;
+  color: var(--danger);
   font-size: 0.9rem;
 }
