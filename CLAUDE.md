@@ -140,6 +140,12 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   La página de personajes (listar, crear, borrar) vive en /personajes,
   servida contra /api/characters vía proxy. E2E con Cypress verificando
   navegación y el flujo completo (npx nx e2e pathfinder-app-e2e).
+  Alta/edición en modal ancho: cerrar por fondo o Escape NO descarta a lo
+  bruto — CharacterForm expone sucio() (lo marca cualquier input/change por
+  propagación; applyInitial lo resetea) y CharactersPage.intentarCerrar()
+  pide confirmación solo si hay cambios. Botón Cancelar explícito.
+  (El soporte de e2e espera a que la API responda antes del primer test,
+  para evitar carreras de arranque en frío.)
 - Usuarios funcionando: /entrar y /registro con JWT en cookie httpOnly
   (ver sección Autenticación); los personajes tienen dueño.
 - Partidas: entidad Partida (el creador es el máster; código de invitación

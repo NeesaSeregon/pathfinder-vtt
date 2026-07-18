@@ -39,11 +39,18 @@
       <div class="characters__modal" role="dialog" aria-modal="true">
         <header>
           <h2>Nuevo personaje</h2>
-          <button type="button" aria-label="Cerrar" (click)="creating.set(false)">
+          <button type="button" aria-label="Cerrar" (click)="intentarCerrar()">
             ✕
           </button>
         </header>
         <app-character-form (save)="create($event)" />
+        <button
+          type="button"
+          class="characters__cancelar"
+          (click)="intentarCerrar()"
+        >
+          Cancelar
+        </button>
       </div>
     </div>
   }
@@ -52,13 +59,13 @@
     <div
       class="characters__overlay"
       (click)="onOverlayClick($event)"
-      (keyup.escape)="closeModal()"
+      (keyup.escape)="intentarCerrar()"
       role="presentation"
     >
       <div class="characters__modal" role="dialog" aria-modal="true">
         <header>
           <h2>{{ character.name }}</h2>
-          <button type="button" aria-label="Cerrar" (click)="closeModal()">
+          <button type="button" aria-label="Cerrar" (click)="intentarCerrar()">
             ✕
           </button>
         </header>
@@ -72,6 +79,13 @@
             submitLabel="Guardar"
             (save)="saveEdit($event)"
           />
+          <button
+            type="button"
+            class="characters__cancelar"
+            (click)="intentarCerrar()"
+          >
+            Cancelar
+          </button>
         }
       </div>
     </div>

@@ -15,3 +15,20 @@
 
 // Import commands.ts using ES2015 syntax:
 import './commands';
+
+/**
+ * En arranque en frío el front (vite) puede estar listo antes que la API
+ * (Nest + TypeORM conectando a Postgres). El primer test que llama a la API
+ * fallaría con un error de proxy. Esperamos a que la API responda: mientras
+ * no está, el proxy devuelve 5xx; en cuanto vive, /api/auth/me da 401.
+ */
+function esperarApi(intentos = 40): void {
+  cy.request({ url: '/api/auth/me', failOnStatusCode: false }).then((res) => {
+    if (res.status >= 500 && intentos > 0) {
+      cy.wait(300);
+      esperarApi(intentos - 1);
+    }
+  });
+}
+
+before(() => esperarApi());

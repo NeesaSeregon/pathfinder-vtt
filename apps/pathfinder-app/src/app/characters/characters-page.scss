@@ -65,7 +65,8 @@
     border: 1px solid var(--border-strong);
     border-radius: 0.5rem;
     padding: 1.25rem;
-    max-width: 42rem;
+    // Más ancha: la hoja completa cabe mejor y hay menos fondo que clicar
+    max-width: 54rem;
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
@@ -81,5 +82,10 @@
         margin: 0;
       }
     }
+  }
+
+  &__cancelar {
+    margin-top: 0.75rem;
+    color: var(--text-muted);
   }
 }

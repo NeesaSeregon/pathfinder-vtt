@@ -490,4 +490,22 @@ describe('pathfinder-app-e2e', () => {
     cy.contains('li', name).contains('button', 'Borrar').click();
     cy.contains('li', name).should('not.exist');
   });
+
+  it('avisa antes de descartar cambios sin guardar al cerrar la edición', () => {
+    const name = `Guarda-${Date.now()}`;
+    cy.request('POST', '/api/characters', { name, level: 1, sheetData: {} });
+    cy.visit('/personajes');
+
+    cy.contains('li', name).contains('button', 'Ver ficha').click();
+    cy.get('.characters__modal').contains('button', 'Editar').click();
+    cy.get('.characters__modal input[name="level"]').clear();
+    cy.get('.characters__modal input[name="level"]').type('5');
+
+    // El usuario cancela el aviso → la ventana sigue abierta y no se pierde nada.
+    // Clic en el borde izquierdo del fondo (fuera del modal y del navbar).
+    cy.on('window:confirm', () => false);
+    cy.get('.characters__overlay').click('left');
+    cy.get('.characters__modal').should('exist');
+    cy.get('.characters__modal input[name="level"]').should('have.value', '5');
+  });
 });

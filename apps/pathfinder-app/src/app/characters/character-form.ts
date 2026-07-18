@@ -294,6 +294,16 @@ export class CharacterForm {
   readonly submitLabel = input('Crear');
   readonly save = output<CharacterUpsert>();
 
+  // ¿El usuario ha tocado algún control desde que se abrió/cargó? El padre
+  // lo consulta para avisar antes de cerrar y no perder lo escrito.
+  private readonly _sucio = signal(false);
+  readonly sucio = this._sucio.asReadonly();
+
+  /** Lo dispara cualquier input/change del formulario (por propagación). */
+  protected marcarSucio(): void {
+    this._sucio.set(true);
+  }
+
   protected readonly alineamientos = ALINEAMIENTOS;
   protected readonly clases = CLASES;
   protected readonly razas = RAZAS;
@@ -945,6 +955,8 @@ export class CharacterForm {
   }
 
   private applyInitial(character: Character | null): void {
+    // Cargar datos por código NO cuenta como edición del usuario.
+    this._sucio.set(false);
     const sheet = character?.sheetData ?? {};
     this.form.name.set(character?.name ?? '');
     this.form.level.set(character?.level ?? 1);

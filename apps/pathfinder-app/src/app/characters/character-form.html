@@ -1,4 +1,9 @@
-<form class="character-form" (ngSubmit)="submit()">
+<form
+  class="character-form"
+  (ngSubmit)="submit()"
+  (input)="marcarSucio()"
+  (change)="marcarSucio()"
+>
   <details class="character-form__datos" open>
     <summary>Datos del personaje</summary>
     <div class="character-form__datos-grid">

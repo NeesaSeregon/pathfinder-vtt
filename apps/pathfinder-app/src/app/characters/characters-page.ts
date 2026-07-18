@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, viewChild } from '@angular/core';
 import { Character, CharacterUpsert } from '@pathfinder/shared';
 import { CharactersApi } from './characters-api';
 import { CharacterForm } from './character-form';
@@ -10,11 +10,15 @@ import { mensajeDeError } from './mensaje-de-error';
   imports: [CharacterForm, FichaVista],
   templateUrl: './characters-page.html',
   styleUrl: './characters-page.scss',
-  // La tecla Escape cierra la modal esté donde esté el foco.
-  host: { '(document:keydown.escape)': 'closeModal()' },
+  // La tecla Escape intenta cerrar (avisa si hay cambios sin guardar).
+  host: { '(document:keydown.escape)': 'intentarCerrar()' },
 })
 export class CharactersPage {
   private readonly api = inject(CharactersApi);
+
+  // Referencia al formulario abierto (alta o edición), para saber si el
+  // usuario ha escrito algo y avisar antes de cerrar sin querer.
+  protected readonly formulario = viewChild(CharacterForm);
 
   protected readonly characters = signal<Character[]>([]);
   protected readonly loading = signal(true);
@@ -67,11 +71,27 @@ export class CharactersPage {
     this.creating.set(false);
   }
 
-  /** Cierra solo si el clic fue en el fondo oscuro, no dentro de la ventana. */
+  /** Clic en el fondo oscuro: intenta cerrar (con aviso si hay cambios). */
   protected onOverlayClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
-      this.closeModal();
+      this.intentarCerrar();
     }
+  }
+
+  /**
+   * Cierre "blando": si hay un formulario abierto con cambios sin guardar,
+   * pide confirmación antes de descartarlos. En modo vista (sin formulario)
+   * o sin cambios, cierra directamente.
+   */
+  protected intentarCerrar(): void {
+    const form = this.formulario();
+    if (
+      form?.sucio() &&
+      !window.confirm('Tienes cambios sin guardar. ¿Descartar y cerrar?')
+    ) {
+      return;
+    }
+    this.closeModal();
   }
 
   protected saveEdit(payload: CharacterUpsert): void {
