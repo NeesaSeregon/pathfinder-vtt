@@ -85,6 +85,13 @@ export class ActualizarPersonajeEnPartidaDto
   @IsString()
   @MaxLength(300)
   condiciones?: string;
+
+  // La iniciativa puede ser negativa (tirada baja + modificador negativo)
+  @IsOptional()
+  @IsInt()
+  @Min(-50)
+  @Max(99)
+  iniciativa?: number;
 }
 
 export class TirarDadosDto implements TirarDados {

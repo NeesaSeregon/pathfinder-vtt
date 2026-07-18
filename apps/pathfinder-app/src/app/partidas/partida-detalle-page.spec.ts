@@ -18,6 +18,9 @@ const DETALLE: PartidaDetalle = {
   numPersonajes: 1,
   esMaster: true,
   codigo: 'ABC234',
+  enCombate: false,
+  ronda: 0,
+  turnoPepId: null,
   personajes: [
     {
       id: 'pep-1',
@@ -31,6 +34,8 @@ const DETALLE: PartidaDetalle = {
       condiciones: '',
       posX: null,
       posY: null,
+      iniciativa: null,
+      iniciativaMod: 2,
       esMio: false,
     },
   ],

@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   ActualizarPersonajeEnPartida,
+  Character,
   CrearPartida,
   PartidaDetalle,
   PartidaResumen,
@@ -65,6 +66,43 @@ export class PartidasApi {
     return this.http.post<TiradaResultado>(
       `${this.baseUrl}/${partidaId}/tiradas`,
       { notacion, etiqueta },
+    );
+  }
+
+  ficha(partidaId: string, pepId: string): Observable<Character> {
+    return this.http.get<Character>(
+      `${this.baseUrl}/${partidaId}/personajes/${pepId}/ficha`,
+    );
+  }
+
+  tirarIniciativa(
+    partidaId: string,
+    pepId: string,
+  ): Observable<PersonajeEnPartidaResumen> {
+    return this.http.post<PersonajeEnPartidaResumen>(
+      `${this.baseUrl}/${partidaId}/personajes/${pepId}/iniciativa`,
+      {},
+    );
+  }
+
+  iniciarCombate(partidaId: string): Observable<PartidaDetalle> {
+    return this.http.post<PartidaDetalle>(
+      `${this.baseUrl}/${partidaId}/combate/iniciar`,
+      {},
+    );
+  }
+
+  siguienteTurno(partidaId: string): Observable<PartidaDetalle> {
+    return this.http.post<PartidaDetalle>(
+      `${this.baseUrl}/${partidaId}/combate/siguiente`,
+      {},
+    );
+  }
+
+  terminarCombate(partidaId: string): Observable<PartidaDetalle> {
+    return this.http.post<PartidaDetalle>(
+      `${this.baseUrl}/${partidaId}/combate/terminar`,
+      {},
     );
   }
 }

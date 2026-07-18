@@ -10,13 +10,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import {
   claseDeArmadura,
+  iniciativa,
   JwtPayload,
   lanzarDados,
+  ordenarIniciativa,
   PartidaDetalle,
   PartidaResumen,
   PersonajeEnPartidaResumen,
   TiradaResultado,
 } from '@pathfinder/shared';
+import { Character } from '../characters/entities/character.entity';
 import { Partida } from './entities/partida.entity';
 import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
 import {
@@ -83,6 +86,9 @@ export class PartidasService {
       personajes: partida.personajes.map((pep) =>
         this.aPersonajeResumen(pep, userId),
       ),
+      enCombate: partida.enCombate,
+      ronda: partida.ronda,
+      turnoPepId: partida.turnoPepId,
     };
   }
 
@@ -182,6 +188,105 @@ export class PartidasService {
     this.gateway.emitirMesaCambiada(partidaId);
   }
 
+  /** Tira 1d20 + el modificador de iniciativa de la ficha y lo fija. */
+  async tirarIniciativa(
+    partidaId: string,
+    pepId: string,
+    userId: string,
+  ): Promise<PersonajeEnPartidaResumen> {
+    const partida = await this.buscarEntidad(partidaId);
+    const pep = this.buscarPep(partida, pepId);
+    this.soloMasterODueno(partida, pep, userId, 'tirar su iniciativa');
+
+    const mod = iniciativa(pep.character?.sheetData ?? {});
+    const notacion = mod >= 0 ? `1d20+${mod}` : `1d20${mod}`;
+    pep.iniciativa = lanzarDados(notacion).total;
+    await this.personajes.save(pep);
+
+    this.gateway.emitirEstadoPersonaje(partidaId, pepId, {
+      iniciativa: pep.iniciativa,
+    });
+    return this.aPersonajeResumen(pep, userId);
+  }
+
+  /** El máster arranca el combate: ordena por iniciativa y da el turno 1. */
+  async iniciarCombate(
+    partidaId: string,
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloElMaster(partida, userId);
+
+    const orden = this.ordenDeCombate(partida);
+    if (orden.length === 0) {
+      throw new BadRequestException('Nadie ha tirado iniciativa todavía');
+    }
+    partida.enCombate = true;
+    partida.ronda = 1;
+    partida.turnoPepId = orden[0].id;
+    await this.partidas.save(partida);
+
+    this.gateway.emitirMesaCambiada(partidaId);
+    return this.detalle(partidaId, userId);
+  }
+
+  /** Pasa el turno al siguiente; al dar la vuelta, sube la ronda. */
+  async siguienteTurno(
+    partidaId: string,
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloElMaster(partida, userId);
+    if (!partida.enCombate) {
+      throw new BadRequestException('El combate no está activo');
+    }
+
+    const orden = this.ordenDeCombate(partida);
+    if (orden.length === 0) {
+      throw new BadRequestException('No hay combatientes con iniciativa');
+    }
+    const actual = orden.findIndex((pep) => pep.id === partida.turnoPepId);
+    const siguiente = actual === -1 ? 0 : (actual + 1) % orden.length;
+    // Si volvemos al principio de la tabla, empieza una ronda nueva
+    if (actual !== -1 && siguiente === 0) {
+      partida.ronda += 1;
+    }
+    partida.turnoPepId = orden[siguiente].id;
+    await this.partidas.save(partida);
+
+    this.gateway.emitirMesaCambiada(partidaId);
+    return this.detalle(partidaId, userId);
+  }
+
+  /** El máster cierra el combate y limpia el rastreador. */
+  async terminarCombate(
+    partidaId: string,
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloElMaster(partida, userId);
+
+    partida.enCombate = false;
+    partida.ronda = 0;
+    partida.turnoPepId = null;
+    await this.partidas.save(partida);
+
+    this.gateway.emitirMesaCambiada(partidaId);
+    return this.detalle(partidaId, userId);
+  }
+
+  /** Combatientes (los que han tirado) en orden de turno. */
+  private ordenDeCombate(partida: Partida): PersonajeEnPartida[] {
+    const combatientes = partida.personajes
+      .filter((pep) => pep.iniciativa !== null)
+      .map((pep) => ({
+        pep,
+        iniciativa: pep.iniciativa,
+        iniciativaMod: iniciativa(pep.character?.sheetData ?? {}),
+      }));
+    return ordenarIniciativa(combatientes).map((c) => c.pep);
+  }
+
   /** Tira los dados en el servidor y retransmite el resultado a la sala. */
   async tirarDados(
     partidaId: string,
@@ -210,6 +315,31 @@ export class PartidasService {
     return resultado;
   }
 
+  /**
+   * Ficha COMPLETA de un personaje de la mesa, en solo lectura. La ve el
+   * máster (necesita las hojas de sus jugadores para dirigir) o el propio
+   * dueño; nadie más, ni siquiera otros jugadores de la misma partida.
+   */
+  async fichaDePersonaje(
+    partidaId: string,
+    pepId: string,
+    userId: string,
+  ): Promise<Character> {
+    const partida = await this.buscarEntidad(partidaId);
+    const pep = partida.personajes.find((p) => p.id === pepId);
+    if (!pep) {
+      throw new NotFoundException('Ese personaje no está en la partida');
+    }
+    const esMaster = partida.masterId === userId;
+    const esDueno = pep.character?.ownerId === userId;
+    if (!esMaster && !esDueno) {
+      throw new ForbiddenException(
+        'Solo el máster o el dueño pueden ver esta ficha',
+      );
+    }
+    return pep.character;
+  }
+
   private async buscarEntidad(id: string): Promise<Partida> {
     const partida = await this.partidas.findOne({
       where: { id },
@@ -231,6 +361,27 @@ export class PartidasService {
       throw new ForbiddenException(
         'Solo los participantes de la mesa pueden tirar dados',
       );
+    }
+  }
+
+  private buscarPep(partida: Partida, pepId: string): PersonajeEnPartida {
+    const pep = partida.personajes.find((p) => p.id === pepId);
+    if (!pep) {
+      throw new NotFoundException('Ese personaje no está en la partida');
+    }
+    return pep;
+  }
+
+  private soloMasterODueno(
+    partida: Partida,
+    pep: PersonajeEnPartida,
+    userId: string,
+    accion: string,
+  ): void {
+    const esMaster = partida.masterId === userId;
+    const esDueno = pep.character?.ownerId === userId;
+    if (!esMaster && !esDueno) {
+      throw new ForbiddenException(`Solo el máster o el dueño pueden ${accion}`);
     }
   }
 
@@ -273,6 +424,9 @@ export class PartidasService {
       condiciones: pep.condiciones,
       posX: pep.posX,
       posY: pep.posY,
+      iniciativa: pep.iniciativa,
+      // El modificador de iniciativa lo deriva el servidor de la ficha
+      iniciativaMod: iniciativa(pep.character?.sheetData ?? {}),
       esMio: pep.character?.ownerId === userId,
     };
   }

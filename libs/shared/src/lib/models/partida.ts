@@ -52,6 +52,10 @@ export interface PersonajeEnPartidaResumen {
   condiciones: string;
   posX: number | null;
   posY: number | null;
+  /** Iniciativa TIRADA en el combate actual (null = aún no ha tirado). */
+  iniciativa: number | null;
+  /** Modificador de iniciativa de la ficha, derivado por el SERVIDOR. */
+  iniciativaMod: number;
   /** ¿El personaje es del usuario que pregunta? (para permitir moverlo) */
   esMio: boolean;
 }
@@ -63,9 +67,40 @@ export interface ActualizarPersonajeEnPartida {
   pgActuales?: number;
   danoNoLetal?: number;
   condiciones?: string;
+  iniciativa?: number;
 }
 
 export interface PartidaDetalle extends PartidaResumen {
   esMaster: boolean;
   personajes: PersonajeEnPartidaResumen[];
+  /** Estado del rastreador de combate (ver ordenarIniciativa). */
+  enCombate: boolean;
+  ronda: number;
+  /** pepId del personaje que tiene el turno (null fuera de combate). */
+  turnoPepId: string | null;
+}
+
+/** Lo mínimo para ordenar el turno: la tirada y su desempate. */
+export interface Combatiente {
+  iniciativa: number | null;
+  iniciativaMod: number;
+}
+
+/**
+ * Ordena combatientes por iniciativa descendente. Empate → gana el mayor
+ * modificador de iniciativa (regla de PF1e). Quien no ha tirado va al final.
+ * La usan el servidor (para el turno) y el cliente (para pintar el orden),
+ * así ambos coinciden siempre.
+ */
+export function ordenarIniciativa<T extends Combatiente>(
+  combatientes: readonly T[],
+): T[] {
+  return [...combatientes].sort((a, b) => {
+    const ia = a.iniciativa ?? Number.NEGATIVE_INFINITY;
+    const ib = b.iniciativa ?? Number.NEGATIVE_INFINITY;
+    if (ib !== ia) {
+      return ib - ia;
+    }
+    return b.iniciativaMod - a.iniciativaMod;
+  });
 }

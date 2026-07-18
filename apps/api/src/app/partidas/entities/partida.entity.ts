@@ -41,6 +41,17 @@ export class Partida {
   @OneToMany(() => PersonajeEnPartida, (pep) => pep.partida)
   personajes: PersonajeEnPartida[];
 
+  /** Rastreador de combate (estado de sesión de la mesa). */
+  @Column({ type: 'boolean', default: false })
+  enCombate: boolean;
+
+  @Column({ type: 'int', default: 0 })
+  ronda: number;
+
+  /** pepId con el turno; uuid suelto (sin FK) por simplicidad, null fuera de combate. */
+  @Column({ type: 'uuid', nullable: true })
+  turnoPepId: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

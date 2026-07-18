@@ -1,7 +1,10 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Observable } from 'rxjs';
 import {
+  Character,
   EstadoPersonajeEvento,
+  ordenarIniciativa,
   PartidaDetalle,
   PersonajeEnPartidaResumen,
   TABLERO_ALTO,
@@ -10,11 +13,12 @@ import {
 } from '@pathfinder/shared';
 import { PartidasApi } from './partidas-api';
 import { PartidaSocket } from './partida-socket';
+import { FichaVista } from '../characters/ficha-vista';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
 @Component({
   selector: 'app-partida-detalle-page',
-  imports: [],
+  imports: [FichaVista],
   templateUrl: './partida-detalle-page.html',
   styleUrl: './partida-detalle-page.scss',
 })
@@ -49,6 +53,17 @@ export class PartidaDetallePage {
     const p = this.partida();
     return !!p && (p.esMaster || p.personajes.some((pep) => pep.esMio));
   });
+
+  /** Ficha abierta en la modal de consulta (null = cerrada). */
+  protected readonly fichaAbierta = signal<Character | null>(null);
+  protected readonly cargandoFicha = signal(false);
+
+  /** Combatientes (los que han tirado) en orden de turno, como el servidor. */
+  protected readonly ordenIniciativa = computed(() =>
+    ordenarIniciativa(
+      (this.partida()?.personajes ?? []).filter((p) => p.iniciativa !== null),
+    ),
+  );
 
   constructor() {
     this.cargar();
@@ -123,6 +138,53 @@ export class PartidaDetallePage {
     this.aplicarCambio(pep.id, { condiciones: condiciones.trim() });
   }
 
+  protected guardarIniciativa(
+    pep: PersonajeEnPartidaResumen,
+    valor: string,
+  ): void {
+    const iniciativa = Number(valor);
+    if (!Number.isInteger(iniciativa)) {
+      return;
+    }
+    this.aplicarCambio(pep.id, { iniciativa });
+  }
+
+  /** Tira 1d20 + el modificador de iniciativa de la ficha en el servidor. */
+  protected tirarIniciativa(pep: PersonajeEnPartidaResumen): void {
+    this.error.set(null);
+    this.api.tirarIniciativa(this.partidaId, pep.id).subscribe({
+      next: (actualizado) => this.reemplazar(actualizado),
+      error: (err) =>
+        this.error.set(`No se pudo tirar iniciativa: ${mensajeDeError(err)}`),
+    });
+  }
+
+  protected esTurno(pep: PersonajeEnPartidaResumen): boolean {
+    return this.partida()?.turnoPepId === pep.id;
+  }
+
+  protected iniciarCombate(): void {
+    this.accionCombate(this.api.iniciarCombate(this.partidaId));
+  }
+
+  protected siguienteTurno(): void {
+    this.accionCombate(this.api.siguienteTurno(this.partidaId));
+  }
+
+  protected terminarCombate(): void {
+    this.accionCombate(this.api.terminarCombate(this.partidaId));
+  }
+
+  /** Las acciones de combate devuelven el detalle completo ya actualizado. */
+  private accionCombate(obs: Observable<PartidaDetalle>): void {
+    this.error.set(null);
+    obs.subscribe({
+      next: (partida) => this.partida.set(partida),
+      error: (err) =>
+        this.error.set(`No se pudo actualizar el combate: ${mensajeDeError(err)}`),
+    });
+  }
+
   protected sacar(pep: PersonajeEnPartidaResumen): void {
     this.api.sacar(this.partidaId, pep.id).subscribe({
       next: () => this.cargar(),
@@ -154,6 +216,33 @@ export class PartidaDetallePage {
         ? prev
         : [tirada, ...prev].slice(0, 30),
     );
+  }
+
+  /** Abre la ficha COMPLETA de un personaje (el servidor valida el acceso). */
+  protected verFicha(pep: PersonajeEnPartidaResumen): void {
+    this.cargandoFicha.set(true);
+    this.error.set(null);
+    this.api.ficha(this.partidaId, pep.id).subscribe({
+      next: (ficha) => {
+        this.fichaAbierta.set(ficha);
+        this.cargandoFicha.set(false);
+      },
+      error: (err) => {
+        this.error.set(`No se pudo abrir la ficha: ${mensajeDeError(err)}`);
+        this.cargandoFicha.set(false);
+      },
+    });
+  }
+
+  protected cerrarFicha(): void {
+    this.fichaAbierta.set(null);
+  }
+
+  /** Cierra la modal solo si el clic fue en el fondo, no dentro de la ventana. */
+  protected onOverlayFicha(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      this.cerrarFicha();
+    }
   }
 
   protected iniciales(nombre: string): string {

@@ -1,0 +1,137 @@
+<p class="characters__modal-summary">
+  Nivel {{ character().level }}
+  @if (character().sheetData.clase) {
+    · {{ character().sheetData.clase }}
+  }
+</p>
+@if (tieneCombate(character())) {
+  <p class="characters__modal-combate">
+    CA {{ ca(character().sheetData) }} (toque
+    {{ caToque(character().sheetData) }}, desprevenido
+    {{ caDesprevenido(character().sheetData) }}) · Iniciativa
+    {{ iniciativaDe(character()) }}
+    @if (pgResumen(character())) {
+      · {{ pgResumen(character()) }}
+    }
+  </p>
+  @if (character().sheetData.combate?.notas; as notas) {
+    <p class="characters__modal-velocidad">
+      Modificadores: {{ notas }}
+    </p>
+  }
+  @if (ofensivoResumen(character()); as ofensivo) {
+    <p class="characters__modal-combate">{{ ofensivo }}</p>
+  }
+  @if (character().sheetData.ofensivo?.notas; as notasOfensivo) {
+    <p class="characters__modal-velocidad">
+      Modificadores ofensivos: {{ notasOfensivo }}
+    </p>
+  }
+  @if (salvacionesResumen(character()); as salvaciones) {
+    <p class="characters__modal-combate">{{ salvaciones }}</p>
+  }
+  @if (character().sheetData.salvaciones?.notas; as notasSalvaciones) {
+    <p class="characters__modal-velocidad">
+      Modificadores de salvación: {{ notasSalvaciones }}
+    </p>
+  }
+  @if (armasDe(character()).length > 0) {
+    <ul class="characters__modal-armas">
+      @for (arma of armasDe(character()); track arma) {
+        <li>{{ arma }}</li>
+      }
+    </ul>
+  }
+  @if (habilidadesDe(character()).length > 0) {
+    <p class="characters__modal-velocidad">
+      Habilidades: {{ habilidadesDe(character()).join(' · ') }}
+    </p>
+  }
+  @if (character().sheetData.habilidadesNotas; as notasHabilidades) {
+    <p class="characters__modal-velocidad">
+      Modificadores condicionales: {{ notasHabilidades }}
+    </p>
+  }
+  @if (character().sheetData.idiomas; as idiomas) {
+    <p class="characters__modal-velocidad">Idiomas: {{ idiomas }}</p>
+  }
+  @if (objetosCaDe(character()); as objetosCa) {
+    <p class="characters__modal-velocidad">
+      Objetos CA: {{ objetosCa }}
+    </p>
+  }
+  @if (equipoResumen(character()); as equipo) {
+    <p class="characters__modal-velocidad">Equipo: {{ equipo }}</p>
+  }
+  @if (dotesResumen(character()); as dotes) {
+    <p class="characters__modal-velocidad">Dotes: {{ dotes }}</p>
+  }
+  @if (character().sheetData.aptitudesEspeciales; as aptitudes) {
+    <p class="characters__modal-velocidad">
+      Aptitudes especiales: {{ aptitudes }}
+    </p>
+  }
+  @if (dineroResumen(character()); as dinero) {
+    <p class="characters__modal-velocidad">Dinero: {{ dinero }}</p>
+  }
+  @if (experienciaResumen(character()); as experiencia) {
+    <p class="characters__modal-velocidad">{{ experiencia }}</p>
+  }
+  @if (conjurosDe(character()).length > 0) {
+    <ul class="characters__modal-armas">
+      @for (linea of conjurosDe(character()); track linea) {
+        <li>{{ linea }}</li>
+      }
+    </ul>
+  }
+  @if (character().sheetData.conjuros?.dominiosEscuela; as dominios) {
+    <p class="characters__modal-velocidad">
+      Dominios/escuela: {{ dominios }}
+    </p>
+  }
+} @else if (pgResumen(character())) {
+  <p class="characters__modal-combate">{{ pgResumen(character()) }}</p>
+}
+@if (velocidadResumen(character()).length > 0) {
+  <p class="characters__modal-velocidad">
+    Velocidad: {{ velocidadResumen(character()).join(' · ') }}
+  </p>
+}
+@if (sheetEntries(character()).length > 0) {
+  <dl class="characters__modal-sheet">
+    @for (entry of sheetEntries(character()); track entry.label) {
+      <div>
+        <dt>{{ entry.label }}</dt>
+        <dd>{{ entry.value }}</dd>
+      </div>
+    }
+  </dl>
+} @else {
+  <p>La ficha está vacía.</p>
+}
+@if (atributosDe(character()).length > 0) {
+  <table class="characters__modal-atributos">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Punt. base</th>
+        <th>Racial</th>
+        <th>Modif.</th>
+        <th>Ajuste temp.</th>
+        <th>Modif. temp.</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (fila of atributosDe(character()); track fila.label) {
+        <tr>
+          <th>{{ fila.label }}</th>
+          <td>{{ fila.puntuacion ?? '—' }}</td>
+          <td>{{ fila.racial }}</td>
+          <td>{{ fila.modificador }}</td>
+          <td>{{ fila.ajusteTemporal }}</td>
+          <td>{{ fila.modTemporal }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}

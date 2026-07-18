@@ -103,15 +103,70 @@
                 (change)="guardarCondiciones(pep, $any($event.target).value)"
               />
             </label>
+            <label class="mesa__iniciativa">
+              Iniciativa
+              <input
+                type="number"
+                [value]="pep.iniciativa ?? ''"
+                [disabled]="!puedeMover(pep)"
+                (change)="guardarIniciativa(pep, $any($event.target).value)"
+              />
+              <span class="mesa__meta">
+                mod {{ pep.iniciativaMod >= 0 ? '+' : '' }}{{ pep.iniciativaMod }}
+              </span>
+              @if (puedeMover(pep)) {
+                <button type="button" (click)="tirarIniciativa(pep)">Tirar</button>
+              }
+            </label>
             @if (puedeMover(pep)) {
-              <button type="button" (click)="sacar(pep)">
-                Sacar de la mesa
-              </button>
+              <div class="mesa__acciones">
+                <button type="button" (click)="verFicha(pep)">Ver ficha</button>
+                <button type="button" (click)="sacar(pep)">
+                  Sacar de la mesa
+                </button>
+              </div>
             }
           </article>
         } @empty {
           <p class="mesa__meta">Nadie se ha unido todavía.</p>
         }
+
+        <section class="mesa__combate">
+          <h2>Combate</h2>
+          @if (p.enCombate) {
+            <p class="mesa__ronda">Ronda {{ p.ronda }}</p>
+            <ol class="mesa__orden">
+              @for (pep of ordenIniciativa(); track pep.id) {
+                <li [class.mesa__orden--turno]="esTurno(pep)">
+                  <span class="mesa__orden-ini">{{ pep.iniciativa }}</span>
+                  {{ pep.nombre }}
+                  @if (esTurno(pep)) {
+                    <strong>← turno</strong>
+                  }
+                </li>
+              } @empty {
+                <li class="mesa__meta">Nadie con iniciativa.</li>
+              }
+            </ol>
+            @if (p.esMaster) {
+              <div class="mesa__acciones">
+                <button type="button" (click)="siguienteTurno()">
+                  Siguiente turno
+                </button>
+                <button type="button" (click)="terminarCombate()">
+                  Terminar combate
+                </button>
+              </div>
+            }
+          } @else {
+            <p class="mesa__meta">Sin combate activo.</p>
+            @if (p.esMaster) {
+              <button type="button" (click)="iniciarCombate()">
+                Iniciar combate
+              </button>
+            }
+          }
+        </section>
 
         <section class="mesa__dados">
           <h2>Dados</h2>
@@ -164,5 +219,24 @@
     </div>
   } @else if (!error()) {
     <p class="mesa__meta">Cargando…</p>
+  }
+
+  @if (fichaAbierta(); as ficha) {
+    <div
+      class="mesa__overlay"
+      (click)="onOverlayFicha($event)"
+      (keyup.escape)="cerrarFicha()"
+      role="presentation"
+    >
+      <div class="mesa__modal" role="dialog" aria-modal="true">
+        <header>
+          <h2>{{ ficha.name }}</h2>
+          <button type="button" aria-label="Cerrar" (click)="cerrarFicha()">
+            ✕
+          </button>
+        </header>
+        <app-ficha-vista [character]="ficha" />
+      </div>
+    </div>
   }
 </main>

@@ -259,6 +259,130 @@ describe('PartidasService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('ver ficha: la ven el máster y el dueño; un tercero recibe 403', async () => {
+    const partida = {
+      id: 'partida-1',
+      masterId: 'master',
+      personajes: [
+        { id: 'pep-1', character: { id: 'char-1', ownerId: 'dueno', sheetData: {} } },
+      ],
+    };
+    partidasRepo.findOne.mockResolvedValue(partida);
+
+    await expect(
+      service.fichaDePersonaje('partida-1', 'pep-1', 'un-tercero'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    const paraMaster = await service.fichaDePersonaje('partida-1', 'pep-1', 'master');
+    expect(paraMaster.id).toBe('char-1');
+    const paraDueno = await service.fichaDePersonaje('partida-1', 'pep-1', 'dueno');
+    expect(paraDueno.id).toBe('char-1');
+  });
+
+  it('ver la ficha de un personaje que no está en la mesa da 404', async () => {
+    partidasRepo.findOne.mockResolvedValue({
+      id: 'partida-1',
+      masterId: 'master',
+      personajes: [],
+    });
+    await expect(
+      service.fichaDePersonaje('partida-1', 'pep-inexistente', 'master'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  const partidaConCombatientes = () => ({
+    id: 'partida-1',
+    nombre: 'Mesa',
+    descripcion: '',
+    estado: 'preparacion',
+    codigo: 'ABC234',
+    masterId: 'master',
+    master: { username: 'neesa' },
+    enCombate: false,
+    ronda: 0,
+    turnoPepId: null as string | null,
+    personajes: [
+      { id: 'pep-a', iniciativa: 12, character: { ownerId: 'j1', sheetData: {} } },
+      { id: 'pep-b', iniciativa: 20, character: { ownerId: 'j2', sheetData: {} } },
+      { id: 'pep-c', iniciativa: null, character: { ownerId: 'j3', sheetData: {} } },
+    ],
+  });
+
+  it('iniciar combate: solo el máster; ordena por iniciativa y da el turno 1', async () => {
+    partidasRepo.findOne.mockResolvedValue(partidaConCombatientes());
+
+    await expect(
+      service.iniciarCombate('partida-1', 'j1'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    const detalle = await service.iniciarCombate('partida-1', 'master');
+    expect(detalle.enCombate).toBe(true);
+    expect(detalle.ronda).toBe(1);
+    // pep-b (20) va antes que pep-a (12); pep-c (sin tirar) queda fuera
+    expect(detalle.turnoPepId).toBe('pep-b');
+  });
+
+  it('iniciar combate sin nadie que haya tirado da 400', async () => {
+    const partida = partidaConCombatientes();
+    partida.personajes.forEach((pep) => (pep.iniciativa = null));
+    partidasRepo.findOne.mockResolvedValue(partida);
+    await expect(
+      service.iniciarCombate('partida-1', 'master'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('siguiente turno avanza y, al dar la vuelta, sube la ronda', async () => {
+    const partida = partidaConCombatientes();
+    partida.enCombate = true;
+    partida.ronda = 1;
+    partida.turnoPepId = 'pep-b'; // el primero del orden
+    partidasRepo.findOne.mockResolvedValue(partida);
+
+    const trasUno = await service.siguienteTurno('partida-1', 'master');
+    expect(trasUno.turnoPepId).toBe('pep-a');
+    expect(trasUno.ronda).toBe(1);
+
+    // pep-a es el último → volver arriba inicia la ronda 2
+    const trasDos = await service.siguienteTurno('partida-1', 'master');
+    expect(trasDos.turnoPepId).toBe('pep-b');
+    expect(trasDos.ronda).toBe(2);
+  });
+
+  it('terminar combate limpia el rastreador (solo el máster)', async () => {
+    const partida = partidaConCombatientes();
+    partida.enCombate = true;
+    partida.ronda = 3;
+    partida.turnoPepId = 'pep-b';
+    partidasRepo.findOne.mockResolvedValue(partida);
+
+    await expect(
+      service.terminarCombate('partida-1', 'j1'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    const detalle = await service.terminarCombate('partida-1', 'master');
+    expect(detalle.enCombate).toBe(false);
+    expect(detalle.ronda).toBe(0);
+    expect(detalle.turnoPepId).toBeNull();
+  });
+
+  it('tirar iniciativa: la fija con 1d20+mod; máster o dueño, no un tercero', async () => {
+    partidasRepo.findOne.mockResolvedValue(partidaConCombatientes());
+
+    await expect(
+      service.tirarIniciativa('partida-1', 'pep-a', 'un-tercero'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    const resumen = await service.tirarIniciativa('partida-1', 'pep-a', 'j1');
+    // Ficha vacía → mod 0 → resultado de 1d20, entre 1 y 20
+    expect(resumen.iniciativa).toBeGreaterThanOrEqual(1);
+    expect(resumen.iniciativa).toBeLessThanOrEqual(20);
+    expect(gateway.emitirEstadoPersonaje).toHaveBeenCalledWith(
+      'partida-1',
+      'pep-a',
+      { iniciativa: resumen.iniciativa },
+    );
+  });
+
   it('sacar a alguien que no está da 404', async () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',

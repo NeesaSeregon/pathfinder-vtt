@@ -69,6 +69,9 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   El authInterceptor ante un 401 limpia y redirige a /entrar.
 - Los personajes tienen dueño (Character.ownerId → users): cada usuario
   solo ve y toca los suyos; el personaje de otro devuelve 404, no 403.
+  EXCEPCIÓN: el máster de una partida puede LEER (no editar) la ficha
+  completa de los personajes de SU mesa (GET /api/partidas/:id/personajes/
+  :pepId/ficha); lo autoriza ser máster o el propio dueño, nadie más.
 
 ## Migraciones (TypeORM)
 - El esquema de la base de datos SOLO cambia mediante migraciones
@@ -141,6 +144,20 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   El servicio emite DESPUÉS de persistir. El AuthGuard global ignora el
   contexto ws (el gateway hace su propia auth). Proxy dev: /socket.io
   con ws:true en proxy.conf.json.
+- Consulta de fichas en la mesa: componente reutilizable FichaVista
+  (apps/pathfinder-app/src/app/characters/ficha-vista.ts) con la vista de
+  SOLO LECTURA de una ficha (todos los derivados vía funciones puras). Se
+  usa en el modal "Ver ficha" de /personajes Y en la mesa (el máster abre
+  la ficha de cualquier jugador; el jugador, la suya).
+- Rastreador de iniciativa y turnos: la iniciativa es estado de sesión
+  (PersonajeEnPartida.iniciativa); el estado de combate vive en la partida
+  (enCombate, ronda, turnoPepId). El orden lo da la función pura compartida
+  ordenarIniciativa (iniciativa desc, desempate por el modificador de la
+  ficha). Endpoints: POST :id/personajes/:pepId/iniciativa (tira 1d20+mod,
+  máster o dueño), POST :id/combate/{iniciar,siguiente,terminar} (solo
+  máster). Al dar la vuelta a la tabla sube la ronda. Los cambios se
+  propagan por el socket (mesa-cambiada para el turno/ronda; estado-
+  personaje para una iniciativa suelta).
 - Tiradas de dados: el SERVIDOR tira (única fuente de azar), no el cliente.
   Función pura lanzarDados(notacion, rng?) en libs/shared (parsea "1d20+5",
   con topes de seguridad). POST /api/partidas/:id/tiradas (solo

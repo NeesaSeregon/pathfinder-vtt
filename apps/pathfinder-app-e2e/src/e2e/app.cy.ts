@@ -130,6 +130,73 @@ describe('partidas', () => {
         cy.get('.mesa__tirada-total').first().should('contain', '5');
       });
   });
+
+  it('el máster consulta la ficha completa de un personaje de su mesa', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    // Ficha con datos reconocibles para comprobar que se abre completa
+    cy.request('POST', '/api/characters', {
+      name: `Ficha-${Date.now()}`,
+      level: 4,
+      sheetData: { clase: 'Explorador', pg: { total: 28 } },
+    })
+      .its('body.id')
+      .then((characterId) => {
+        cy.request('POST', '/api/partidas', { nombre: `VerFicha-${Date.now()}` })
+          .its('body.id')
+          .then((partidaId) => {
+            cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
+              characterId,
+            });
+            cy.visit(`/partidas/${partidaId}`);
+            cy.get('.mesa__personaje')
+              .contains('button', 'Ver ficha')
+              .click();
+            cy.get('.mesa__modal')
+              .should('contain', 'Explorador')
+              .and('contain', 'PG 28');
+          });
+      });
+  });
+
+  it('el máster lleva el rastreador de iniciativa y turnos', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.request('POST', '/api/characters', {
+      name: `Comb-${Date.now()}`,
+      level: 3,
+      sheetData: {},
+    })
+      .its('body.id')
+      .then((characterId) => {
+        cy.request('POST', '/api/partidas', { nombre: `Combate-${Date.now()}` })
+          .its('body.id')
+          .then((partidaId) => {
+            cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
+              characterId,
+            })
+              .its('body.id')
+              .then((pepId) => {
+                // Fijamos la iniciativa por API: el flujo de turnos es determinista
+                cy.request(
+                  'PATCH',
+                  `/api/partidas/${partidaId}/personajes/${pepId}`,
+                  { iniciativa: 15 },
+                );
+                cy.visit(`/partidas/${partidaId}`);
+
+                cy.contains('button', 'Iniciar combate').click();
+                cy.get('.mesa__ronda').should('contain', 'Ronda 1');
+                cy.get('.mesa__orden--turno').should('contain', 'Comb-');
+
+                // Un solo combatiente: al pasar turno se da la vuelta → ronda 2
+                cy.contains('button', 'Siguiente turno').click();
+                cy.get('.mesa__ronda').should('contain', 'Ronda 2');
+
+                cy.contains('button', 'Terminar combate').click();
+                cy.get('.mesa__combate').should('contain', 'Sin combate activo');
+              });
+          });
+      });
+  });
 });
 
 describe('home y navegación', () => {

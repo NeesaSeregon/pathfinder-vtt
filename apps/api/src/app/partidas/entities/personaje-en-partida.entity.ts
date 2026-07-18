@@ -53,4 +53,8 @@ export class PersonajeEnPartida {
 
   @Column({ type: 'int', nullable: true })
   posY: number | null;
+
+  /** Iniciativa tirada para el combate actual; null = aún no ha tirado. */
+  @Column({ type: 'int', nullable: true })
+  iniciativa: number | null;
 }

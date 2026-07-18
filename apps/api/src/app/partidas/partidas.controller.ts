@@ -84,6 +84,48 @@ export class PartidasController {
     return this.partidas.actualizarPersonaje(id, pepId, dto, user.sub);
   }
 
+  @Get(':id/personajes/:pepId/ficha')
+  ficha(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('pepId', ParseUUIDPipe) pepId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.fichaDePersonaje(id, pepId, user.sub);
+  }
+
+  @Post(':id/personajes/:pepId/iniciativa')
+  tirarIniciativa(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('pepId', ParseUUIDPipe) pepId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.tirarIniciativa(id, pepId, user.sub);
+  }
+
+  @Post(':id/combate/iniciar')
+  iniciarCombate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.iniciarCombate(id, user.sub);
+  }
+
+  @Post(':id/combate/siguiente')
+  siguienteTurno(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.siguienteTurno(id, user.sub);
+  }
+
+  @Post(':id/combate/terminar')
+  terminarCombate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.terminarCombate(id, user.sub);
+  }
+
   @Post(':id/tiradas')
   tirar(
     @Param('id', ParseUUIDPipe) id: string,

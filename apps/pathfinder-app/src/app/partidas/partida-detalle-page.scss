@@ -99,6 +99,56 @@
     color: var(--text-muted);
   }
 
+  &__iniciativa {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+
+    input {
+      width: 4rem;
+    }
+  }
+
+  &__combate {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  &__ronda {
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0 0 0.5rem;
+  }
+
+  &__orden {
+    list-style: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.3rem 0.4rem;
+      border-radius: 0.3rem;
+    }
+
+    &--turno {
+      background: rgba(123, 216, 143, 0.18);
+    }
+  }
+
+  &__orden-ini {
+    display: inline-flex;
+    justify-content: center;
+    min-width: 1.8rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
   &__dados {
     margin-top: 1.25rem;
     padding-top: 1rem;
@@ -153,6 +203,46 @@
   &__tirada-total {
     color: var(--accent);
     font-size: 1.05rem;
+  }
+
+  &__acciones {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 10, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 10;
+  }
+
+  &__modal {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    max-width: 42rem;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.6);
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+
+      h2 {
+        margin: 0;
+      }
+    }
   }
 }
 

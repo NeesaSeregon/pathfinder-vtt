@@ -1,0 +1,80 @@
+// Estilos de la vista de ficha (solo lectura). Viven aquí porque el
+// componente FichaVista es su dueño; se reutilizan en la lista de
+// personajes y en la mesa. Conservan el prefijo characters__modal- para
+// no romper selectores del e2e.
+.characters__modal-summary {
+  color: var(--text-muted);
+  margin-top: 0;
+}
+
+.characters__modal-combate {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.characters__modal-velocidad {
+  color: var(--text-muted);
+}
+
+.characters__modal-armas {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  color: var(--text);
+
+  li {
+    padding: 0.15rem 0;
+  }
+}
+
+.characters__modal-atributos {
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+
+  th,
+  td {
+    padding: 0.25rem 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  thead th {
+    font-size: 0.75rem;
+    color: var(--text-faint);
+  }
+
+  tbody th {
+    text-align: left;
+    color: var(--text-muted);
+  }
+
+  td:nth-child(3),
+  td:nth-child(5) {
+    font-weight: 600;
+  }
+}
+
+.characters__modal-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.25rem 1rem;
+  margin: 0 0 1rem;
+
+  div {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  dt {
+    font-weight: 600;
+    color: var(--text-muted);
+
+    &::after {
+      content: ':';
+    }
+  }
+
+  dd {
+    margin: 0;
+  }
+}
