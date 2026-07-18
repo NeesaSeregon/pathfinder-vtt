@@ -150,6 +150,14 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   SOLO LECTURA de una ficha (todos los derivados vía funciones puras). Se
   usa en el modal "Ver ficha" de /personajes Y en la mesa (el máster abre
   la ficha de cualquier jugador; el jugador, la suya).
+- Condiciones estructuradas: catálogo oficial de PF1e en libs/shared
+  (condiciones.ts: id ascii estable + nombre + efecto, descripciones
+  propias porque la traducción de Devir tiene copyright). La columna
+  condiciones pasó de texto libre a jsonb string[] (migración
+  CondicionesEstructuradas). El DTO valida que cada id sea del catálogo.
+  En la mesa se añaden/quitan con chips (nombre + efecto) y un
+  desplegable. Es el primer paso del futuro sistema de efectos (que un
+  día aplicará los modificadores: −2 CA del aturdido, etc.).
 - Rastreador de iniciativa y turnos: la iniciativa es estado de sesión
   (PersonajeEnPartida.iniciativa); el estado de combate vive en la partida
   (enCombate, ronda, turnoPepId). El orden lo da la función pura compartida

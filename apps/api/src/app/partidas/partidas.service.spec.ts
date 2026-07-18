@@ -35,7 +35,7 @@ describe('PartidasService', () => {
     save: jest.fn(async (x) => ({
       id: 'pep-1',
       danoNoLetal: 0,
-      condiciones: '',
+      condiciones: [],
       posX: null,
       posY: null,
       ...x,
@@ -163,7 +163,7 @@ describe('PartidasService', () => {
       character: { ownerId: 'dueno', name: 'Valeros', level: 3, sheetData: {} },
       pgActuales: 30,
       danoNoLetal: 0,
-      condiciones: '',
+      condiciones: [],
       posX: null,
       posY: null,
     };

@@ -94,9 +94,44 @@
   &__condiciones {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.3rem;
     font-size: 0.9rem;
     color: var(--text-muted);
+  }
+
+  &__cond-titulo {
+    font-size: 0.9rem;
+  }
+
+  &__cond {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.3rem 0.45rem;
+    background: rgba(255, 255, 255, 0.04);
+    border-left: 2px solid var(--accent);
+    border-radius: 0.25rem;
+
+    strong {
+      color: var(--text);
+    }
+
+    small {
+      display: block;
+      color: var(--text-muted);
+      line-height: 1.25;
+    }
+  }
+
+  &__cond-quitar {
+    flex-shrink: 0;
+    padding: 0 0.4rem;
+    line-height: 1.6;
+  }
+
+  &__cond-anadir {
+    align-self: flex-start;
   }
 
   &__iniciativa {

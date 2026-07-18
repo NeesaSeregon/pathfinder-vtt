@@ -92,17 +92,43 @@
                 <span>/ {{ pep.pgTotal }}</span>
               }
             </label>
-            <label class="mesa__condiciones">
-              Condiciones
-              <input
-                type="text"
-                maxlength="300"
-                placeholder="aturdido, enredado..."
-                [value]="pep.condiciones"
-                [disabled]="!puedeMover(pep)"
-                (change)="guardarCondiciones(pep, $any($event.target).value)"
-              />
-            </label>
+            <div class="mesa__condiciones">
+              <span class="mesa__cond-titulo">Condiciones</span>
+              @for (id of pep.condiciones; track id) {
+                <div class="mesa__cond" [title]="descripcionCondicion(id)">
+                  <div>
+                    <strong>{{ nombreCondicion(id) }}</strong>
+                    <small>{{ descripcionCondicion(id) }}</small>
+                  </div>
+                  @if (puedeMover(pep)) {
+                    <button
+                      type="button"
+                      class="mesa__cond-quitar"
+                      [attr.aria-label]="'Quitar ' + nombreCondicion(id)"
+                      (click)="quitarCondicion(pep, id)"
+                    >
+                      ✕
+                    </button>
+                  }
+                </div>
+              } @empty {
+                <span class="mesa__meta">Ninguna.</span>
+              }
+              @if (puedeMover(pep)) {
+                <select
+                  class="mesa__cond-anadir"
+                  (change)="
+                    anadirCondicion(pep, $any($event.target).value);
+                    $any($event.target).value = ''
+                  "
+                >
+                  <option value="">+ añadir condición…</option>
+                  @for (c of condicionesDisponibles(pep); track c.id) {
+                    <option [value]="c.id">{{ c.nombre }}</option>
+                  }
+                </select>
+              }
+            </div>
             <label class="mesa__iniciativa">
               Iniciativa
               <input

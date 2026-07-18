@@ -31,7 +31,7 @@ const DETALLE: PartidaDetalle = {
       pgTotal: 31,
       pgActuales: 31,
       danoNoLetal: 0,
-      condiciones: '',
+      condiciones: [],
       posX: null,
       posY: null,
       iniciativa: null,

@@ -49,7 +49,8 @@ export interface PersonajeEnPartidaResumen {
   pgTotal?: number;
   pgActuales: number | null;
   danoNoLetal: number;
-  condiciones: string;
+  /** Condiciones activas como ids del catálogo (ver condiciones.ts). */
+  condiciones: string[];
   posX: number | null;
   posY: number | null;
   /** Iniciativa TIRADA en el combate actual (null = aún no ha tirado). */
@@ -66,7 +67,7 @@ export interface ActualizarPersonajeEnPartida {
   posY?: number;
   pgActuales?: number;
   danoNoLetal?: number;
-  condiciones?: string;
+  condiciones?: string[];
   iniciativa?: number;
 }
 

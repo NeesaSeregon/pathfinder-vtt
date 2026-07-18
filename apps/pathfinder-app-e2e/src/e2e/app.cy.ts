@@ -106,12 +106,14 @@ describe('partidas', () => {
           cy.request(
             'PATCH',
             `/api/partidas/${partidaId}/personajes/${pepId}`,
-            { pgActuales: 7, condiciones: 'aturdido' },
+            { pgActuales: 7, condiciones: ['aturdido'] },
           );
         });
     });
     cy.get('.mesa__pg input').should('have.value', '7');
-    cy.get('.mesa__condiciones input').should('have.value', 'aturdido');
+    // La condición estructurada aparece con su nombre y su efecto (−2 CA)
+    cy.get('.mesa__condiciones').should('contain', 'Aturdido');
+    cy.get('.mesa__cond').should('contain', 'CA');
   });
 
   it('un participante tira los dados y el total aparece en el registro', () => {
@@ -194,6 +196,36 @@ describe('partidas', () => {
                 cy.contains('button', 'Terminar combate').click();
                 cy.get('.mesa__combate').should('contain', 'Sin combate activo');
               });
+          });
+      });
+  });
+
+  it('añade y quita una condición estructurada del catálogo', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.request('POST', '/api/characters', {
+      name: `Cond-${Date.now()}`,
+      level: 1,
+      sheetData: {},
+    })
+      .its('body.id')
+      .then((characterId) => {
+        cy.request('POST', '/api/partidas', { nombre: `Cond-${Date.now()}` })
+          .its('body.id')
+          .then((partidaId) => {
+            cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
+              characterId,
+            });
+            cy.visit(`/partidas/${partidaId}`);
+
+            // Añadir "Enredado" desde el desplegable → aparece con su efecto
+            cy.get('.mesa__cond-anadir').select('enredado');
+            cy.get('.mesa__cond')
+              .should('contain', 'Enredado')
+              .and('contain', 'media velocidad');
+
+            // Quitarla con la ✕ → vuelve a "Ninguna"
+            cy.get('.mesa__cond').contains('button', '✕').click();
+            cy.get('.mesa__condiciones').should('contain', 'Ninguna');
           });
       });
   });

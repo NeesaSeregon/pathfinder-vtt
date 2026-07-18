@@ -421,7 +421,7 @@ export class PartidasService {
       pgTotal: pep.character?.sheetData?.pg?.total,
       pgActuales: pep.pgActuales,
       danoNoLetal: pep.danoNoLetal,
-      condiciones: pep.condiciones,
+      condiciones: pep.condiciones ?? [],
       posX: pep.posX,
       posY: pep.posY,
       iniciativa: pep.iniciativa,

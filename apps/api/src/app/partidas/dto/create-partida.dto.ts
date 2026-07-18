@@ -1,4 +1,6 @@
 import {
+  ArrayMaxSize,
+  IsArray,
   IsIn,
   IsInt,
   IsOptional,
@@ -11,6 +13,7 @@ import {
 } from 'class-validator';
 import {
   ActualizarPersonajeEnPartida,
+  CONDICION_IDS,
   CrearPartida,
   ESTADOS_PARTIDA,
   EstadoPartida,
@@ -81,10 +84,12 @@ export class ActualizarPersonajeEnPartidaDto
   @Max(9999)
   danoNoLetal?: number;
 
+  // Lista de ids del catálogo de condiciones; rechazamos cualquier id ajeno
   @IsOptional()
-  @IsString()
-  @MaxLength(300)
-  condiciones?: string;
+  @IsArray()
+  @ArrayMaxSize(CONDICION_IDS.length)
+  @IsIn(CONDICION_IDS, { each: true })
+  condiciones?: string[];
 
   // La iniciativa puede ser negativa (tirada baja + modificador negativo)
   @IsOptional()

@@ -43,9 +43,9 @@ export class PersonajeEnPartida {
   @Column({ type: 'int', default: 0 })
   danoNoLetal: number;
 
-  /** Condiciones activas, texto libre por ahora ("aturdido, enredado"). */
-  @Column({ type: 'text', default: '' })
-  condiciones: string;
+  /** Condiciones activas como lista de ids del catálogo (ver condiciones.ts). */
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  condiciones: string[];
 
   /** Posición en el tablero (casillas); null = aún sin colocar. */
   @Column({ type: 'int', nullable: true })

@@ -3,6 +3,8 @@ import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import {
   Character,
+  CONDICIONES,
+  CONDICION_POR_ID,
   EstadoPersonajeEvento,
   ordenarIniciativa,
   PartidaDetalle,
@@ -131,11 +133,30 @@ export class PartidaDetallePage {
     this.aplicarCambio(pep.id, { pgActuales });
   }
 
-  protected guardarCondiciones(
-    pep: PersonajeEnPartidaResumen,
-    condiciones: string,
-  ): void {
-    this.aplicarCambio(pep.id, { condiciones: condiciones.trim() });
+  protected nombreCondicion(id: string): string {
+    return CONDICION_POR_ID[id]?.nombre ?? id;
+  }
+
+  protected descripcionCondicion(id: string): string {
+    return CONDICION_POR_ID[id]?.descripcion ?? '';
+  }
+
+  /** Condiciones del catálogo que este personaje aún NO tiene activas. */
+  protected condicionesDisponibles(pep: PersonajeEnPartidaResumen) {
+    return CONDICIONES.filter((c) => !pep.condiciones.includes(c.id));
+  }
+
+  protected anadirCondicion(pep: PersonajeEnPartidaResumen, id: string): void {
+    if (!id || pep.condiciones.includes(id)) {
+      return;
+    }
+    this.aplicarCambio(pep.id, { condiciones: [...pep.condiciones, id] });
+  }
+
+  protected quitarCondicion(pep: PersonajeEnPartidaResumen, id: string): void {
+    this.aplicarCambio(pep.id, {
+      condiciones: pep.condiciones.filter((c) => c !== id),
+    });
   }
 
   protected guardarIniciativa(
