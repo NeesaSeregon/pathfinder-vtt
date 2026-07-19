@@ -1,3 +1,5 @@
+import type { Tamano, TipoPersonaje } from './character';
+
 export const ESTADOS_PARTIDA = [
   'preparacion',
   'activa',
@@ -41,6 +43,46 @@ export interface MiPartidaResumen extends PartidaResumen {
   misPersonajes: string[];
 }
 
+/**
+ * Actitud de un PNJ en ESTA mesa. Va en el asiento y no en la ficha porque
+ * es estado de escena: el mismo bloque de estadísticas puede ser un enemigo
+ * hoy y un aliado en otra partida.
+ */
+export const ACTITUDES = ['enemigo', 'aliado', 'neutral'] as const;
+export type ActitudPnj = (typeof ACTITUDES)[number];
+
+export const ACTITUD_LABELS: Record<ActitudPnj, string> = {
+  enemigo: 'Enemigo',
+  aliado: 'Aliado',
+  neutral: 'Neutral',
+};
+
+/**
+ * Lo que el máster rellena para sembrar PNJ. Las estadísticas van por
+ * COMPONENTES (Destreza, armadura, escudo, tamaño) como las da el
+ * Bestiario: así la CA y la iniciativa las derivan las mismas funciones
+ * puras que para un PJ, sin excepciones.
+ */
+export interface CrearPnj {
+  nombre: string;
+  /** Siembra varios de golpe: "Goblin" ×4 → Goblin 1..4, cada uno su token. */
+  cantidad: number;
+  actitud: ActitudPnj;
+  /** Colocado pero invisible para los jugadores hasta que el máster revele. */
+  oculto: boolean;
+  nivel?: number;
+  tamano?: Tamano;
+  destreza?: number;
+  bonifArmadura?: number;
+  bonifEscudo?: number;
+  armaduraNatural?: number;
+  pgTotal?: number;
+  modVarioIniciativa?: number;
+}
+
+/** Tope por siembra: evita que un cero de más llene la mesa de goblins. */
+export const PNJ_MAX_CANTIDAD = 12;
+
 /** Dimensiones del tablero en casillas (1 casilla = 5 pies). */
 export const TABLERO_ANCHO = 20;
 export const TABLERO_ALTO = 15;
@@ -78,6 +120,17 @@ export interface PersonajeEnPartidaResumen {
   iniciativaMod: number;
   /** ¿El personaje es del usuario que pregunta? (para permitir moverlo) */
   esMio: boolean;
+  /** 'pnj' pinta el token por actitud y lo trata como criatura del máster. */
+  tipo: TipoPersonaje;
+  /** Solo en PNJ: colorea el token (enemigo/aliado/neutral). */
+  actitud?: ActitudPnj;
+  /**
+   * PNJ colocado pero aún invisible para los jugadores. El servidor NO
+   * envía estos asientos a quien no es el máster: el filtro está en
+   * detalle(), y por eso los cambios de un oculto se notifican con
+   * mesa-cambiada (recarga filtrada) y no con el evento de estado.
+   */
+  oculto: boolean;
 }
 
 /** Cambios de estado de sesión de un personaje en la mesa. */

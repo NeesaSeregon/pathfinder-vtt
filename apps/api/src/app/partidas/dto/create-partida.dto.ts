@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -12,13 +13,19 @@ import {
   MinLength,
 } from 'class-validator';
 import {
+  ACTITUDES,
+  ActitudPnj,
   ActualizarPersonajeEnPartida,
   CONDICION_IDS,
   CrearPartida,
+  CrearPnj,
   ESTADOS_PARTIDA,
   EstadoPartida,
+  PNJ_MAX_CANTIDAD,
   TABLERO_ALTO,
   TABLERO_ANCHO,
+  Tamano,
+  TAMANOS,
   TirarDados,
 } from '@pathfinder/shared';
 
@@ -110,4 +117,81 @@ export class TirarDadosDto implements TirarDados {
   @IsString()
   @MaxLength(60)
   etiqueta?: string;
+}
+
+/**
+ * Bloque de estadísticas corto de un PNJ. Se piden COMPONENTES y no
+ * totales (CA, iniciativa): así los derivan las mismas funciones puras
+ * que para un PJ. Los rangos son generosos a propósito — hay monstruos
+ * con armadura natural absurda — pero acotados para que un dedazo no
+ * cree una criatura imposible.
+ */
+export class CrearPnjDto implements CrearPnj {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  nombre: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(PNJ_MAX_CANTIDAD)
+  cantidad: number;
+
+  @IsIn(ACTITUDES)
+  actitud: ActitudPnj;
+
+  @IsBoolean()
+  oculto: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  nivel?: number;
+
+  @IsOptional()
+  @IsIn(TAMANOS)
+  tamano?: Tamano;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  destreza?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(50)
+  bonifArmadura?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(50)
+  bonifEscudo?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(50)
+  armaduraNatural?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(9999)
+  pgTotal?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(-20)
+  @Max(20)
+  modVarioIniciativa?: number;
+}
+
+/** Revelar u ocultar un PNJ ya colocado. */
+export class RevelarPnjDto {
+  @IsBoolean()
+  oculto: boolean;
 }

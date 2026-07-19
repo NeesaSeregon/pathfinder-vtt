@@ -13,6 +13,11 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import {
+  casillasQueOcupa,
+  claseDeArmadura,
+  iniciativa,
+} from '@pathfinder/shared';
 import { PartidasService } from './partidas.service';
 import { Partida } from './entities/partida.entity';
 import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
@@ -50,7 +55,7 @@ describe('PartidasService', () => {
     findOneBy: jest.fn(),
     remove: jest.fn(),
   };
-  const characters = { findOne: jest.fn() };
+  const characters = { findOne: jest.fn(), create: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -519,5 +524,190 @@ describe('PartidasService', () => {
     await expect(
       service.sacar('partida-1', 'pep-inexistente', 'master'),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  describe('PNJ', () => {
+    /** Una mesa con un PJ a la vista y un goblin escondido esperando. */
+    const mesaConEmboscada = () => ({
+      id: 'partida-1',
+      masterId: 'master',
+      mapaFichero: null,
+      enCombate: false,
+      ronda: 0,
+      turnoPepId: null,
+      master: { username: 'master' },
+      personajes: [
+        {
+          id: 'pep-pj',
+          characterId: 'char-pj',
+          oculto: false,
+          actitud: null,
+          condiciones: [],
+          posX: 1,
+          posY: 1,
+          character: { ownerId: 'jugador', name: 'Valeros', tipo: 'pj' },
+        },
+        {
+          id: 'pep-goblin',
+          characterId: 'char-goblin',
+          oculto: true,
+          actitud: 'enemigo',
+          condiciones: [],
+          posX: 5,
+          posY: 5,
+          character: { ownerId: 'master', name: 'Goblin 1', tipo: 'pnj' },
+        },
+      ],
+    });
+
+    it('el máster ve el PNJ oculto en el detalle', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      const detalle = await service.detalle('partida-1', 'master');
+      expect(detalle.personajes.map((p) => p.nombre)).toEqual([
+        'Valeros',
+        'Goblin 1',
+      ]);
+    });
+
+    // El corazón de la emboscada: al jugador no le llega NI el nombre ni la
+    // posición del goblin. El filtro vive solo en detalle().
+    it('el jugador NO recibe el PNJ oculto, ni su posición', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      const detalle = await service.detalle('partida-1', 'jugador');
+      expect(detalle.personajes.map((p) => p.nombre)).toEqual(['Valeros']);
+      expect(JSON.stringify(detalle)).not.toContain('Goblin');
+    });
+
+    // Un evento de estado va a TODA la sala sin filtrar: mover un oculto
+    // delataría su casilla. Por eso se degrada a mesa-cambiada.
+    it('mover un PNJ oculto NO emite su estado: emite mesa-cambiada', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      await service.actualizarPersonaje(
+        'partida-1',
+        'pep-goblin',
+        { posX: 8, posY: 8 },
+        'master',
+      );
+      expect(gateway.emitirEstadoPersonaje).not.toHaveBeenCalled();
+      expect(gateway.emitirMesaCambiada).toHaveBeenCalledWith('partida-1');
+    });
+
+    it('mover un personaje VISIBLE sí emite su estado (camino normal)', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      await service.actualizarPersonaje(
+        'partida-1',
+        'pep-pj',
+        { posX: 2, posY: 2 },
+        'master',
+      );
+      expect(gateway.emitirEstadoPersonaje).toHaveBeenCalled();
+    });
+
+    it('sembrar 3 goblins crea 3 fichas numeradas y 3 asientos', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      characters.create.mockImplementation(async (dto) => ({
+        id: `char-${dto.name}`,
+        ...dto,
+      }));
+
+      await service.crearPnjs(
+        'partida-1',
+        {
+          nombre: 'Goblin',
+          cantidad: 3,
+          actitud: 'enemigo',
+          oculto: true,
+          pgTotal: 6,
+        },
+        'master',
+      );
+
+      const nombres = characters.create.mock.calls.map((c) => c[0].name);
+      expect(nombres).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3']);
+      // Siempre como PNJ, nunca como PJ del máster
+      expect(characters.create.mock.calls[0][2]).toBe('pnj');
+      expect(pepsRepo.save).toHaveBeenCalledTimes(3);
+      // Arrancan con los PG llenos del bloque de estadísticas
+      expect(pepsRepo.create.mock.calls[0][0].pgActuales).toBe(6);
+    });
+
+    it('con una sola copia no se numera el nombre', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      characters.create.mockImplementation(async (dto) => ({
+        id: 'char-x',
+        ...dto,
+      }));
+
+      await service.crearPnjs(
+        'partida-1',
+        {
+          nombre: 'Jefe goblin',
+          cantidad: 1,
+          actitud: 'enemigo',
+          oculto: false,
+        },
+        'master',
+      );
+
+      expect(characters.create.mock.calls[0][0].name).toBe('Jefe goblin');
+    });
+
+    it('sembrar PNJ es cosa del máster: a un jugador le da 403', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      await expect(
+        service.crearPnjs(
+          'partida-1',
+          { nombre: 'Goblin', cantidad: 1, actitud: 'enemigo', oculto: false },
+          'jugador',
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('revelar un PNJ lo hace visible y avisa a la mesa', async () => {
+      const mesa = mesaConEmboscada();
+      partidasRepo.findOne.mockResolvedValue(mesa);
+
+      await service.revelarPnj('partida-1', 'pep-goblin', false, 'master');
+
+      expect(mesa.personajes[1].oculto).toBe(false);
+      expect(gateway.emitirMesaCambiada).toHaveBeenCalledWith('partida-1');
+    });
+
+    it('revelar es cosa del máster: a un jugador le da 403', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      await expect(
+        service.revelarPnj('partida-1', 'pep-goblin', false, 'jugador'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('el bloque corto deriva CA e iniciativa con las reglas de siempre', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      characters.create.mockImplementation(async (dto) => ({
+        id: 'char-x',
+        ...dto,
+      }));
+
+      await service.crearPnjs(
+        'partida-1',
+        {
+          nombre: 'Goblin',
+          cantidad: 1,
+          actitud: 'enemigo',
+          oculto: false,
+          tamano: 'pequeno',
+          destreza: 15,
+          bonifArmadura: 3,
+          bonifEscudo: 1,
+          pgTotal: 6,
+        },
+        'master',
+      );
+
+      // Goblin del Bestiario: 10 +3 armadura +1 escudo +2 Des +1 tamaño = 17
+      const sheet = characters.create.mock.calls[0][0].sheetData;
+      expect(claseDeArmadura(sheet)).toBe(17);
+      expect(iniciativa(sheet)).toBe(2);
+      expect(casillasQueOcupa(sheet)).toBe(1);
+    });
   });
 });

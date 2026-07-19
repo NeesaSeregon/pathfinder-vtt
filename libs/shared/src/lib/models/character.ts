@@ -961,10 +961,18 @@ export interface CharacterSheetData {
   [key: string]: unknown;
 }
 
+/**
+ * Un PNJ es mecánicamente una ficha más (en PF1e un monstruo tiene CA, PG,
+ * iniciativa y tamaño igual que un PJ), así que comparte tabla y todos los
+ * cálculos derivados. El tipo solo sirve para no mezclarlos en las listas.
+ */
+export type TipoPersonaje = 'pj' | 'pnj';
+
 export interface Character {
   id: string;
   name: string;
   level: number;
+  tipo: TipoPersonaje;
   sheetData: CharacterSheetData;
 }
 

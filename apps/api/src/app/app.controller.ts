@@ -8,6 +8,6 @@ export class AppController {
 
   @Get('demo')
   getDemo(): Character {
-    return { id: '1', name: 'Ezren', level: 5, sheetData: {} };
+    return { id: '1', name: 'Ezren', level: 5, tipo: 'pj', sheetData: {} };
   }
 }

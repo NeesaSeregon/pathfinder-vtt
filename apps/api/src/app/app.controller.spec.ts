@@ -19,6 +19,7 @@ describe('AppController', () => {
         id: '1',
         name: 'Ezren',
         level: 5,
+        tipo: 'pj',
         sheetData: {},
       });
     });

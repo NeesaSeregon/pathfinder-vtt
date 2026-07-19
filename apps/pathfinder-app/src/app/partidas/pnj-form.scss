@@ -1,0 +1,82 @@
+.pnj {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+
+  &__fila {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  &__campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+    min-width: 7rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+
+    input,
+    select {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border-strong);
+      border-radius: 0.375rem;
+      padding: 0.4rem 0.5rem;
+      font: inherit;
+    }
+
+    &--ancho {
+      flex: 3;
+      min-width: 12rem;
+    }
+
+    /* Los numéricos no necesitan estirarse: caben varios por fila */
+    &--corto {
+      flex: 0 0 6rem;
+      min-width: 6rem;
+    }
+  }
+
+  &__pista {
+    margin: -0.35rem 0 0;
+    font-size: 0.85rem;
+    color: var(--text-faint);
+  }
+
+  /* Los derivados en vivo: evitan tener que echar la cuenta a mano */
+  &__previa {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+
+    strong {
+      color: var(--accent);
+    }
+  }
+
+  &__oculto {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--danger);
+    font-size: 0.9rem;
+  }
+
+  &__botones {
+    display: flex;
+    gap: 0.6rem;
+  }
+}

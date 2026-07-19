@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
+import type { ActitudPnj } from '@pathfinder/shared';
 import { Partida } from './partida.entity';
 import { Character } from '../../characters/entities/character.entity';
 
@@ -57,4 +58,16 @@ export class PersonajeEnPartida {
   /** Iniciativa tirada para el combate actual; null = aún no ha tirado. */
   @Column({ type: 'int', nullable: true })
   iniciativa: number | null;
+
+  /**
+   * Actitud del PNJ EN ESTA MESA (null en los PJ). Va en el asiento y no en
+   * la ficha porque es estado de escena: el mismo goblin puede ser enemigo
+   * aquí y aliado en otra partida.
+   */
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  actitud: ActitudPnj | null;
+
+  /** PNJ colocado pero invisible para los jugadores hasta que se revele. */
+  @Column({ type: 'boolean', default: false })
+  oculto: boolean;
 }

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import type { TipoPersonaje } from '@pathfinder/shared';
 import { CreateCharacterDto } from './dto/create-character.dto';
 import { UpdateCharacterDto } from './dto/update-character.dto';
 import { Character } from './entities/character.entity';
@@ -17,19 +18,30 @@ export class CharactersService {
     private readonly gateway: PartidasGateway,
   ) {}
 
+  /**
+   * El tipo NO viaja en el DTO a propósito: por la API pública siempre se
+   * crean PJ. Los PNJ los siembra PartidasService, que pasa 'pnj' aquí.
+   */
   create(
     createCharacterDto: CreateCharacterDto,
     ownerId: string,
+    tipo: TipoPersonaje = 'pj',
   ): Promise<Character> {
     const character = this.charactersRepository.create({
       ...createCharacterDto,
+      tipo,
       ownerId,
     });
     return this.charactersRepository.save(character);
   }
 
-  findAll(ownerId: string): Promise<Character[]> {
-    return this.charactersRepository.findBy({ ownerId });
+  /**
+   * La lista de /personajes son TUS PJ. Los PNJ (el bestiario que generas
+   * en las mesas) se piden aparte: si no, cuatro goblins por combate
+   * sepultarían a los personajes de verdad.
+   */
+  findAll(ownerId: string, tipo: TipoPersonaje = 'pj'): Promise<Character[]> {
+    return this.charactersRepository.findBy({ ownerId, tipo });
   }
 
   /**

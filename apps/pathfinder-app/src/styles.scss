@@ -28,6 +28,12 @@
   --token-3: #6ee7a8;
   --token-4: #f472b6;
   --token-5: #60a5fa;
+  /* Tokens de PNJ: van por ACTITUD, no por nombre, para leer el tablero de
+     un vistazo. Deliberadamente fuera de la paleta de arriba: un PJ nunca
+     debe confundirse con un enemigo. */
+  --actitud-enemigo: #e05252;
+  --actitud-aliado: #5bb56a;
+  --actitud-neutral: #8b93a7;
 }
 
 * {

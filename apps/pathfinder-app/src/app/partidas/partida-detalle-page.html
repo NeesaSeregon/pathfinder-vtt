@@ -16,6 +16,7 @@
       </div>
       <div class="mesa__cabecera-acciones">
         @if (p.esMaster) {
+          <button type="button" (click)="abrirPnj()">+ Añadir PNJ</button>
           <label class="mesa__mapa">
             <span>Mapa de fondo</span>
             <input
@@ -43,13 +44,14 @@
           <button
             type="button"
             class="tablero__token"
-            [style.background]="colorToken(pep.nombre)"
+            [style.background]="colorToken(pep)"
             [attr.draggable]="puedeMover(pep)"
             (dragstart)="iniciarArrastre($event, pep)"
             (dragend)="terminarArrastre()"
             [class.tablero__token--seleccionado]="seleccionado() === pep.id"
             [class.tablero__token--arrastrando]="arrastrando() === pep.id"
             [class.tablero__token--ajeno]="!puedeMover(pep)"
+            [class.tablero__token--oculto]="pep.oculto"
             (click)="seleccionarDelBanquillo(pep)"
           >
             {{ pep.nombre }}
@@ -63,9 +65,28 @@
       <aside class="mesa__panel mesa__panel--personajes">
         <h2>Mesa ({{ p.personajes.length }})</h2>
         @for (pep of p.personajes; track pep.id) {
-          <article class="mesa__personaje">
+          <article
+            class="mesa__personaje"
+            [class.mesa__personaje--pnj]="pep.tipo === 'pnj'"
+            [class.mesa__personaje--oculto]="pep.oculto"
+          >
             <header>
-              <strong>{{ pep.nombre }}</strong>
+              <strong>
+                {{ pep.nombre }}
+                @if (pep.tipo === 'pnj' && pep.actitud) {
+                  <span
+                    class="mesa__actitud"
+                    [style.background]="colorToken(pep)"
+                  >
+                    {{ actitudLabels[pep.actitud] }}
+                  </span>
+                }
+                @if (pep.oculto) {
+                  <span class="mesa__oculto-marca" title="Los jugadores no lo ven">
+                    oculto
+                  </span>
+                }
+              </strong>
               <small>
                 nivel {{ pep.nivel }} · CA {{ pep.ca }}
                 @if (pep.ca !== pep.caBase) {
@@ -158,6 +179,12 @@
             @if (puedeMover(pep)) {
               <div class="mesa__acciones">
                 <button type="button" (click)="verFicha(pep)">Ver ficha</button>
+                <!-- Revelar es cosa del máster: es SU emboscada -->
+                @if (p.esMaster && pep.tipo === 'pnj') {
+                  <button type="button" (click)="alternarOculto(pep)">
+                    {{ pep.oculto ? 'Revelar' : 'Ocultar' }}
+                  </button>
+                }
                 <button type="button" (click)="sacar(pep)">
                   Sacar de la mesa
                 </button>
@@ -190,7 +217,7 @@
               @if (tokenEn(x, y); as pep) {
                 <span
                   class="tablero__token"
-                  [style.background]="colorToken(pep.nombre)"
+                  [style.background]="colorToken(pep)"
                   [style.width]="ladoToken(pep)"
                   [style.height]="ladoToken(pep)"
                   [attr.data-casillas]="pep.casillas"
@@ -202,6 +229,7 @@
                   "
                   [class.tablero__token--arrastrando]="arrastrando() === pep.id"
                   [class.tablero__token--ajeno]="!puedeMover(pep)"
+            [class.tablero__token--oculto]="pep.oculto"
                   [title]="pep.nombre"
                 >
                   {{ iniciales(pep.nombre) }}
@@ -302,6 +330,30 @@
     </div>
   } @else if (!error()) {
     <p class="mesa__meta">Cargando…</p>
+  }
+
+  @if (pnjAbierto()) {
+    <div
+      class="mesa__overlay"
+      (click)="onOverlayPnj($event)"
+      (keyup.escape)="cerrarPnj()"
+      role="presentation"
+    >
+      <div class="mesa__modal" role="dialog" aria-modal="true">
+        <header>
+          <h2>Añadir PNJ</h2>
+          <button type="button" aria-label="Cerrar" (click)="cerrarPnj()">
+            ✕
+          </button>
+        </header>
+        <app-pnj-form
+          [guardando]="creandoPnj()"
+          [error]="errorPnj()"
+          (crear)="crearPnjs($event)"
+          (cancelar)="cerrarPnj()"
+        />
+      </div>
+    </div>
   }
 
   @if (fichaAbierta(); as ficha) {

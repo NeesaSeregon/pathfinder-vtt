@@ -9,9 +9,11 @@ import {
 import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import {
+  ACTITUD_LABELS,
   Character,
   CharacterUpsert,
   CONDICIONES,
+  CrearPnj,
   CONDICION_POR_ID,
   EstadoPersonajeEvento,
   ordenarIniciativa,
@@ -26,11 +28,12 @@ import { PartidaSocket } from './partida-socket';
 import { CharactersApi } from '../characters/characters-api';
 import { FichaVista } from '../characters/ficha-vista';
 import { CharacterForm } from '../characters/character-form';
+import { PnjForm } from './pnj-form';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
 @Component({
   selector: 'app-partida-detalle-page',
-  imports: [FichaVista, CharacterForm],
+  imports: [FichaVista, CharacterForm, PnjForm],
   templateUrl: './partida-detalle-page.html',
   styleUrl: './partida-detalle-page.scss',
 })
@@ -79,6 +82,13 @@ export class PartidaDetallePage {
       ? `url(/api/partidas/${this.partidaId}/mapa?v=${this.versionMapa()})`
       : null;
   });
+
+  protected readonly actitudLabels = ACTITUD_LABELS;
+
+  /** Formulario de siembra de PNJ (solo el máster). */
+  protected readonly pnjAbierto = signal(false);
+  protected readonly creandoPnj = signal(false);
+  protected readonly errorPnj = signal<string | null>(null);
 
   /** Ficha abierta en la modal de consulta (null = cerrada). */
   protected readonly fichaAbierta = signal<Character | null>(null);
@@ -441,13 +451,62 @@ export class PartidaDetallePage {
       .toUpperCase();
   }
 
-  /** Color estable del avatar según el nombre (paleta del tema, styles.scss). */
-  protected colorToken(nombre: string): string {
+  /**
+   * Color del token. Los PNJ van por ACTITUD (rojo enemigo, verde aliado,
+   * gris neutral) para leer el tablero de un vistazo; los PJ mantienen su
+   * color estable por nombre, que es lo que distingue a los jugadores.
+   */
+  protected colorToken(pep: PersonajeEnPartidaResumen): string {
+    if (pep.tipo === 'pnj' && pep.actitud) {
+      return `var(--actitud-${pep.actitud})`;
+    }
     let suma = 0;
-    for (let i = 0; i < nombre.length; i++) {
-      suma += nombre.charCodeAt(i);
+    for (let i = 0; i < pep.nombre.length; i++) {
+      suma += pep.nombre.charCodeAt(i);
     }
     return `var(--token-${suma % 6})`;
+  }
+
+  /** El máster siembra PNJ: enemigos, aliados o figurantes. */
+  protected abrirPnj(): void {
+    this.pnjAbierto.set(true);
+    this.errorPnj.set(null);
+  }
+
+  protected cerrarPnj(): void {
+    this.pnjAbierto.set(false);
+  }
+
+  /** Cierra la modal de PNJ solo si el clic fue en el fondo. */
+  protected onOverlayPnj(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      this.cerrarPnj();
+    }
+  }
+
+  protected crearPnjs(datos: CrearPnj): void {
+    this.errorPnj.set(null);
+    this.creandoPnj.set(true);
+    this.api.crearPnjs(this.partidaId, datos).subscribe({
+      next: (partida) => {
+        this.partida.set(partida);
+        this.creandoPnj.set(false);
+        this.pnjAbierto.set(false);
+      },
+      error: (err) => {
+        this.creandoPnj.set(false);
+        this.errorPnj.set(mensajeDeError(err));
+      },
+    });
+  }
+
+  /** Saca al PNJ de la sombra (o lo vuelve a esconder). */
+  protected alternarOculto(pep: PersonajeEnPartidaResumen): void {
+    this.api.revelarPnj(this.partidaId, pep.id, !pep.oculto).subscribe({
+      next: (partida) => this.partida.set(partida),
+      error: (err) =>
+        this.error.set(`No se pudo cambiar la visibilidad: ${mensajeDeError(err)}`),
+    });
   }
 
   private mover(pepId: string, posX: number, posY: number): void {

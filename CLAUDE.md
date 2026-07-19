@@ -136,6 +136,10 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   para trabajar con vistas a la integración ficha-tablero.
 
 ## Mejoras futuras
+- PNJ: pendientes de una segunda vuelta si hacen falta en mesa — bestiario
+  reutilizable (hoy cada siembra crea fichas nuevas; no hay "sembrar desde
+  una plantilla ya creada"), ataques/daño en el bloque corto, y limpiar de
+  golpe los PNJ muertos al terminar el combate.
 - Recuperar contraseña por email ("la he olvidado"). Descartado de momento
   a conciencia: exige tabla de tokens de un solo uso con caducidad (+ su
   migración) y, sobre todo, un SERVICIO DE ENVÍO DE CORREO externo (Resend,
@@ -217,6 +221,34 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la
   ficha al unirse—, danoNoLetal, condiciones, posX/posY). /partidas/crear
   y /partidas/buscar (por nombre o código) + unirse funcionan en el front.
+- PNJ (enemigos, aliados, figurantes): un PNJ es un Character con
+  tipo='pnj', propiedad del MÁSTER. Se decidió así (frente a una entidad
+  aparte) porque en PF1e un monstruo tiene CA, PG, iniciativa y tamaño
+  igual que un PJ: reutiliza tokens, huellas, arrastre, condiciones,
+  iniciativa, permisos y socket SIN una sola rama nueva. El coste es
+  filtrar: findAll(ownerId, tipo='pj') para que el bestiario no sepulte
+  /personajes. El tipo NO viaja en CreateCharacterDto — por la API pública
+  solo se crean PJ; 'pnj' lo pasa PartidasService como 3er argumento.
+- POST /api/partidas/:id/pnjs siembra N (PNJ_MAX_CANTIDAD=12). Crea UNA
+  FICHA POR COPIA (Goblin 1..N) porque el asiento es único por
+  (partida, personaje). Con cantidad=1 no se numera.
+  Las estadísticas se piden por COMPONENTES (Destreza, armadura, escudo,
+  natural, tamaño) como los da el Bestiario, NO como totales: así CA,
+  iniciativa y huella salen de las mismas funciones puras que para un PJ y
+  las condiciones siguen sumando encima. El formulario previsualiza esos
+  derivados con las MISMAS funciones, así que lo que se lee al crear es lo
+  que sale en la mesa.
+- actitud y oculto viven en PersonajeEnPartida (el ASIENTO), no en la
+  ficha: son estado de escena, y el mismo goblin puede ser enemigo aquí y
+  aliado en otra mesa. El token se colorea por actitud
+  (--actitud-enemigo/aliado/neutral en styles.scss), fuera de la paleta
+  --token-N para que un PJ nunca se confunda con un enemigo.
+- PNJ OCULTO (emboscada): el filtro está en UN SOLO SITIO, detalle(), que
+  quita los ocultos si no eres el máster. Por eso los cambios de un asiento
+  oculto NO pueden ir por EVENTO_ESTADO_PERSONAJE (va a toda la sala sin
+  filtrar y delataría su casilla): emitirCambioDePep() los degrada a
+  EVENTO_MESA_CAMBIADA, que hace recargar y vuelve a pasar por el filtro.
+  PATCH :id/pnjs/:pepId revela u oculta (solo el máster).
 - GET /api/partidas/mias: las mesas del usuario (las que dirige + aquellas
   donde tiene algún personaje sentado), sin tope. Devuelve MiPartidaResumen
   (PartidaResumen + soyMaster + misPersonajes). Se declara ANTES de

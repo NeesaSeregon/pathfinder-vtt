@@ -22,6 +22,8 @@ import { FicheroSubido, PartidasService } from './partidas.service';
 import {
   ActualizarPersonajeEnPartidaDto,
   CreatePartidaDto,
+  CrearPnjDto,
+  RevelarPnjDto,
   TirarDadosDto,
   UnirsePartidaDto,
   UpdatePartidaDto,
@@ -76,6 +78,27 @@ export class PartidasController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.partidas.eliminar(id, user.sub);
+  }
+
+  /** Siembra PNJ (enemigos, aliados o figurantes). Solo el máster. */
+  @Post(':id/pnjs')
+  crearPnjs(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CrearPnjDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.crearPnjs(id, dto, user.sub);
+  }
+
+  /** Revela (o vuelve a esconder) un PNJ del tablero. Solo el máster. */
+  @Patch(':id/pnjs/:pepId')
+  revelarPnj(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('pepId', ParseUUIDPipe) pepId: string,
+    @Body() dto: RevelarPnjDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.revelarPnj(id, pepId, dto.oculto, user.sub);
   }
 
   @Post(':id/personajes')

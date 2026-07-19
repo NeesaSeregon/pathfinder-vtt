@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   ActualizarPersonajeEnPartida,
   CrearPartida,
+  CrearPnj,
   MiPartidaResumen,
   PartidaDetalle,
   PartidaResumen,
@@ -30,6 +31,26 @@ export class PartidasApi {
   /** Tus mesas: las que diriges y aquellas donde tienes un personaje. */
   mias(): Observable<MiPartidaResumen[]> {
     return this.http.get<MiPartidaResumen[]>(`${this.baseUrl}/mias`);
+  }
+
+  /** Siembra PNJ en la mesa (solo el máster). Devuelve el detalle ya al día. */
+  crearPnjs(partidaId: string, datos: CrearPnj): Observable<PartidaDetalle> {
+    return this.http.post<PartidaDetalle>(
+      `${this.baseUrl}/${partidaId}/pnjs`,
+      datos,
+    );
+  }
+
+  /** Revela u oculta un PNJ del tablero (solo el máster). */
+  revelarPnj(
+    partidaId: string,
+    pepId: string,
+    oculto: boolean,
+  ): Observable<PartidaDetalle> {
+    return this.http.patch<PartidaDetalle>(
+      `${this.baseUrl}/${partidaId}/pnjs/${pepId}`,
+      { oculto },
+    );
   }
 
   detalle(id: string): Observable<PartidaDetalle> {

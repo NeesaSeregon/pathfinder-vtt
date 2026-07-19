@@ -75,7 +75,7 @@ type CharacterFormInterno = {
 };
 
 function personaje(sheetData: Character['sheetData']): Character {
-  return { id: '1', name: 'Ezren', level: 5, sheetData };
+  return { id: '1', name: 'Ezren', level: 5, tipo: 'pj', sheetData };
 }
 
 describe('CharacterForm', () => {

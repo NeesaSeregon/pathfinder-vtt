@@ -13,6 +13,7 @@ import { ILike, In, Repository } from 'typeorm';
 import {
   caConCondiciones,
   casillasQueOcupa,
+  CharacterSheetData,
   claseDeArmadura,
   efectoDeCondiciones,
   huellasSeSolapan,
@@ -35,6 +36,7 @@ import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
 import {
   ActualizarPersonajeEnPartidaDto,
   CreatePartidaDto,
+  CrearPnjDto,
   TirarDadosDto,
   UpdatePartidaDto,
 } from './dto/create-partida.dto';
@@ -134,12 +136,17 @@ export class PartidasService {
 
   async detalle(id: string, userId: string): Promise<PartidaDetalle> {
     const partida = await this.buscarEntidad(id);
+    const esMaster = partida.masterId === userId;
     return {
       ...this.aResumen(partida, userId),
-      esMaster: partida.masterId === userId,
-      personajes: partida.personajes.map((pep) =>
-        this.aPersonajeResumen(pep, userId),
-      ),
+      esMaster,
+      // ÚNICO filtro de PNJ ocultos de toda la aplicación. Que esté aquí y
+      // solo aquí es lo que hace la emboscada fiable: cualquier camino que
+      // lleve datos al cliente pasa por este detalle (la carga inicial y la
+      // recarga que dispara mesa-cambiada).
+      personajes: partida.personajes
+        .filter((pep) => esMaster || !pep.oculto)
+        .map((pep) => this.aPersonajeResumen(pep, userId)),
       enCombate: partida.enCombate,
       ronda: partida.ronda,
       turnoPepId: partida.turnoPepId,
@@ -330,12 +337,89 @@ export class PartidasService {
     Object.assign(pep, dto);
     await this.personajes.save(pep);
     const resumen = this.aPersonajeResumen(pep, userId);
-    this.gateway.emitirEstadoPersonaje(
-      partidaId,
-      pepId,
-      this.aEstadoNeutro(resumen),
-    );
+    this.emitirCambioDePep(partidaId, pep, resumen);
     return resumen;
+  }
+
+  /**
+   * Siembra PNJ en la mesa. Crea UNA FICHA POR COPIA (Goblin 1..N) porque
+   * un asiento es único por (partida, personaje): dos tokens del mismo
+   * goblin necesitan dos fichas. Las fichas quedan en el bestiario del
+   * máster para reutilizarlas en la siguiente sesión.
+   */
+  async crearPnjs(
+    partidaId: string,
+    dto: CrearPnjDto,
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloElMaster(partida, userId);
+
+    const cantidad = dto.cantidad ?? 1;
+    const sheetData = this.sheetDePnj(dto);
+
+    for (let i = 0; i < cantidad; i++) {
+      // Con una sola copia no se numera: "Jefe goblin", no "Jefe goblin 1"
+      const nombre = cantidad > 1 ? `${dto.nombre} ${i + 1}` : dto.nombre;
+      const ficha = await this.characters.create(
+        { name: nombre, level: dto.nivel ?? 1, sheetData },
+        userId,
+        'pnj',
+      );
+      await this.personajes.save(
+        this.personajes.create({
+          partidaId,
+          characterId: ficha.id,
+          // Arranca con los PG llenos, igual que un PJ al unirse
+          pgActuales: sheetData.pg?.total ?? null,
+          condiciones: [],
+          actitud: dto.actitud,
+          oculto: dto.oculto ?? false,
+        }),
+      );
+    }
+
+    this.gateway.emitirMesaCambiada(partidaId);
+    return this.detalle(partidaId, userId);
+  }
+
+  /**
+   * Del formulario corto a una ficha de verdad. Se guardan COMPONENTES
+   * (Destreza, armadura, escudo, tamaño), no totales: así la CA, la
+   * iniciativa y la huella salen de las mismas funciones puras que usan
+   * los PJ, y las condiciones siguen sumando encima sin casos especiales.
+   */
+  private sheetDePnj(dto: CrearPnjDto): CharacterSheetData {
+    return {
+      tamano: dto.tamano ?? 'mediano',
+      atributos: { destreza: { puntuacion: dto.destreza ?? 10 } },
+      combate: {
+        bonifArmadura: dto.bonifArmadura ?? 0,
+        bonifEscudo: dto.bonifEscudo ?? 0,
+        armaduraNatural: dto.armaduraNatural ?? 0,
+        modVarioIniciativa: dto.modVarioIniciativa ?? 0,
+      },
+      pg: { total: dto.pgTotal ?? 0 },
+    };
+  }
+
+  /** El máster revela (o vuelve a esconder) un PNJ colocado en el tablero. */
+  async revelarPnj(
+    partidaId: string,
+    pepId: string,
+    oculto: boolean,
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloElMaster(partida, userId);
+    const pep = this.buscarPep(partida, pepId);
+
+    pep.oculto = oculto;
+    await this.personajes.save(pep);
+    // Siempre mesa-cambiada: aparecer o desaparecer del tablero cambia lo
+    // que cada cliente tiene derecho a ver, y eso lo resuelve detalle().
+    this.gateway.emitirMesaCambiada(partidaId);
+    return this.detalle(partidaId, userId);
   }
 
   /** Puede sacar un personaje: el máster de la mesa o el dueño de la ficha. */
@@ -376,12 +460,30 @@ export class PartidasService {
     await this.personajes.save(pep);
 
     const resumen = this.aPersonajeResumen(pep, userId);
+    this.emitirCambioDePep(partidaId, pep, resumen);
+    return resumen;
+  }
+
+  /**
+   * Retransmite un cambio de estado a la sala. Si el asiento está OCULTO no
+   * se puede usar el evento de estado —va a todos por igual y delataría la
+   * posición o los PG del PNJ—, así que se manda un mesa-cambiada: cada
+   * cliente recarga y el filtro de detalle() decide qué merece ver.
+   */
+  private emitirCambioDePep(
+    partidaId: string,
+    pep: PersonajeEnPartida,
+    resumen: PersonajeEnPartidaResumen,
+  ): void {
+    if (pep.oculto) {
+      this.gateway.emitirMesaCambiada(partidaId);
+      return;
+    }
     this.gateway.emitirEstadoPersonaje(
       partidaId,
-      pepId,
+      pep.id,
       this.aEstadoNeutro(resumen),
     );
-    return resumen;
   }
 
   /** Quita esMio (lo único que depende de quién pregunta) para retransmitir. */
@@ -627,6 +729,9 @@ export class PartidasService {
       // El modificador de iniciativa lo deriva el servidor de la ficha
       iniciativaMod: iniciativa(pep.character?.sheetData ?? {}),
       esMio: pep.character?.ownerId === userId,
+      tipo: pep.character?.tipo ?? 'pj',
+      actitud: pep.actitud ?? undefined,
+      oculto: pep.oculto,
     };
   }
 

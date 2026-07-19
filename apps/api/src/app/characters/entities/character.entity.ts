@@ -10,6 +10,7 @@ import {
 import type {
   Character as CharacterModel,
   CharacterSheetData,
+  TipoPersonaje,
 } from '@pathfinder/shared';
 import { User } from '../../users/entities/user.entity';
 
@@ -35,6 +36,14 @@ export class Character implements CharacterModel {
 
   @Column({ type: 'int', default: 1 })
   level: number;
+
+  /**
+   * 'pnj' = criatura del máster (enemigo, aliado o figurante). Comparte
+   * tabla y cálculos con los PJ; solo sirve para no mezclarlos en las
+   * listas. Las fichas anteriores a esta columna son todas 'pj'.
+   */
+  @Column({ type: 'varchar', length: 3, default: 'pj' })
+  tipo: TipoPersonaje;
 
   // JSONB: la ficha completa (atributos, inventario, dotes...) vive aquí
   // como documento, sin necesidad de una columna por campo.

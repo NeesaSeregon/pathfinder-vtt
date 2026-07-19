@@ -42,6 +42,8 @@ const DETALLE: PartidaDetalle = {
       iniciativa: null,
       iniciativaMod: 2,
       esMio: false,
+      tipo: 'pj',
+      oculto: false,
     },
   ],
 };

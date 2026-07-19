@@ -39,19 +39,32 @@ describe('CharactersService', () => {
     expect(service).toBeDefined();
   });
 
-  it('create asigna el dueño al personaje nuevo', () => {
+  it('create asigna el dueño al personaje nuevo, y lo crea como PJ', () => {
     repo.create.mockReturnValue({});
     service.create({ name: 'Valeros' }, 'user-1');
     expect(repo.create).toHaveBeenCalledWith({
       name: 'Valeros',
       ownerId: 'user-1',
+      tipo: 'pj',
     });
   });
 
-  it('findAll filtra por dueño', () => {
+  // El tipo NO viaja en el DTO: por la API pública solo se crean PJ. Solo
+  // PartidasService, al sembrar la mesa, pide 'pnj' explícitamente.
+  it('create marca PNJ solo si se pide como tercer argumento', () => {
+    repo.create.mockReturnValue({});
+    service.create({ name: 'Goblin 1' }, 'master-1', 'pnj');
+    expect(repo.create).toHaveBeenCalledWith({
+      name: 'Goblin 1',
+      ownerId: 'master-1',
+      tipo: 'pnj',
+    });
+  });
+
+  it('findAll lista TUS PJ, sin los goblins del bestiario', () => {
     repo.findBy.mockResolvedValue([]);
     service.findAll('user-1');
-    expect(repo.findBy).toHaveBeenCalledWith({ ownerId: 'user-1' });
+    expect(repo.findBy).toHaveBeenCalledWith({ ownerId: 'user-1', tipo: 'pj' });
   });
 
   it('findOne de un personaje ajeno da el mismo 404 que uno inexistente', async () => {

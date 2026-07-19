@@ -127,6 +127,20 @@
     flex-direction: column;
     gap: 0.6rem;
 
+    /* Un PNJ oculto solo lo ve el máster: se marca en diagonal para que no
+       se le escape que los jugadores NO están viendo eso. */
+    &--oculto {
+      border-style: dashed;
+      border-color: var(--text-faint);
+      background: repeating-linear-gradient(
+        45deg,
+        var(--surface),
+        var(--surface) 8px,
+        var(--surface-2) 8px,
+        var(--surface-2) 16px
+      );
+    }
+
     header {
       display: flex;
       flex-direction: column;
@@ -384,6 +398,33 @@
     }
   }
 
+  /* Etiqueta de actitud junto al nombre del PNJ (mismo color que su token) */
+  &__actitud {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--bg);
+    vertical-align: middle;
+  }
+
+  &__oculto-marca {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    border: 1px dashed var(--text-faint);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+    vertical-align: middle;
+  }
+
   &__modal-acciones {
     display: flex;
     align-items: center;
@@ -486,6 +527,14 @@
     &--ajeno {
       filter: saturate(0.55) brightness(0.85);
       cursor: default;
+    }
+
+    /* Solo lo ve el máster (a los jugadores no les llega el asiento): el
+       borde punteado le recuerda que ese token está en la sombra. */
+    &--oculto {
+      opacity: 0.6;
+      outline: 2px dashed var(--text-faint);
+      outline-offset: 1px;
     }
   }
 }

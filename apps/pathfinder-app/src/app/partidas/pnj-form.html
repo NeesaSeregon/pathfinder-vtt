@@ -1,0 +1,176 @@
+<form class="pnj" (ngSubmit)="enviar()">
+  <div class="pnj__fila">
+    <label class="pnj__campo pnj__campo--ancho">
+      Nombre
+      <input
+        type="text"
+        name="nombre"
+        maxlength="80"
+        placeholder="p. ej. Goblin"
+        [ngModel]="nombre()"
+        (ngModelChange)="nombre.set($event)"
+      />
+    </label>
+    <label class="pnj__campo pnj__campo--corto">
+      Cantidad
+      <input
+        type="number"
+        name="cantidad"
+        min="1"
+        [max]="maxCantidad"
+        [ngModel]="cantidad()"
+        (ngModelChange)="cantidad.set(aNumero($event))"
+      />
+    </label>
+  </div>
+
+  @if ((cantidad() ?? 0) > 1) {
+    <p class="pnj__pista">
+      Se sentarán «{{ nombre() || 'PNJ' }} 1» … «{{ nombre() || 'PNJ' }}
+      {{ cantidad() }}», cada uno con su token.
+    </p>
+  }
+
+  <div class="pnj__fila">
+    <label class="pnj__campo">
+      Actitud
+      <select
+        name="actitud"
+        [ngModel]="actitud()"
+        (ngModelChange)="actitud.set($event)"
+      >
+        @for (a of actitudes; track a) {
+          <option [value]="a">{{ actitudLabels[a] }}</option>
+        }
+      </select>
+    </label>
+    <label class="pnj__campo">
+      Tamaño
+      <select
+        name="tamano"
+        [ngModel]="tamano()"
+        (ngModelChange)="tamano.set($event)"
+      >
+        @for (t of tamanos; track t) {
+          <option [value]="t">{{ tamanoLabels[t] }}</option>
+        }
+      </select>
+    </label>
+    <label class="pnj__campo pnj__campo--corto">
+      Nivel
+      <input
+        type="number"
+        name="nivel"
+        min="1"
+        max="20"
+        [ngModel]="nivel()"
+        (ngModelChange)="nivel.set(aNumero($event))"
+      />
+    </label>
+  </div>
+
+  <div class="pnj__fila">
+    <label class="pnj__campo pnj__campo--corto">
+      Destreza
+      <input
+        type="number"
+        name="destreza"
+        min="1"
+        max="50"
+        [ngModel]="destreza()"
+        (ngModelChange)="destreza.set(aNumero($event))"
+      />
+    </label>
+    <label class="pnj__campo pnj__campo--corto">
+      Armadura
+      <input
+        type="number"
+        name="bonifArmadura"
+        min="0"
+        max="50"
+        [ngModel]="bonifArmadura()"
+        (ngModelChange)="bonifArmadura.set(aNumero($event))"
+      />
+    </label>
+    <label class="pnj__campo pnj__campo--corto">
+      Escudo
+      <input
+        type="number"
+        name="bonifEscudo"
+        min="0"
+        max="50"
+        [ngModel]="bonifEscudo()"
+        (ngModelChange)="bonifEscudo.set(aNumero($event))"
+      />
+    </label>
+    <label class="pnj__campo pnj__campo--corto">
+      Nat.
+      <input
+        type="number"
+        name="armaduraNatural"
+        min="0"
+        max="50"
+        [ngModel]="armaduraNatural()"
+        (ngModelChange)="armaduraNatural.set(aNumero($event))"
+      />
+    </label>
+    <label class="pnj__campo pnj__campo--corto">
+      PG
+      <input
+        type="number"
+        name="pgTotal"
+        min="0"
+        max="9999"
+        [ngModel]="pgTotal()"
+        (ngModelChange)="pgTotal.set(aNumero($event))"
+      />
+    </label>
+    <label class="pnj__campo pnj__campo--corto">
+      Ini. varios
+      <input
+        type="number"
+        name="modVarioIniciativa"
+        min="-20"
+        max="20"
+        [ngModel]="modVarioIniciativa()"
+        (ngModelChange)="modVarioIniciativa.set(aNumero($event))"
+      />
+    </label>
+  </div>
+
+  <!-- Los mismos cálculos que hará el servidor: lo que se lee aquí es lo
+       que aparecerá en la mesa. -->
+  <p class="pnj__previa">
+    Saldrá con <strong>CA {{ caPrevia() }}</strong>, iniciativa
+    <strong>{{ iniciativaPrevia() >= 0 ? '+' : ''
+      }}{{ iniciativaPrevia() }}</strong>
+    y ocupará
+    <strong>{{ casillasPrevias() }}×{{ casillasPrevias() }}</strong>
+    @if (casillasPrevias() > 1) {
+      casillas
+    } @else {
+      casilla
+    }
+  </p>
+
+  <label class="pnj__oculto">
+    <input
+      type="checkbox"
+      name="oculto"
+      [ngModel]="oculto()"
+      (ngModelChange)="oculto.set($event)"
+    />
+    Empezar oculto (los jugadores no lo verán hasta que lo reveles)
+  </label>
+
+  @if (error(); as mensaje) {
+    <p class="pnj__error" role="alert">{{ mensaje }}</p>
+  }
+
+  <div class="pnj__botones">
+    <button type="submit" [disabled]="!valido() || guardando()">
+      {{ guardando() ? 'Creando…' : 'Añadir a la mesa' }}
+    </button>
+    <button type="button" (click)="cancelar.emit()">Cancelar</button>
+  </div>
+</form>

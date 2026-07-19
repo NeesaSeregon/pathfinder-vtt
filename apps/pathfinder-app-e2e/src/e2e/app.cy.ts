@@ -240,6 +240,93 @@ describe('partidas', () => {
       });
   });
 
+  it('el máster siembra 3 goblins y aparecen con su CA derivada', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre: `Pnj-${Date.now()}` })
+      .its('body.id')
+      .then((partidaId) => {
+        cy.visit(`/partidas/${partidaId}`);
+        cy.contains('button', '+ Añadir PNJ').click();
+
+        cy.get('input[name="nombre"]').type('Goblin');
+        cy.get('input[name="cantidad"]').clear();
+        cy.get('input[name="cantidad"]').type('3');
+        cy.get('select[name="tamano"]').select('pequeno');
+        cy.get('input[name="destreza"]').clear();
+        cy.get('input[name="destreza"]').type('15');
+        cy.get('input[name="bonifArmadura"]').clear();
+        cy.get('input[name="bonifArmadura"]').type('3');
+        cy.get('input[name="bonifEscudo"]').clear();
+        cy.get('input[name="bonifEscudo"]').type('1');
+        cy.get('input[name="pgTotal"]').clear();
+        cy.get('input[name="pgTotal"]').type('6');
+
+        // La previsualización usa las mismas reglas que el servidor
+        cy.get('.pnj__previa').should('contain', 'CA 17');
+        cy.contains('button', 'Añadir a la mesa').click();
+
+        // Tres tokens numerados, con la CA y los PG ya derivados
+        cy.get('.mesa__personaje').should('have.length', 3);
+        cy.contains('.mesa__personaje', 'Goblin 1').should('contain', 'CA 17');
+        cy.contains('.mesa__personaje', 'Goblin 3').should('contain', '6');
+        cy.contains('.mesa__personaje', 'Goblin 1').should('contain', 'Enemigo');
+      });
+  });
+
+  it('la emboscada: el jugador no ve al PNJ oculto hasta que se revela', () => {
+    const sufijo = Date.now();
+    const nombreMesa = `Emboscada-${sufijo}`;
+
+    // El máster prepara la mesa con un goblin escondido
+    cy.login(`gm-${sufijo}`, `gm-${sufijo}@mesa.es`, 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre: nombreMesa })
+      .its('body.id')
+      .then((partidaId) => {
+        cy.request('POST', `/api/partidas/${partidaId}/pnjs`, {
+          nombre: 'Goblin acechante',
+          cantidad: 1,
+          actitud: 'enemigo',
+          oculto: true,
+          pgTotal: 6,
+        });
+
+        // El jugador entra: no hay ni rastro del goblin
+        cy.login(`pj-${sufijo}`, `pj-${sufijo}@mesa.es`, 'contraseña-larga');
+        cy.request('POST', '/api/characters', {
+          name: `Heroe-${sufijo}`,
+          level: 1,
+          sheetData: {},
+        })
+          .its('body.id')
+          .then((characterId) => {
+            cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
+              characterId,
+            });
+            cy.visit(`/partidas/${partidaId}`);
+            cy.contains('.mesa__personaje', `Heroe-${sufijo}`).should('exist');
+            cy.contains('Goblin acechante').should('not.exist');
+
+            // Y tampoco viaja en la respuesta de la API, no solo en pantalla
+            cy.request(`/api/partidas/${partidaId}`).then((res) => {
+              expect(JSON.stringify(res.body)).to.not.contain('Goblin');
+            });
+
+            // El máster lo revela
+            cy.login(`gm-${sufijo}`, `gm-${sufijo}@mesa.es`, 'contraseña-larga');
+            cy.visit(`/partidas/${partidaId}`);
+            cy.contains('.mesa__personaje', 'Goblin acechante')
+              .should('contain', 'oculto')
+              .contains('button', 'Revelar')
+              .click();
+
+            // Ahora sí llega al jugador
+            cy.login(`pj-${sufijo}`, `pj-${sufijo}@mesa.es`, 'contraseña-larga');
+            cy.visit(`/partidas/${partidaId}`);
+            cy.contains('.mesa__personaje', 'Goblin acechante').should('exist');
+          });
+      });
+  });
+
   it('el máster lleva el rastreador de iniciativa y turnos', () => {
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
     cy.request('POST', '/api/characters', {
