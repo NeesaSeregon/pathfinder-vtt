@@ -4,6 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 import { CharactersService } from './characters.service';
 import { Character } from './entities/character.entity';
 import { PersonajeEnPartida } from '../partidas/entities/personaje-en-partida.entity';
+import { PartidasGateway } from '../partidas/partidas.gateway';
 
 describe('CharactersService', () => {
   let service: CharactersService;
@@ -15,15 +16,19 @@ describe('CharactersService', () => {
     preload: jest.fn(),
     remove: jest.fn(),
   };
-  const peps = { count: jest.fn() };
+  const peps = { count: jest.fn(), find: jest.fn() };
+  const gateway = { emitirMesaCambiada: jest.fn() };
 
   beforeEach(async () => {
     jest.resetAllMocks();
+    // Por defecto, el personaje no está sentado en ninguna mesa
+    peps.find.mockResolvedValue([]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CharactersService,
         { provide: getRepositoryToken(Character), useValue: repo },
         { provide: getRepositoryToken(PersonajeEnPartida), useValue: peps },
+        { provide: PartidasGateway, useValue: gateway },
       ],
     }).compile();
 
@@ -84,5 +89,32 @@ describe('CharactersService', () => {
     await expect(service.leer('char-1', 'extrano')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  // Editar la ficha cambia valores DERIVADOS que la mesa muestra (CA, PG
+  // totales, iniciativa): sin este aviso los demás verían datos viejos.
+  it('update avisa a todas las mesas donde el personaje está sentado', async () => {
+    repo.findOneBy.mockResolvedValue({ id: 'char-1', ownerId: 'yo' });
+    repo.preload.mockResolvedValue({ id: 'char-1', name: 'Valeros' });
+    repo.save.mockResolvedValue({ id: 'char-1', name: 'Valeros' });
+    peps.find.mockResolvedValue([
+      { partidaId: 'partida-1' },
+      { partidaId: 'partida-2' },
+    ]);
+
+    await service.update('char-1', { name: 'Valeros' }, 'yo');
+
+    expect(gateway.emitirMesaCambiada).toHaveBeenCalledWith('partida-1');
+    expect(gateway.emitirMesaCambiada).toHaveBeenCalledWith('partida-2');
+  });
+
+  it('update de un personaje que no está en ninguna mesa no emite nada', async () => {
+    repo.findOneBy.mockResolvedValue({ id: 'char-1', ownerId: 'yo' });
+    repo.preload.mockResolvedValue({ id: 'char-1' });
+    repo.save.mockResolvedValue({ id: 'char-1' });
+
+    await service.update('char-1', { name: 'Solo' }, 'yo');
+
+    expect(gateway.emitirMesaCambiada).not.toHaveBeenCalled();
   });
 });

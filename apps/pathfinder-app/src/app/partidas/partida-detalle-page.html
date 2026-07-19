@@ -311,14 +311,33 @@
       (keyup.escape)="cerrarFicha()"
       role="presentation"
     >
-      <div class="mesa__modal" role="dialog" aria-modal="true">
+      <div
+        class="mesa__modal"
+        [class.mesa__modal--editando]="editandoFicha()"
+        role="dialog"
+        aria-modal="true"
+      >
         <header>
           <h2>{{ ficha.name }}</h2>
-          <button type="button" aria-label="Cerrar" (click)="cerrarFicha()">
-            ✕
-          </button>
+          <div class="mesa__modal-acciones">
+            <!-- Editar solo tu propia ficha: el máster la ve, no la toca -->
+            @if (fichaEsMia() && !editandoFicha()) {
+              <button type="button" (click)="editarFicha()">Editar</button>
+            }
+            <button type="button" aria-label="Cerrar" (click)="cerrarFicha()">
+              ✕
+            </button>
+          </div>
         </header>
-        <app-ficha-vista [character]="ficha" />
+        @if (editandoFicha()) {
+          <app-character-form
+            [initial]="ficha"
+            [submitLabel]="guardandoFicha() ? 'Guardando…' : 'Guardar'"
+            (save)="guardarFicha($event)"
+          />
+        } @else {
+          <app-ficha-vista [character]="ficha" />
+        }
       </div>
     </div>
   }

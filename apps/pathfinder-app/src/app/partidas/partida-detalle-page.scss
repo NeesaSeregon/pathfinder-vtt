@@ -376,6 +376,18 @@
         margin: 0;
       }
     }
+
+    // Editando cabe el formulario entero: la ficha de PF1e es ancha y en
+    // 42rem los bloques de atributos y habilidades se apelotonan.
+    &--editando {
+      max-width: 68rem;
+    }
+  }
+
+  &__modal-acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 }
 

@@ -196,6 +196,50 @@ describe('partidas', () => {
       });
   });
 
+  it('el jugador edita su ficha desde la mesa y la tarjeta se actualiza', () => {
+    const sufijo = Date.now();
+    const nombre = `Editar-${sufijo}`;
+
+    // El máster monta la mesa
+    cy.login(`m-${sufijo}`, `m-${sufijo}@mesa.es`, 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre })
+      .its('body.id')
+      .then((partidaId) => {
+        // El jugador se sienta con su personaje de nivel 3
+        cy.login(`j-${sufijo}`, `j-${sufijo}@mesa.es`, 'contraseña-larga');
+        cy.request('POST', '/api/characters', {
+          name: `Valeros-${sufijo}`,
+          level: 3,
+          sheetData: {},
+        })
+          .its('body.id')
+          .then((characterId) => {
+            cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
+              characterId,
+            });
+
+            cy.visit(`/partidas/${partidaId}`);
+            cy.get('.mesa__personaje').should('contain', 'nivel 3');
+
+            // Abre SU ficha y la edita ahí mismo
+            cy.get('.mesa__personaje').contains('button', 'Ver ficha').click();
+            cy.get('.mesa__modal').contains('button', 'Editar').click();
+            cy.get('.mesa__modal input[name="level"]').clear();
+            cy.get('.mesa__modal input[name="level"]').type('7');
+            cy.get('.mesa__modal').contains('button', 'Guardar').click();
+
+            // La tarjeta de la mesa refleja el cambio sin recargar a mano
+            cy.get('.mesa__personaje').should('contain', 'nivel 7');
+
+            // El máster ve la ficha, pero NO puede editarla
+            cy.login(`m-${sufijo}`, `m-${sufijo}@mesa.es`, 'contraseña-larga');
+            cy.visit(`/partidas/${partidaId}`);
+            cy.get('.mesa__personaje').contains('button', 'Ver ficha').click();
+            cy.get('.mesa__modal').should('not.contain', 'Editar');
+          });
+      });
+  });
+
   it('el máster lleva el rastreador de iniciativa y turnos', () => {
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
     cy.request('POST', '/api/characters', {

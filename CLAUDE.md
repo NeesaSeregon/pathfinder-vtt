@@ -93,6 +93,17 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   jugador). Sigue siendo 404 si no tienes acceso. Editar/borrar y el
   findOne interno siguen siendo SOLO del dueño. La mesa ("Ver ficha") usa
   este endpoint; antes había uno propio en partidas, ya retirado.
+  Desde la mesa, "Ver ficha" abre en LECTURA y ofrece "Editar" SOLO si la
+  ficha es tuya (pep.esMio); el máster la ve pero no la toca, igual que en
+  /personajes. Reutiliza CharacterForm (mismo aviso de cambios sin guardar
+  vía form.sucio()) y la modal se ensancha a 68rem al editar.
+- Editar una ficha AVISA a las mesas donde esté sentada: CharactersService.
+  update() emite EVENTO_MESA_CAMBIADA por cada PersonajeEnPartida del
+  personaje. Sin eso, el resto de la mesa seguiría viendo la CA/PG/nivel
+  viejos hasta recargar, porque esos valores los DERIVA el servidor de
+  sheetData. Para poder hacerlo sin ciclo de módulos (PartidasModule ya
+  importa CharactersModule) el gateway vive en PartidasGatewayModule, que
+  importan los dos.
 
 ## Migraciones (TypeORM)
 - El esquema de la base de datos SOLO cambia mediante migraciones

@@ -5,6 +5,7 @@ import { CreateCharacterDto } from './dto/create-character.dto';
 import { UpdateCharacterDto } from './dto/update-character.dto';
 import { Character } from './entities/character.entity';
 import { PersonajeEnPartida } from '../partidas/entities/personaje-en-partida.entity';
+import { PartidasGateway } from '../partidas/partidas.gateway';
 
 @Injectable()
 export class CharactersService {
@@ -13,6 +14,7 @@ export class CharactersService {
     private readonly charactersRepository: Repository<Character>,
     @InjectRepository(PersonajeEnPartida)
     private readonly peps: Repository<PersonajeEnPartida>,
+    private readonly gateway: PartidasGateway,
   ) {}
 
   create(
@@ -82,7 +84,21 @@ export class CharactersService {
     if (!character) {
       throw new NotFoundException(`Character with id ${id} not found`);
     }
-    return this.charactersRepository.save(character);
+    const guardado = await this.charactersRepository.save(character);
+    await this.avisarASusMesas(id);
+    return guardado;
+  }
+
+  /**
+   * La ficha manda sobre valores que la mesa muestra DERIVADOS (CA, PG
+   * totales, iniciativa, casillas que ocupa). Si no avisáramos, el resto de
+   * la mesa seguiría viendo la CA vieja hasta recargar a mano.
+   */
+  private async avisarASusMesas(characterId: string): Promise<void> {
+    const sentado = await this.peps.find({ where: { characterId } });
+    for (const pep of sentado) {
+      this.gateway.emitirMesaCambiada(pep.partidaId);
+    }
   }
 
   async remove(id: string, ownerId: string): Promise<void> {

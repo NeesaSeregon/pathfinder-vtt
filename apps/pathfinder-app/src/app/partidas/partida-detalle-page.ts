@@ -1,8 +1,16 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import {
   Character,
+  CharacterUpsert,
   CONDICIONES,
   CONDICION_POR_ID,
   EstadoPersonajeEvento,
@@ -17,11 +25,12 @@ import { PartidasApi } from './partidas-api';
 import { PartidaSocket } from './partida-socket';
 import { CharactersApi } from '../characters/characters-api';
 import { FichaVista } from '../characters/ficha-vista';
+import { CharacterForm } from '../characters/character-form';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
 @Component({
   selector: 'app-partida-detalle-page',
-  imports: [FichaVista],
+  imports: [FichaVista, CharacterForm],
   templateUrl: './partida-detalle-page.html',
   styleUrl: './partida-detalle-page.scss',
 })
@@ -74,6 +83,17 @@ export class PartidaDetallePage {
   /** Ficha abierta en la modal de consulta (null = cerrada). */
   protected readonly fichaAbierta = signal<Character | null>(null);
   protected readonly cargandoFicha = signal(false);
+  /**
+   * ¿La ficha abierta es MÍA? Solo entonces se puede editar: el máster ve
+   * las fichas de su mesa, pero editarlas sigue siendo cosa del dueño (el
+   * servidor lo impone igualmente con un 404).
+   */
+  protected readonly fichaEsMia = signal(false);
+  /** Modo edición dentro de la modal (por defecto se abre en lectura). */
+  protected readonly editandoFicha = signal(false);
+  protected readonly guardandoFicha = signal(false);
+  /** Para preguntar antes de descartar cambios sin guardar (form.sucio()). */
+  private readonly formularioFicha = viewChild(CharacterForm);
 
   /** Combatientes (los que han tirado) en orden de turno, como el servidor. */
   protected readonly ordenIniciativa = computed(() =>
@@ -354,6 +374,8 @@ export class PartidaDetallePage {
     this.charactersApi.get(pep.characterId).subscribe({
       next: (ficha) => {
         this.fichaAbierta.set(ficha);
+        this.fichaEsMia.set(pep.esMio);
+        this.editandoFicha.set(false);
         this.cargandoFicha.set(false);
       },
       error: (err) => {
@@ -363,8 +385,44 @@ export class PartidaDetallePage {
     });
   }
 
+  protected editarFicha(): void {
+    this.editandoFicha.set(true);
+  }
+
+  /**
+   * Guarda la ficha desde la mesa. Al volver hay que RECARGAR la partida:
+   * la CA, los PG totales, la iniciativa y las casillas que ocupa son
+   * derivados de la ficha y los calcula el servidor.
+   */
+  protected guardarFicha(cambios: CharacterUpsert): void {
+    const ficha = this.fichaAbierta();
+    if (!ficha) {
+      return;
+    }
+    this.guardandoFicha.set(true);
+    this.charactersApi.update(ficha.id, cambios).subscribe({
+      next: (actualizada) => {
+        this.fichaAbierta.set(actualizada);
+        this.editandoFicha.set(false);
+        this.guardandoFicha.set(false);
+        this.cargar();
+      },
+      error: (err) => {
+        this.guardandoFicha.set(false);
+        this.error.set(`No se pudo guardar la ficha: ${mensajeDeError(err)}`);
+      },
+    });
+  }
+
   protected cerrarFicha(): void {
+    // Editando, no se cierra a lo bruto: se pregunta como en /personajes
+    if (this.editandoFicha() && this.formularioFicha()?.sucio()) {
+      if (!window.confirm('Tienes cambios sin guardar. ¿Descartar y cerrar?')) {
+        return;
+      }
+    }
     this.fichaAbierta.set(null);
+    this.editandoFicha.set(false);
   }
 
   /** Cierra la modal solo si el clic fue en el fondo, no dentro de la ventana. */
