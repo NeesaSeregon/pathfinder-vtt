@@ -117,6 +117,39 @@ describe('partidas', () => {
     // SISTEMA DE EFECTOS: aturdido baja la CA (base 10 → 8) en tiempo real
     cy.get('.mesa__personaje').should('contain', 'CA 8');
     cy.get('.mesa__personaje').should('contain', 'base 10');
+
+    // Reparto de columnas: las fichas a la izquierda, el turno a la derecha
+    cy.get('.mesa__panel--personajes .mesa__personaje').should('exist');
+    cy.get('.mesa__panel--juego .mesa__combate').should('exist');
+    cy.get('.mesa__panel--juego .mesa__dados').should('exist');
+    cy.get('.mesa__panel--juego .mesa__personaje').should('not.exist');
+  });
+
+  it('en escritorio la mesa ocupa el monitor: columnas a los extremos', () => {
+    cy.viewport(1920, 1080);
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre: `Ancho-${Date.now()}` }).then(
+      (res) => {
+        cy.visit(`/partidas/${res.body.id}`);
+
+        // La columna izquierda arranca pegada al borde (solo el padding)
+        cy.get('.mesa__panel--personajes').then(($izq) => {
+          expect($izq[0].getBoundingClientRect().left).to.be.lessThan(30);
+        });
+        // Y la derecha termina pegada al otro extremo
+        cy.get('.mesa__panel--juego').then(($der) => {
+          expect(1920 - $der[0].getBoundingClientRect().right).to.be.lessThan(30);
+        });
+
+        // El tablero queda centrado entre ambas: márgenes similares
+        cy.get('.tablero').then(($t) => {
+          const caja = $t[0].getBoundingClientRect();
+          const izquierda = caja.left;
+          const derecha = 1920 - caja.right;
+          expect(Math.abs(izquierda - derecha)).to.be.lessThan(40);
+        });
+      },
+    );
   });
 
   it('un participante tira los dados y el total aparece en el registro', () => {

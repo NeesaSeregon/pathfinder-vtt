@@ -59,50 +59,8 @@
     }
 
     <div class="mesa__contenido">
-      <div
-        class="tablero"
-        role="grid"
-        [class.tablero--con-mapa]="fondoTablero()"
-        [style.background-image]="fondoTablero()"
-      >
-        @for (y of filas; track y) {
-          @for (x of columnas; track x) {
-            <button
-              type="button"
-              class="tablero__celda"
-              [class.tablero__celda--destino]="
-                (seleccionado() || arrastrando()) && !ocupanteDe(x, y)
-              "
-              (click)="clickCelda(x, y)"
-              (dragover)="permitirSoltar($event)"
-              (drop)="soltarEn($event, x, y)"
-            >
-              @if (tokenEn(x, y); as pep) {
-                <span
-                  class="tablero__token"
-                  [style.background]="colorToken(pep.nombre)"
-                  [style.width]="ladoToken(pep)"
-                  [style.height]="ladoToken(pep)"
-                  [attr.data-casillas]="pep.casillas"
-                  [attr.draggable]="puedeMover(pep)"
-                  (dragstart)="iniciarArrastre($event, pep)"
-                  (dragend)="terminarArrastre()"
-                  [class.tablero__token--seleccionado]="
-                    seleccionado() === pep.id
-                  "
-                  [class.tablero__token--arrastrando]="arrastrando() === pep.id"
-                  [class.tablero__token--ajeno]="!puedeMover(pep)"
-                  [title]="pep.nombre"
-                >
-                  {{ iniciales(pep.nombre) }}
-                </span>
-              }
-            </button>
-          }
-        }
-      </div>
-
-      <aside class="mesa__panel">
+      <!-- Columna izquierda: quién está en la mesa y cómo está -->
+      <aside class="mesa__panel mesa__panel--personajes">
         <h2>Mesa ({{ p.personajes.length }})</h2>
         @for (pep of p.personajes; track pep.id) {
           <article class="mesa__personaje">
@@ -209,7 +167,53 @@
         } @empty {
           <p class="mesa__meta">Nadie se ha unido todavía.</p>
         }
+      </aside>
 
+      <div
+        class="tablero"
+        role="grid"
+        [class.tablero--con-mapa]="fondoTablero()"
+        [style.background-image]="fondoTablero()"
+      >
+        @for (y of filas; track y) {
+          @for (x of columnas; track x) {
+            <button
+              type="button"
+              class="tablero__celda"
+              [class.tablero__celda--destino]="
+                (seleccionado() || arrastrando()) && !ocupanteDe(x, y)
+              "
+              (click)="clickCelda(x, y)"
+              (dragover)="permitirSoltar($event)"
+              (drop)="soltarEn($event, x, y)"
+            >
+              @if (tokenEn(x, y); as pep) {
+                <span
+                  class="tablero__token"
+                  [style.background]="colorToken(pep.nombre)"
+                  [style.width]="ladoToken(pep)"
+                  [style.height]="ladoToken(pep)"
+                  [attr.data-casillas]="pep.casillas"
+                  [attr.draggable]="puedeMover(pep)"
+                  (dragstart)="iniciarArrastre($event, pep)"
+                  (dragend)="terminarArrastre()"
+                  [class.tablero__token--seleccionado]="
+                    seleccionado() === pep.id
+                  "
+                  [class.tablero__token--arrastrando]="arrastrando() === pep.id"
+                  [class.tablero__token--ajeno]="!puedeMover(pep)"
+                  [title]="pep.nombre"
+                >
+                  {{ iniciales(pep.nombre) }}
+                </span>
+              }
+            </button>
+          }
+        }
+      </div>
+
+      <!-- Columna derecha: lo que pasa en el turno (combate y dados) -->
+      <aside class="mesa__panel mesa__panel--juego">
         <section class="mesa__combate">
           <h2>Combate</h2>
           @if (p.enCombate) {

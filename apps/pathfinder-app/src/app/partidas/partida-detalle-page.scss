@@ -1,7 +1,9 @@
 .mesa {
-  max-width: 100rem;
-  margin: 0 auto;
-  padding: 1.25rem clamp(1rem, 3vw, 2rem) 2.5rem;
+  // A sangre: la mesa es la pantalla de trabajo y ocupa TODO el monitor.
+  // No lleva max-width (el resto de páginas sí) para que las columnas se
+  // peguen a los extremos y el tablero quede centrado entre ellas.
+  margin: 0;
+  padding: 1.25rem clamp(0.75rem, 1.2vw, 1.25rem) 2.5rem;
 
   &__cabecera {
     display: flex;
@@ -69,15 +71,25 @@
     }
   }
 
-  // -- Distribución principal: tablero + panel lateral ---------------------
+  // -- Distribución principal: tres columnas -------------------------------
+  // Quién está en la mesa (izquierda) | tablero | qué pasa ahora (derecha).
+  // Las fichas de personaje se fueron a su propia columna: apiladas con
+  // combate y dados dejaban la derecha larguísima y el tablero estrecho.
+  // Las columnas crecen un poco en monitores grandes (condiciones y registro
+  // de tiradas son lo que más agradece el ancho), pero con tope: pasado un
+  // punto, un panel más ancho solo aleja el tablero del centro.
   &__contenido {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 23rem;
-    gap: 1.5rem;
+    grid-template-columns:
+      clamp(21rem, 20vw, 27rem)
+      minmax(0, 1fr)
+      clamp(23rem, 21vw, 29rem);
+    grid-template-areas: 'personajes tablero juego';
+    gap: clamp(1rem, 1.5vw, 2rem);
     align-items: start;
   }
 
-  // -- Panel lateral: tarjetas apiladas, pegajoso y con scroll propio ------
+  // -- Paneles laterales: tarjetas apiladas, pegajosos y con scroll propio -
   &__panel {
     position: sticky;
     top: 1rem;
@@ -94,6 +106,14 @@
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--text-faint);
+    }
+
+    &--personajes {
+      grid-area: personajes;
+    }
+
+    &--juego {
+      grid-area: juego;
     }
   }
 
@@ -361,6 +381,7 @@
 
 // -- Tablero: rejilla responsive de celdas cuadradas -----------------------
 .tablero {
+  grid-area: tablero;
   display: grid;
   grid-template-columns: repeat(20, 1fr);
   grid-template-rows: repeat(15, 1fr);
@@ -469,9 +490,38 @@
   font-weight: 700;
 }
 
+// Pantalla mediana: no caben tres columnas sin ahogar el tablero. Los
+// personajes bajan a lo ancho, debajo del tablero, en rejilla de tarjetas.
+@media (max-width: 85rem) {
+  .mesa__contenido {
+    grid-template-columns: minmax(0, 1fr) 23rem;
+    grid-template-areas:
+      'tablero juego'
+      'personajes personajes';
+  }
+
+  .mesa__panel--personajes {
+    position: static;
+    max-height: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    align-content: start;
+
+    // El rótulo "Mesa (n)" ocupa su propia fila, no una celda de la rejilla
+    > h2,
+    > p {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
 @media (max-width: 60rem) {
   .mesa__contenido {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      'tablero'
+      'personajes'
+      'juego';
   }
 
   .mesa__panel {

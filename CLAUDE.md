@@ -213,10 +213,21 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   desconcertante. Se consulta en DOS pasos (ids primero) a propósito:
   filtrar por una relación anidada y cargar esa misma relación en una sola
   consulta hace que TypeORM devuelva solo las filas que casan.
-- Vista de partida en /partidas/:id: layout a ancho completo (máx 100rem)
-  con tablero responsive (rejilla de casillas cuadradas por aspect-ratio,
-  acotada por el alto de la ventana) y panel lateral tipo tarjetas, pegajoso
-  y con scroll propio. Tokens = avatares circulares con color propio por
+- Vista de partida en /partidas/:id: es la ÚNICA página A SANGRE (sin
+  max-width; las demás siguen centradas y acotadas). Es la pantalla de
+  trabajo: las columnas se pegan a los extremos del monitor y el tablero
+  queda centrado entre ellas. Los paneles crecen con clamp(21rem, 20vw,
+  27rem) y clamp(23rem, 21vw, 29rem) — con tope, porque pasado un punto un
+  panel más ancho solo aleja el tablero del centro. El padding lateral
+  coincide con el de la navbar (1.25rem) para que todo alinee. Tablero
+  responsive (rejilla de casillas cuadradas por aspect-ratio,
+  acotada por el alto de la ventana) y TRES columnas por grid-template-areas
+  ('personajes tablero juego', 21rem | 1fr | 23rem): las fichas de los
+  personajes a la IZQUIERDA y combate + dados a la DERECHA. Antes iba todo
+  apilado en el panel derecho, que quedaba larguísimo y estrechaba el
+  tablero. Ambos paneles son pegajosos y con scroll propio. Responsive:
+  a ≤85rem los personajes bajan a lo ancho bajo el tablero en rejilla de
+  tarjetas (auto-fill, 18rem) y a ≤60rem va todo en una columna. Tokens = avatares circulares con color propio por
   personaje (paleta --token-0..5 en styles.scss; colorToken() elige por hash
   del nombre). Mover en dos clics (banquillo para los no colocados), PG y
   condiciones editables y CA derivada POR EL SERVIDOR. Permisos: máster toca
