@@ -136,10 +136,10 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   para trabajar con vistas a la integración ficha-tablero.
 
 ## Mejoras futuras
-- PNJ: pendientes de una segunda vuelta si hacen falta en mesa — bestiario
-  reutilizable (hoy cada siembra crea fichas nuevas; no hay "sembrar desde
-  una plantilla ya creada"), ataques/daño en el bloque corto, y limpiar de
-  golpe los PNJ muertos al terminar el combate.
+- PNJ: pendientes de una segunda vuelta si hacen falta en mesa — ataques y
+  daño en el bloque corto (hoy solo lo que el tablero muestra: CA, PG,
+  iniciativa y tamaño; lo demás se rellena editando la ficha completa) y
+  limpiar de golpe los PNJ muertos al terminar el combate.
 - Recuperar contraseña por email ("la he olvidado"). Descartado de momento
   a conciencia: exige tabla de tokens de un solo uso con caducidad (+ su
   migración) y, sobre todo, un SERVICIO DE ENVÍO DE CORREO externo (Resend,
@@ -229,9 +229,26 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   filtrar: findAll(ownerId, tipo='pj') para que el bestiario no sepulte
   /personajes. El tipo NO viaja en CreateCharacterDto — por la API pública
   solo se crean PJ; 'pnj' lo pasa PartidasService como 3er argumento.
-- POST /api/partidas/:id/pnjs siembra N (PNJ_MAX_CANTIDAD=12). Crea UNA
-  FICHA POR COPIA (Goblin 1..N) porque el asiento es único por
-  (partida, personaje). Con cantidad=1 no se numera.
+- BESTIARIO: characters.plantillaId separa las dos clases de ficha PNJ.
+  · PLANTILLA (plantillaId null): el monstruo de tu colección. Persiste,
+    se reutiliza y es lo único que listan GET /api/characters?tipo=pnj y la
+    pestaña "Bestiario" de /personajes.
+  · INSTANCIA (plantillaId = id de la plantilla): la copia sentada en una
+    mesa, con sus PG y condiciones. Es DESECHABLE: sacarla de la mesa borra
+    su ficha (así se evita la basura que acumulaban las emboscadas). Ojo en
+    sacar(): un PJ o una PLANTILLA no se borran jamás por esa vía.
+  La FK es ON DELETE SET NULL, no CASCADE: borrar una plantilla del
+  bestiario no debe hacer desaparecer monstruos ya puestos en una mesa.
+  La instancia COPIA el sheetData (no lo referencia): retocar la plantilla
+  no cambia los monstruos ya sembrados a media partida.
+- POST /api/partidas/:id/pnjs crea la PLANTILLA + N instancias (todo lo
+  que creas queda reutilizable sin decidirlo antes).
+  POST /api/partidas/:id/pnjs/desde-plantilla siembra N copias de una ya
+  guardada, validando que la plantilla es tuya (404 si no).
+  N ≤ PNJ_MAX_CANTIDAD (12); con cantidad=1 no se numera el nombre.
+  UNA FICHA POR COPIA porque el asiento es único por (partida, personaje).
+  En la mesa, "+ Añadir PNJ" abre en el BESTIARIO si el máster ya tiene
+  monstruos guardados, y en el formulario si no tiene ninguno.
   Las estadísticas se piden por COMPONENTES (Destreza, armadura, escudo,
   natural, tamaño) como los da el Bestiario, NO como totales: así CA,
   iniciativa y huella salen de las mismas funciones puras que para un PJ y
@@ -249,6 +266,30 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   filtrar y delataría su casilla): emitirCambioDePep() los degrada a
   EVENTO_MESA_CAMBIADA, que hace recargar y vuelve a pasar por el filtro.
   PATCH :id/pnjs/:pepId revela u oculta (solo el máster).
+- LAS MESAS SON PRIVADAS. Hasta 2026-07-19 no lo eran: el buscador listaba
+  las 12 mesas más recientes DE TODO EL MUNDO, detalle() no comprobaba nada
+  y unir() no pedía el código — el código de invitación existía pero ningún
+  endpoint lo usaba, era decorativo. Cualquiera entraba en la mesa de otro.
+  Las cuatro puertas, cerradas y con test de regresión:
+  · detalle() y mapaDe() → solo participantes, y responden 404 (no 403: un
+    403 confirmaría que esa partida existe).
+  · unir() → EXIGE el código, salvo que ya seas participante (el máster, o
+    un jugador que trae un segundo personaje). Se compara en mayúsculas y
+    sin espacios.
+  · buscar() → sin texto devuelve []. Con texto: primero código EXACTO (la
+    invitación); si no casa, por nombre pero SOLO entre tus mesas. Ya no se
+    pueden enumerar mesas ajenas.
+  · El socket entrarSala() comprueba la pertenencia por su cuenta. Es fácil
+    de olvidar: los WebSockets NO pasan por el AuthGuard de HTTP, y antes
+    bastaba con mandar un partidaId para ver moverse los tokens de una mesa
+    ajena sin haberse unido. Por eso el gateway tiene sus propios repos.
+- POST /api/partidas/:id/codigo regenera el código (solo el máster): la
+  respuesta barata a "se me ha filtrado" — los de dentro siguen dentro y el
+  viejo deja de abrir. Se prefirió a una cola de solicitudes con aprobación
+  manual, que para una mesa de amigos es artillería pesada.
+  En el front, la caja de búsqueda hace de campo de código: el texto se
+  reenvía como codigo al unirse, pero solo si mide ≤8 (un nombre largo no
+  puede ser un código de 6, y mandarlo rompería la validación del DTO).
 - GET /api/partidas/mias: las mesas del usuario (las que dirige + aquellas
   donde tiene algún personaje sentado), sin tope. Devuelve MiPartidaResumen
   (PartidaResumen + soyMaster + misPersonajes). Se declara ANTES de

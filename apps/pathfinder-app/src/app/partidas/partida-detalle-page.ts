@@ -10,6 +10,8 @@ import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import {
   ACTITUD_LABELS,
+  ACTITUDES,
+  ActitudPnj,
   Character,
   CharacterUpsert,
   CONDICIONES,
@@ -85,10 +87,18 @@ export class PartidaDetallePage {
 
   protected readonly actitudLabels = ACTITUD_LABELS;
 
-  /** Formulario de siembra de PNJ (solo el máster). */
+  /** Siembra de PNJ (solo el máster): desde el bestiario o creando uno nuevo. */
   protected readonly pnjAbierto = signal(false);
+  protected readonly modoPnj = signal<'bestiario' | 'nuevo'>('bestiario');
+  protected readonly bestiario = signal<Character[]>([]);
   protected readonly creandoPnj = signal(false);
   protected readonly errorPnj = signal<string | null>(null);
+
+  /** Opciones de la siembra desde plantilla (las estadísticas ya están). */
+  protected readonly cantidadPlantilla = signal(1);
+  protected readonly actitudPlantilla = signal<ActitudPnj>('enemigo');
+  protected readonly ocultoPlantilla = signal(false);
+  protected readonly actitudes = ACTITUDES;
 
   /** Ficha abierta en la modal de consulta (null = cerrada). */
   protected readonly fichaAbierta = signal<Character | null>(null);
@@ -206,6 +216,24 @@ export class PartidaDetallePage {
       },
       error: (err) =>
         this.error.set(`No se pudo subir el mapa: ${mensajeDeError(err)}`),
+    });
+  }
+
+  /** Cambia el código de invitación: la salida barata si se filtra. */
+  protected regenerarCodigo(): void {
+    if (
+      !window.confirm(
+        'Se generará un código nuevo y el anterior dejará de servir. ' +
+          'Los que ya están en la mesa siguen dentro. ¿Continuar?',
+      )
+    ) {
+      return;
+    }
+    this.error.set(null);
+    this.api.regenerarCodigo(this.partidaId).subscribe({
+      next: (partida) => this.partida.set(partida),
+      error: (err) =>
+        this.error.set(`No se pudo cambiar el código: ${mensajeDeError(err)}`),
     });
   }
 
@@ -467,10 +495,45 @@ export class PartidaDetallePage {
     return `var(--token-${suma % 6})`;
   }
 
-  /** El máster siembra PNJ: enemigos, aliados o figurantes. */
+  /**
+   * El máster siembra PNJ. Se abre en el BESTIARIO si ya tiene monstruos
+   * guardados (el caso frecuente en cuanto lleva un par de sesiones) y en
+   * el formulario si aún no tiene ninguno.
+   */
   protected abrirPnj(): void {
     this.pnjAbierto.set(true);
     this.errorPnj.set(null);
+    this.charactersApi.bestiario().subscribe({
+      next: (plantillas) => {
+        this.bestiario.set(plantillas);
+        this.modoPnj.set(plantillas.length > 0 ? 'bestiario' : 'nuevo');
+      },
+      // Sin bestiario disponible siempre queda crear uno a mano
+      error: () => this.modoPnj.set('nuevo'),
+    });
+  }
+
+  protected sembrarDesdePlantilla(plantillaId: string): void {
+    this.errorPnj.set(null);
+    this.creandoPnj.set(true);
+    this.api
+      .sembrarDesdePlantilla(this.partidaId, {
+        plantillaId,
+        cantidad: this.cantidadPlantilla(),
+        actitud: this.actitudPlantilla(),
+        oculto: this.ocultoPlantilla(),
+      })
+      .subscribe({
+        next: (partida) => {
+          this.partida.set(partida);
+          this.creandoPnj.set(false);
+          this.pnjAbierto.set(false);
+        },
+        error: (err) => {
+          this.creandoPnj.set(false);
+          this.errorPnj.set(mensajeDeError(err));
+        },
+      });
   }
 
   protected cerrarPnj(): void {

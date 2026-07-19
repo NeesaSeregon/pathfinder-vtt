@@ -11,6 +11,16 @@
           máster {{ p.master }}
           @if (p.codigo) {
             <span class="mesa__codigo">código {{ p.codigo }}</span>
+            <!-- Si el código se filtra, cambiarlo cierra la puerta sin
+                 echar a nadie de los que ya están dentro. -->
+            <button
+              type="button"
+              class="mesa__codigo-cambiar"
+              title="Genera un código nuevo; el anterior deja de servir"
+              (click)="regenerarCodigo()"
+            >
+              cambiar
+            </button>
           }
         </p>
       </div>
@@ -346,12 +356,108 @@
             ✕
           </button>
         </header>
-        <app-pnj-form
-          [guardando]="creandoPnj()"
-          [error]="errorPnj()"
-          (crear)="crearPnjs($event)"
-          (cancelar)="cerrarPnj()"
-        />
+
+        <!-- Dos caminos: reutilizar del bestiario o crear uno nuevo -->
+        <div class="mesa__pestanas" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            [class.mesa__pestana--activa]="modoPnj() === 'bestiario'"
+            [attr.aria-selected]="modoPnj() === 'bestiario'"
+            (click)="modoPnj.set('bestiario')"
+          >
+            Del bestiario ({{ bestiario().length }})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [class.mesa__pestana--activa]="modoPnj() === 'nuevo'"
+            [attr.aria-selected]="modoPnj() === 'nuevo'"
+            (click)="modoPnj.set('nuevo')"
+          >
+            Crear uno nuevo
+          </button>
+        </div>
+
+        @if (modoPnj() === 'bestiario') {
+          @if (bestiario().length === 0) {
+            <p class="mesa__meta">
+              Tu bestiario está vacío. Crea un monstruo en la otra pestaña y
+              se guardará aquí para las próximas sesiones.
+            </p>
+          } @else {
+            <!-- Estas tres opciones valen para el que elijas: se rellenan
+                 antes de pulsar, no hay un segundo paso. -->
+            <div class="mesa__siembra-opciones">
+              <label>
+                Cantidad
+                <input
+                  type="number"
+                  name="cantidadPlantilla"
+                  min="1"
+                  [value]="cantidadPlantilla()"
+                  (change)="
+                    cantidadPlantilla.set(+$any($event.target).value || 1)
+                  "
+                />
+              </label>
+              <label>
+                Actitud
+                <select
+                  name="actitudPlantilla"
+                  (change)="actitudPlantilla.set($any($event.target).value)"
+                >
+                  @for (a of actitudes; track a) {
+                    <option
+                      [value]="a"
+                      [selected]="a === actitudPlantilla()"
+                    >
+                      {{ actitudLabels[a] }}
+                    </option>
+                  }
+                </select>
+              </label>
+              <label class="mesa__siembra-oculto">
+                <input
+                  type="checkbox"
+                  name="ocultoPlantilla"
+                  [checked]="ocultoPlantilla()"
+                  (change)="ocultoPlantilla.set($any($event.target).checked)"
+                />
+                Empezar oculto
+              </label>
+            </div>
+
+            @if (errorPnj(); as mensaje) {
+              <p class="acceso__error" role="alert">{{ mensaje }}</p>
+            }
+
+            <ul class="mesa__bestiario">
+              @for (plantilla of bestiario(); track plantilla.id) {
+                <li>
+                  <div>
+                    <strong>{{ plantilla.name }}</strong>
+                    <small>nivel {{ plantilla.level }}</small>
+                  </div>
+                  <button
+                    type="button"
+                    [disabled]="creandoPnj()"
+                    (click)="sembrarDesdePlantilla(plantilla.id)"
+                  >
+                    Traer al tablero
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        } @else {
+          <app-pnj-form
+            [guardando]="creandoPnj()"
+            [error]="errorPnj()"
+            (crear)="crearPnjs($event)"
+            (cancelar)="cerrarPnj()"
+          />
+        }
       </div>
     </div>
   }

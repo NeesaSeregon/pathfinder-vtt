@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { JwtPayload } from '@pathfinder/shared';
 import { CharactersService } from './characters.service';
@@ -28,9 +29,16 @@ export class CharactersController {
     return this.charactersService.create(createCharacterDto, user.sub);
   }
 
+  /** ?tipo=pnj devuelve el BESTIARIO (plantillas); por defecto, tus PJ. */
   @Get()
-  findAll(@CurrentUser() user: JwtPayload) {
-    return this.charactersService.findAll(user.sub);
+  findAll(
+    @CurrentUser() user: JwtPayload,
+    @Query('tipo') tipo?: string,
+  ) {
+    return this.charactersService.findAll(
+      user.sub,
+      tipo === 'pnj' ? 'pnj' : 'pj',
+    );
   }
 
   @Get(':id')

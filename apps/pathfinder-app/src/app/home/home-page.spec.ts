@@ -44,8 +44,9 @@ describe('HomePage', () => {
     sesion.establecer(username);
     await fixture.whenStable();
     httpMock.expectOne('/api/partidas/mias').flush(MIS_MESAS);
-    // El panel de unirse pide lo suyo al crearse
-    httpMock.expectOne('/api/partidas').flush([]);
+    // El panel de unirse solo pide tus personajes: ya NO lista partidas
+    // al crearse (el buscador dejó de ser un catálogo de mesas ajenas).
+    httpMock.expectNone('/api/partidas');
     httpMock.expectOne('/api/characters').flush([]);
     await fixture.whenStable();
   }
@@ -106,7 +107,7 @@ describe('HomePage', () => {
     sesion.establecer('neesa');
     await fixture.whenStable();
     httpMock.expectOne('/api/partidas/mias').flush([]);
-    httpMock.expectOne('/api/partidas').flush([]);
+    httpMock.expectNone('/api/partidas');
     httpMock.expectOne('/api/characters').flush([]);
     await fixture.whenStable();
 

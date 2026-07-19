@@ -1,5 +1,5 @@
 import { inject, Service } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Character, CharacterUpsert } from '@pathfinder/shared';
 
@@ -10,6 +10,13 @@ export class CharactersApi {
 
   list(): Observable<Character[]> {
     return this.http.get<Character[]>(this.baseUrl);
+  }
+
+  /** El BESTIARIO: las plantillas de PNJ del máster, listas para sembrar. */
+  bestiario(): Observable<Character[]> {
+    return this.http.get<Character[]>(this.baseUrl, {
+      params: new HttpParams().set('tipo', 'pnj'),
+    });
   }
 
   /** Una ficha por id. La API permite leerla al dueño o al máster de su mesa. */

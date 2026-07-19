@@ -53,9 +53,16 @@ describe('PartidasService', () => {
       ...x,
     })),
     findOneBy: jest.fn(),
+    find: jest.fn(),
     remove: jest.fn(),
   };
-  const characters = { findOne: jest.fn(), create: jest.fn() };
+  const characters = {
+    findOne: jest.fn(),
+    create: jest.fn(),
+    crearInstancia: jest.fn(),
+    plantilla: jest.fn(),
+    borrarPorId: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -102,6 +109,7 @@ describe('PartidasService', () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',
       masterId: 'master',
+      codigo: 'ABC234',
       personajes: [],
     });
     pepsRepo.findOneBy.mockResolvedValue(null);
@@ -113,7 +121,7 @@ describe('PartidasService', () => {
       sheetData: { pg: { total: 45 } },
     });
 
-    const pep = await service.unir('partida-1', 'char-1', 'user-1');
+    const pep = await service.unir('partida-1', 'char-1', 'user-1', 'ABC234');
     expect(pep.pgActuales).toBe(45);
     expect(pep.pgTotal).toBe(45);
   });
@@ -122,13 +130,14 @@ describe('PartidasService', () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',
       masterId: 'master',
+      codigo: 'ABC234',
       personajes: [],
     });
     characters.findOne.mockResolvedValue({ id: 'char-1', sheetData: {} });
     pepsRepo.findOneBy.mockResolvedValue({ id: 'pep-existente' });
 
     await expect(
-      service.unir('partida-1', 'char-1', 'user-1'),
+      service.unir('partida-1', 'char-1', 'user-1', 'ABC234'),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
@@ -150,20 +159,19 @@ describe('PartidasService', () => {
   });
 
   it('el código de invitación solo lo ve el máster', async () => {
-    partidasRepo.find.mockResolvedValue([
-      {
-        id: 'partida-1',
-        nombre: 'Mesa',
-        descripcion: '',
-        estado: 'preparacion',
-        codigo: 'ABC234',
-        masterId: 'user-1',
-        master: { username: 'neesa' },
-        personajes: [],
-      },
-    ]);
-    const propias = await service.buscar(undefined, 'user-1');
-    const ajenas = await service.buscar(undefined, 'user-2');
+    // Se busca por el código, que es el único camino a una mesa ajena
+    partidasRepo.findOne.mockResolvedValue({
+      id: 'partida-1',
+      nombre: 'Mesa',
+      descripcion: '',
+      estado: 'preparacion',
+      codigo: 'ABC234',
+      masterId: 'user-1',
+      master: { username: 'neesa' },
+      personajes: [],
+    });
+    const propias = await service.buscar('ABC234', 'user-1');
+    const ajenas = await service.buscar('ABC234', 'user-2');
     expect(propias[0].codigo).toBe('ABC234');
     expect(ajenas[0].codigo).toBeUndefined();
   });
@@ -526,6 +534,135 @@ describe('PartidasService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  /**
+   * Regresión de un agujero real: cualquiera veía las mesas de todos en el
+   * buscador, entraba con el id y se sentaba sin código. El código de
+   * invitación existía pero NO lo pedía ningún endpoint.
+   */
+  describe('la mesa es privada', () => {
+    const mesaAjena = () => ({
+      id: 'partida-1',
+      nombre: 'Mesa del admin',
+      descripcion: '',
+      estado: 'preparacion',
+      codigo: 'ABC234',
+      masterId: 'admin',
+      master: { username: 'admin' },
+      mapaFichero: 'mapa.png',
+      enCombate: false,
+      ronda: 0,
+      turnoPepId: null,
+      personajes: [
+        {
+          id: 'pep-1',
+          characterId: 'char-1',
+          oculto: false,
+          condiciones: [],
+          character: { ownerId: 'otro-jugador', name: 'Valeros', tipo: 'pj' },
+        },
+      ],
+    });
+
+    it('detalle: un extraño recibe 404, no la mesa', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaAjena());
+      await expect(
+        service.detalle('partida-1', 'neesa'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('detalle: el máster y los jugadores sentados sí la ven', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaAjena());
+      await expect(service.detalle('partida-1', 'admin')).resolves.toBeTruthy();
+      await expect(
+        service.detalle('partida-1', 'otro-jugador'),
+      ).resolves.toBeTruthy();
+    });
+
+    it('unir: sin código no se entra, aunque tengas el id', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaAjena());
+      await expect(
+        service.unir('partida-1', 'char-9', 'neesa'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('unir: con el código equivocado tampoco', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaAjena());
+      await expect(
+        service.unir('partida-1', 'char-9', 'neesa', 'XXXXXX'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('unir: el código vale sin importar mayúsculas ni espacios', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaAjena());
+      pepsRepo.findOneBy.mockResolvedValue(null);
+      characters.findOne.mockResolvedValue({ id: 'char-9', sheetData: {} });
+
+      await expect(
+        service.unir('partida-1', 'char-9', 'neesa', ' abc234 '),
+      ).resolves.toBeTruthy();
+    });
+
+    it('unir: quien YA está en la mesa no vuelve a teclear el código', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaAjena());
+      pepsRepo.findOneBy.mockResolvedValue(null);
+      characters.findOne.mockResolvedValue({ id: 'char-2', sheetData: {} });
+
+      // El máster trae un PNJ suyo, el jugador un segundo personaje
+      await expect(
+        service.unir('partida-1', 'char-2', 'admin'),
+      ).resolves.toBeTruthy();
+      await expect(
+        service.unir('partida-1', 'char-2', 'otro-jugador'),
+      ).resolves.toBeTruthy();
+    });
+
+    it('buscar sin texto ya NO enumera las mesas de todo el mundo', async () => {
+      await expect(service.buscar(undefined, 'neesa')).resolves.toEqual([]);
+      await expect(service.buscar('   ', 'neesa')).resolves.toEqual([]);
+      expect(partidasRepo.find).not.toHaveBeenCalled();
+    });
+
+    it('buscar por nombre no encuentra mesas ajenas', async () => {
+      // No participa en ninguna: sin mesas propias, sin resultados
+      pepsRepo.find.mockResolvedValue([]);
+      partidasRepo.find.mockResolvedValue([]);
+      partidasRepo.findOne.mockResolvedValue(null); // no es un código
+
+      const encontradas = await service.buscar('Mesa del admin', 'neesa');
+      expect(encontradas).toEqual([]);
+    });
+
+    it('buscar por código exacto sí devuelve la mesa (es la invitación)', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaAjena());
+      const encontradas = await service.buscar('abc234', 'neesa');
+      expect(encontradas).toHaveLength(1);
+      expect(encontradas[0].nombre).toBe('Mesa del admin');
+    });
+
+    it('el mapa de una mesa ajena no se sirve', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaAjena());
+      await expect(
+        service.mapaDe('partida-1', 'neesa'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.mapaDe('partida-1', 'admin')).resolves.toBe(
+        'mapa.png',
+      );
+    });
+
+    it('regenerar el código lo cambia y es cosa del máster', async () => {
+      const mesa = mesaAjena();
+      partidasRepo.findOne.mockResolvedValue(mesa);
+
+      await expect(
+        service.regenerarCodigo('partida-1', 'otro-jugador'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      await service.regenerarCodigo('partida-1', 'admin');
+      expect(mesa.codigo).not.toBe('ABC234');
+      expect(mesa.codigo).toMatch(/^[A-HJ-KM-NP-Z2-9]{6}$/);
+    });
+  });
+
   describe('PNJ', () => {
     /** Una mesa con un PJ a la vista y un goblin escondido esperando. */
     const mesaConEmboscada = () => ({
@@ -603,11 +740,16 @@ describe('PartidasService', () => {
       expect(gateway.emitirEstadoPersonaje).toHaveBeenCalled();
     });
 
-    it('sembrar 3 goblins crea 3 fichas numeradas y 3 asientos', async () => {
+    /** Crear un monstruo deja UNA plantilla + N instancias sentadas. */
+    it('sembrar 3 goblins guarda 1 plantilla y crea 3 instancias', async () => {
       partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
       characters.create.mockImplementation(async (dto) => ({
-        id: `char-${dto.name}`,
+        id: 'plantilla-goblin',
         ...dto,
+      }));
+      characters.crearInstancia.mockImplementation(async (_p, nombre) => ({
+        id: `char-${nombre}`,
+        name: nombre,
       }));
 
       await service.crearPnjs(
@@ -622,13 +764,131 @@ describe('PartidasService', () => {
         'master',
       );
 
-      const nombres = characters.create.mock.calls.map((c) => c[0].name);
-      expect(nombres).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3']);
-      // Siempre como PNJ, nunca como PJ del máster
+      // La plantilla se crea UNA vez, con el nombre sin numerar
+      expect(characters.create).toHaveBeenCalledTimes(1);
+      expect(characters.create.mock.calls[0][0].name).toBe('Goblin');
       expect(characters.create.mock.calls[0][2]).toBe('pnj');
+
+      // Y de ella salen 3 instancias numeradas, con su asiento cada una
+      const nombres = characters.crearInstancia.mock.calls.map((c) => c[1]);
+      expect(nombres).toEqual(['Goblin 1', 'Goblin 2', 'Goblin 3']);
       expect(pepsRepo.save).toHaveBeenCalledTimes(3);
       // Arrancan con los PG llenos del bloque de estadísticas
       expect(pepsRepo.create.mock.calls[0][0].pgActuales).toBe(6);
+    });
+
+    it('sembrar desde el bestiario NO crea plantilla nueva, solo copias', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      characters.plantilla.mockResolvedValue({
+        id: 'plantilla-goblin',
+        name: 'Goblin',
+        level: 1,
+        sheetData: { pg: { total: 6 } },
+      });
+      characters.crearInstancia.mockImplementation(async (_p, nombre) => ({
+        id: `char-${nombre}`,
+        name: nombre,
+      }));
+
+      await service.sembrarDesdePlantilla(
+        'partida-1',
+        {
+          plantillaId: 'plantilla-goblin',
+          cantidad: 2,
+          actitud: 'enemigo',
+          oculto: false,
+        },
+        'master',
+      );
+
+      expect(characters.create).not.toHaveBeenCalled();
+      expect(characters.crearInstancia).toHaveBeenCalledTimes(2);
+      // Los PG salen de la plantilla, sin volver a teclearlos
+      expect(pepsRepo.create.mock.calls[0][0].pgActuales).toBe(6);
+    });
+
+    it('sembrar del bestiario ajeno es imposible: lo valida la plantilla', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConEmboscada());
+      characters.plantilla.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        service.sembrarDesdePlantilla(
+          'partida-1',
+          {
+            plantillaId: 'de-otro',
+            cantidad: 1,
+            actitud: 'enemigo',
+            oculto: false,
+          },
+          'master',
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(characters.crearInstancia).not.toHaveBeenCalled();
+    });
+
+    // La basura que acumulaban las emboscadas: cada instancia sacada de la
+    // mesa se lleva su ficha. La PLANTILLA y los PJ nunca se tocan.
+    it('sacar una instancia de PNJ borra también su ficha', async () => {
+      partidasRepo.findOne.mockResolvedValue({
+        id: 'partida-1',
+        masterId: 'master',
+        personajes: [
+          {
+            id: 'pep-goblin',
+            character: {
+              id: 'char-goblin',
+              ownerId: 'master',
+              tipo: 'pnj',
+              plantillaId: 'plantilla-goblin',
+            },
+          },
+        ],
+      });
+
+      await service.sacar('partida-1', 'pep-goblin', 'master');
+      expect(characters.borrarPorId).toHaveBeenCalledWith('char-goblin');
+    });
+
+    it('sacar un PJ NO borra su ficha (es del jugador)', async () => {
+      partidasRepo.findOne.mockResolvedValue({
+        id: 'partida-1',
+        masterId: 'master',
+        personajes: [
+          {
+            id: 'pep-pj',
+            character: {
+              id: 'char-pj',
+              ownerId: 'jugador',
+              tipo: 'pj',
+              plantillaId: null,
+            },
+          },
+        ],
+      });
+
+      await service.sacar('partida-1', 'pep-pj', 'master');
+      expect(characters.borrarPorId).not.toHaveBeenCalled();
+    });
+
+    it('sacar una PLANTILLA sentada a mano no la borra del bestiario', async () => {
+      partidasRepo.findOne.mockResolvedValue({
+        id: 'partida-1',
+        masterId: 'master',
+        personajes: [
+          {
+            id: 'pep-plantilla',
+            character: {
+              id: 'char-plantilla',
+              ownerId: 'master',
+              tipo: 'pnj',
+              plantillaId: null, // es plantilla, no instancia
+            },
+          },
+        ],
+      });
+
+      await service.sacar('partida-1', 'pep-plantilla', 'master');
+      expect(characters.borrarPorId).not.toHaveBeenCalled();
     });
 
     it('con una sola copia no se numera el nombre', async () => {
@@ -636,6 +896,10 @@ describe('PartidasService', () => {
       characters.create.mockImplementation(async (dto) => ({
         id: 'char-x',
         ...dto,
+      }));
+      characters.crearInstancia.mockImplementation(async (_p, nombre) => ({
+        id: 'inst-x',
+        name: nombre,
       }));
 
       await service.crearPnjs(
@@ -685,6 +949,10 @@ describe('PartidasService', () => {
       characters.create.mockImplementation(async (dto) => ({
         id: 'char-x',
         ...dto,
+      }));
+      characters.crearInstancia.mockImplementation(async (_p, nombre) => ({
+        id: 'inst-x',
+        name: nombre,
       }));
 
       await service.crearPnjs(

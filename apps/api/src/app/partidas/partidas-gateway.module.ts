@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { PartidasGateway } from './partidas.gateway';
+import { Partida } from './entities/partida.entity';
+import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
 
 /**
  * El gateway vive en su propio módulo porque lo necesitan DOS: PartidasModule
@@ -9,6 +12,9 @@ import { PartidasGateway } from './partidas.gateway';
  * CharactersModule. Solo depende de JwtService, que es global.
  */
 @Module({
+  // El gateway consulta la pertenencia por su cuenta al entrar en una sala:
+  // los WebSockets no pasan por el AuthGuard de HTTP.
+  imports: [TypeOrmModule.forFeature([Partida, PersonajeEnPartida])],
   providers: [PartidasGateway],
   exports: [PartidasGateway],
 })

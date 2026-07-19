@@ -9,6 +9,7 @@ import {
   PartidaDetalle,
   PartidaResumen,
   PersonajeEnPartidaResumen,
+  SembrarPnj,
   TiradaResultado,
 } from '@pathfinder/shared';
 
@@ -41,6 +42,17 @@ export class PartidasApi {
     );
   }
 
+  /** Trae copias de un monstruo del bestiario (solo el máster). */
+  sembrarDesdePlantilla(
+    partidaId: string,
+    datos: SembrarPnj,
+  ): Observable<PartidaDetalle> {
+    return this.http.post<PartidaDetalle>(
+      `${this.baseUrl}/${partidaId}/pnjs/desde-plantilla`,
+      datos,
+    );
+  }
+
   /** Revela u oculta un PNJ del tablero (solo el máster). */
   revelarPnj(
     partidaId: string,
@@ -57,13 +69,26 @@ export class PartidasApi {
     return this.http.get<PartidaDetalle>(`${this.baseUrl}/${id}`);
   }
 
+  /**
+   * Se sienta en una mesa. El código es la invitación: hace falta salvo que
+   * ya estés dentro (el máster, o un jugador con un segundo personaje).
+   */
   unir(
     partidaId: string,
     characterId: string,
+    codigo?: string,
   ): Observable<PersonajeEnPartidaResumen> {
     return this.http.post<PersonajeEnPartidaResumen>(
       `${this.baseUrl}/${partidaId}/personajes`,
-      { characterId },
+      { characterId, codigo },
+    );
+  }
+
+  /** Cambia el código de invitación de la mesa (solo el máster). */
+  regenerarCodigo(partidaId: string): Observable<PartidaDetalle> {
+    return this.http.post<PartidaDetalle>(
+      `${this.baseUrl}/${partidaId}/codigo`,
+      {},
     );
   }
 

@@ -24,6 +24,7 @@ import {
   CreatePartidaDto,
   CrearPnjDto,
   RevelarPnjDto,
+  SembrarPnjDto,
   TirarDadosDto,
   UnirsePartidaDto,
   UpdatePartidaDto,
@@ -90,6 +91,16 @@ export class PartidasController {
     return this.partidas.crearPnjs(id, dto, user.sub);
   }
 
+  /** Trae copias de un monstruo del bestiario. Solo el máster. */
+  @Post(':id/pnjs/desde-plantilla')
+  sembrarDesdePlantilla(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SembrarPnjDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.sembrarDesdePlantilla(id, dto, user.sub);
+  }
+
   /** Revela (o vuelve a esconder) un PNJ del tablero. Solo el máster. */
   @Patch(':id/pnjs/:pepId')
   revelarPnj(
@@ -107,7 +118,16 @@ export class PartidasController {
     @Body() dto: UnirsePartidaDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.partidas.unir(id, dto.characterId, user.sub);
+    return this.partidas.unir(id, dto.characterId, user.sub, dto.codigo);
+  }
+
+  /** Cambia el código de invitación (por si se filtra). Solo el máster. */
+  @Post(':id/codigo')
+  regenerarCodigo(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.regenerarCodigo(id, user.sub);
   }
 
   @Patch(':id/personajes/:pepId')
@@ -138,8 +158,9 @@ export class PartidasController {
   @Header('Cache-Control', 'private, max-age=60')
   async verMapa(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
   ): Promise<StreamableFile> {
-    const fichero = await this.partidas.mapaDe(id);
+    const fichero = await this.partidas.mapaDe(id, user.sub);
     const extension = fichero.slice(fichero.lastIndexOf('.'));
     const tipo =
       Object.keys(MAPA_TIPOS).find((mime) => MAPA_TIPOS[mime] === extension) ??

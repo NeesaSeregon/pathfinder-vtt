@@ -38,8 +38,8 @@ export class UnirsePanel {
   protected readonly error = signal<string | null>(null);
 
   constructor() {
-    // Al entrar: las últimas partidas y tus personajes para el selector
-    this.buscar();
+    // Ya NO se listan partidas al entrar: el buscador dejó de ser un
+    // catálogo de mesas ajenas. Solo se cargan tus personajes.
     this.charactersApi.list().subscribe({
       next: (personajes) => this.misPersonajes.set(personajes),
       error: () => undefined,
@@ -58,14 +58,23 @@ export class UnirsePanel {
   protected unirse(partida: PartidaResumen): void {
     this.mensaje.set(null);
     this.error.set(null);
-    this.api.unir(partida.id, this.personajeElegido()).subscribe({
-      next: (pep) => {
-        this.mensaje.set(`${pep.nombre} se ha unido a «${partida.nombre}»`);
-        this.buscar(); // refresca el nº de personajes
-        this.unido.emit();
-      },
-      error: (err) =>
-        this.error.set(`No se pudo unir: ${mensajeDeError(err)}`),
-    });
+    // La caja de búsqueda hace de campo de código: si buscaste por código,
+    // el texto ES la llave y se reenvía sin pedírtelo dos veces. Un texto
+    // más largo no puede ser un código (son 6), así que no se manda —
+    // buscar por nombre solo encuentra mesas donde ya estás, y ahí no hace
+    // falta ninguna llave.
+    const texto = this.busqueda().trim();
+    const codigo = texto.length <= 8 ? texto : undefined;
+    this.api
+      .unir(partida.id, this.personajeElegido(), codigo)
+      .subscribe({
+        next: (pep) => {
+          this.mensaje.set(`${pep.nombre} se ha unido a «${partida.nombre}»`);
+          this.buscar(); // refresca el nº de personajes
+          this.unido.emit();
+        },
+        error: (err) =>
+          this.error.set(`No se pudo unir: ${mensajeDeError(err)}`),
+      });
   }
 }

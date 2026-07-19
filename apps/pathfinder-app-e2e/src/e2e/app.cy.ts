@@ -125,6 +125,84 @@ describe('partidas', () => {
     cy.get('.mesa__panel--juego .mesa__personaje').should('not.exist');
   });
 
+  // Regresión del agujero que encontró Neesa: entrar en la mesa de otro sin
+  // invitación, a través de las partidas sugeridas del buscador.
+  it('la mesa de otro es privada: ni se lista, ni se ve, ni se entra', () => {
+    const sufijo = Date.now();
+    const nombre = `Privada-${sufijo}`;
+
+    cy.login(`dueno-${sufijo}`, `dueno-${sufijo}@mesa.es`, 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre }).then((mesa) => {
+      const partidaId = mesa.body.id;
+      const codigo = mesa.body.codigo;
+
+      // Entra un extraño con su personaje
+      cy.login(`neesa-${sufijo}`, `neesa-${sufijo}@mesa.es`, 'contraseña-larga');
+      cy.request('POST', '/api/characters', {
+        name: `Neesa-${sufijo}`,
+        level: 1,
+        sheetData: {},
+      })
+        .its('body.id')
+        .then((characterId) => {
+          // 1. El buscador ya NO sugiere mesas ajenas
+          cy.request('/api/partidas').its('body').should('have.length', 0);
+
+          // 2. Ni aparece buscándola por su nombre exacto
+          cy.request(`/api/partidas?buscar=${nombre}`)
+            .its('body')
+            .should('have.length', 0);
+
+          // 3. Con el id en la mano, la mesa no existe para él
+          cy.request({
+            url: `/api/partidas/${partidaId}`,
+            failOnStatusCode: false,
+          })
+            .its('status')
+            .should('eq', 404);
+
+          // 4. Y no puede sentarse sin el código
+          cy.request({
+            method: 'POST',
+            url: `/api/partidas/${partidaId}/personajes`,
+            body: { characterId },
+            failOnStatusCode: false,
+          })
+            .its('status')
+            .should('eq', 403);
+
+          // 5. Con el código sí: es la invitación
+          cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
+            characterId,
+            codigo,
+          });
+          cy.visit(`/partidas/${partidaId}`);
+          cy.get('h1').should('contain', nombre);
+        });
+    });
+  });
+
+  it('el máster puede cambiar el código si se le filtra', () => {
+    const sufijo = Date.now();
+    cy.login(`rot-${sufijo}`, `rot-${sufijo}@mesa.es`, 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre: `Rotar-${sufijo}` }).then(
+      (mesa) => {
+        const viejo = mesa.body.codigo;
+        cy.visit(`/partidas/${mesa.body.id}`);
+        cy.contains('.mesa__codigo', viejo);
+
+        cy.on('window:confirm', () => true);
+        cy.contains('.mesa__codigo-cambiar', 'cambiar').click();
+
+        // El código cambia en pantalla y el viejo deja de encontrar la mesa
+        cy.get('.mesa__codigo').should('not.contain', viejo);
+        cy.request(`/api/partidas?buscar=${viejo}`)
+          .its('body')
+          .should('have.length', 0);
+      },
+    );
+  });
+
   it('en escritorio la mesa ocupa el monitor: columnas a los extremos', () => {
     cy.viewport(1920, 1080);
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
@@ -202,9 +280,11 @@ describe('partidas', () => {
 
     // El máster monta la mesa
     cy.login(`m-${sufijo}`, `m-${sufijo}@mesa.es`, 'contraseña-larga');
-    cy.request('POST', '/api/partidas', { nombre })
-      .its('body.id')
-      .then((partidaId) => {
+    cy.request('POST', '/api/partidas', { nombre }).then((mesa) => {
+      const partidaId = mesa.body.id;
+      // El código es la invitación: sin él el jugador no podría sentarse
+      const codigo = mesa.body.codigo;
+      {
         // El jugador se sienta con su personaje de nivel 3
         cy.login(`j-${sufijo}`, `j-${sufijo}@mesa.es`, 'contraseña-larga');
         cy.request('POST', '/api/characters', {
@@ -216,6 +296,7 @@ describe('partidas', () => {
           .then((characterId) => {
             cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
               characterId,
+              codigo,
             });
 
             cy.visit(`/partidas/${partidaId}`);
@@ -237,7 +318,8 @@ describe('partidas', () => {
             cy.get('.mesa__personaje').contains('button', 'Ver ficha').click();
             cy.get('.mesa__modal').should('not.contain', 'Editar');
           });
-      });
+      }
+    });
   });
 
   it('el máster siembra 3 goblins y aparecen con su CA derivada', () => {
@@ -247,6 +329,9 @@ describe('partidas', () => {
       .then((partidaId) => {
         cy.visit(`/partidas/${partidaId}`);
         cy.contains('button', '+ Añadir PNJ').click();
+        // Este máster ya tiene bestiario, así que el modal abre ahí: para
+        // crear uno desde cero hay que pedir la otra pestaña.
+        cy.contains('button', 'Crear uno nuevo').click();
 
         cy.get('input[name="nombre"]').type('Goblin');
         cy.get('input[name="cantidad"]').clear();
@@ -273,15 +358,97 @@ describe('partidas', () => {
       });
   });
 
+  it('bestiario: crear un monstruo lo guarda y se reutiliza en otra mesa', () => {
+    const sufijo = Date.now();
+    const bicho = `Osgo-${sufijo}`;
+    cy.login(`bes-${sufijo}`, `bes-${sufijo}@mesa.es`, 'contraseña-larga');
+
+    // Primera mesa: se crea el monstruo desde cero
+    cy.request('POST', '/api/partidas', { nombre: `Mesa1-${sufijo}` })
+      .its('body.id')
+      .then((primera) => {
+        cy.visit(`/partidas/${primera}`);
+        cy.contains('button', '+ Añadir PNJ').click();
+        // Sin bestiario todavía, arranca en la pestaña de crear
+        cy.get('input[name="nombre"]').type(bicho);
+        cy.get('input[name="pgTotal"]').clear();
+        cy.get('input[name="pgTotal"]').type('30');
+        cy.contains('button', 'Añadir a la mesa').click();
+        cy.contains('.mesa__personaje', bicho).should('exist');
+
+        // Segunda mesa: ahora ya está en el bestiario, sin volver a teclearlo
+        cy.request('POST', '/api/partidas', { nombre: `Mesa2-${sufijo}` })
+          .its('body.id')
+          .then((segunda) => {
+            cy.visit(`/partidas/${segunda}`);
+            cy.contains('button', '+ Añadir PNJ').click();
+
+            // Se abre directamente en el bestiario porque ya hay monstruos
+            cy.get('.mesa__bestiario').should('contain', bicho);
+            cy.get('input[name="cantidadPlantilla"]').clear();
+            cy.get('input[name="cantidadPlantilla"]').type('2');
+            cy.contains('.mesa__bestiario li', bicho)
+              .contains('button', 'Traer al tablero')
+              .click();
+
+            // Dos copias numeradas, con los PG que se guardaron en la plantilla
+            cy.contains('.mesa__personaje', `${bicho} 1`).should('contain', '30');
+            cy.contains('.mesa__personaje', `${bicho} 2`).should('exist');
+
+            // El bestiario NO se llena de copias: sigue habiendo una entrada
+            cy.visit('/personajes');
+            cy.contains('button', 'Bestiario').click();
+            cy.get('.characters__list li').should('have.length', 1);
+            cy.get('.characters__list').should('contain', bicho);
+
+            // Y las copias no ensucian la lista de personajes de verdad
+            cy.contains('button', 'Mis personajes').click();
+            cy.contains('.characters__list', bicho).should('not.exist');
+          });
+      });
+  });
+
+  it('sacar un PNJ de la mesa no deja su ficha rondando por el bestiario', () => {
+    const sufijo = Date.now();
+    const bicho = `Efimero-${sufijo}`;
+    cy.login(`efi-${sufijo}`, `efi-${sufijo}@mesa.es`, 'contraseña-larga');
+
+    cy.request('POST', '/api/partidas', { nombre: `Limpieza-${sufijo}` })
+      .its('body.id')
+      .then((partidaId) => {
+        cy.request('POST', `/api/partidas/${partidaId}/pnjs`, {
+          nombre: bicho,
+          cantidad: 2,
+          actitud: 'enemigo',
+          oculto: false,
+          pgTotal: 5,
+        });
+
+        cy.visit(`/partidas/${partidaId}`);
+        cy.contains('.mesa__personaje', `${bicho} 1`)
+          .contains('button', 'Sacar de la mesa')
+          .click();
+        cy.contains('.mesa__personaje', `${bicho} 1`).should('not.exist');
+
+        // La instancia desaparece, pero la PLANTILLA sigue en el bestiario
+        cy.request('/api/characters?tipo=pnj').then((res) => {
+          const nombres = res.body.map((c: { name: string }) => c.name);
+          expect(nombres).to.include(bicho);
+          expect(nombres).to.not.include(`${bicho} 1`);
+        });
+      });
+  });
+
   it('la emboscada: el jugador no ve al PNJ oculto hasta que se revela', () => {
     const sufijo = Date.now();
     const nombreMesa = `Emboscada-${sufijo}`;
 
     // El máster prepara la mesa con un goblin escondido
     cy.login(`gm-${sufijo}`, `gm-${sufijo}@mesa.es`, 'contraseña-larga');
-    cy.request('POST', '/api/partidas', { nombre: nombreMesa })
-      .its('body.id')
-      .then((partidaId) => {
+    cy.request('POST', '/api/partidas', { nombre: nombreMesa }).then((mesa) => {
+      const partidaId = mesa.body.id;
+      const codigo = mesa.body.codigo;
+      {
         cy.request('POST', `/api/partidas/${partidaId}/pnjs`, {
           nombre: 'Goblin acechante',
           cantidad: 1,
@@ -301,6 +468,7 @@ describe('partidas', () => {
           .then((characterId) => {
             cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
               characterId,
+              codigo,
             });
             cy.visit(`/partidas/${partidaId}`);
             cy.contains('.mesa__personaje', `Heroe-${sufijo}`).should('exist');
@@ -324,7 +492,8 @@ describe('partidas', () => {
             cy.visit(`/partidas/${partidaId}`);
             cy.contains('.mesa__personaje', 'Goblin acechante').should('exist');
           });
-      });
+      }
+    });
   });
 
   it('el máster lleva el rastreador de iniciativa y turnos', () => {
@@ -525,8 +694,9 @@ describe('home y navegación', () => {
     cy.login(`master-${sufijo}`, `master-${sufijo}@mesa.es`, 'contraseña-larga');
     cy.request('POST', '/api/partidas', { nombre }).then((res) => {
       const partidaId = res.body.id;
+      const codigo = res.body.codigo;
 
-      // Ahora entra el jugador, con su personaje, y se sienta en ella
+      // Ahora entra el jugador, con el código que le han pasado
       cy.login(`jugador-${sufijo}`, `jugador-${sufijo}@mesa.es`, 'contraseña-larga');
       cy.request('POST', '/api/characters', {
         name: `Valeros-${sufijo}`,
@@ -535,6 +705,7 @@ describe('home y navegación', () => {
       }).then((personaje) => {
         cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
           characterId: personaje.body.id,
+          codigo,
         });
       });
 

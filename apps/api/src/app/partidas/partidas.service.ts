@@ -11,6 +11,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, In, Repository } from 'typeorm';
 import {
+  ActitudPnj,
   caConCondiciones,
   casillasQueOcupa,
   CharacterSheetData,
@@ -37,9 +38,11 @@ import {
   ActualizarPersonajeEnPartidaDto,
   CreatePartidaDto,
   CrearPnjDto,
+  SembrarPnjDto,
   TirarDadosDto,
   UpdatePartidaDto,
 } from './dto/create-partida.dto';
+import { Character } from '../characters/entities/character.entity';
 import { CharactersService } from '../characters/characters.service';
 import { PartidasGateway } from './partidas.gateway';
 
@@ -84,23 +87,62 @@ export class PartidasService {
     return this.aResumen({ ...partida, personajes: [] }, masterId);
   }
 
-  /** Busca por código exacto o por nombre (parcial); sin texto lista todo. */
+  /**
+   * El buscador NO es un catálogo de mesas ajenas: antes listaba las 12 más
+   * recientes de todo el mundo y cualquiera podía colarse. Ahora hay dos
+   * caminos, y ninguno permite enumerar:
+   *  - CÓDIGO exacto: devuelve esa mesa (es la invitación, quien lo tiene
+   *    puede entrar).
+   *  - NOMBRE: busca SOLO entre TUS mesas, que es para lo que se usa de
+   *    verdad — reencontrar la tuya, no descubrir las de otros.
+   * Sin texto no devuelve nada.
+   */
   async buscar(
     texto: string | undefined,
     userId: string,
   ): Promise<PartidaResumen[]> {
     const filtro = texto?.trim();
+    if (!filtro) {
+      return [];
+    }
+
+    // Primero, ¿es un código de invitación? Búsqueda exacta, no parcial.
+    const porCodigo = await this.partidas.findOne({
+      where: { codigo: filtro.toUpperCase() },
+      relations: { master: true, personajes: true },
+    });
+    if (porCodigo) {
+      return [this.aResumen(porCodigo, userId)];
+    }
+
+    // Si no, por nombre, pero acotado a las mesas donde ya participas
+    const idsMios = await this.idsDeMisMesas(userId);
+    if (idsMios.length === 0) {
+      return [];
+    }
     const partidas = await this.partidas.find({
-      where: filtro
-        ? [{ codigo: filtro.toUpperCase() }, { nombre: ILike(`%${filtro}%`) }]
-        : {},
+      where: { id: In(idsMios), nombre: ILike(`%${filtro}%`) },
       relations: { master: true, personajes: true },
       order: { createdAt: 'DESC' },
-      // Con unas pocas basta: el buscador es para encontrar TU mesa, no un
-      // catálogo. Se afina escribiendo el nombre o el código.
-      take: 12,
     });
     return partidas.map((partida) => this.aResumen(partida, userId));
+  }
+
+  /** Ids de las mesas que diriges o donde tienes algún personaje sentado. */
+  private async idsDeMisMesas(userId: string): Promise<string[]> {
+    const sentados = await this.personajes.find({
+      where: { character: { ownerId: userId } },
+    });
+    const dirigidas = await this.partidas.find({
+      where: { masterId: userId },
+      select: { id: true },
+    });
+    return [
+      ...new Set([
+        ...sentados.map((pep) => pep.partidaId),
+        ...dirigidas.map((p) => p.id),
+      ]),
+    ];
   }
 
   /**
@@ -111,16 +153,13 @@ export class PartidasService {
     // En dos pasos a propósito: filtrar por una relación anidada y cargar
     // esa misma relación en la misma consulta hace que TypeORM devuelva
     // SOLO las filas que casan (verías un personaje por mesa, el tuyo).
-    const sentados = await this.personajes.find({
-      where: { character: { ownerId: userId } },
-    });
-    const idsJugando = [...new Set(sentados.map((pep) => pep.partidaId))];
+    const ids = await this.idsDeMisMesas(userId);
+    if (ids.length === 0) {
+      return [];
+    }
 
     const partidas = await this.partidas.find({
-      where: [
-        { masterId: userId },
-        ...(idsJugando.length > 0 ? [{ id: In(idsJugando) }] : []),
-      ],
+      where: { id: In(ids) },
       relations: { master: true, personajes: { character: true } },
       order: { updatedAt: 'DESC' },
     });
@@ -136,6 +175,12 @@ export class PartidasService {
 
   async detalle(id: string, userId: string): Promise<PartidaDetalle> {
     const partida = await this.buscarEntidad(id);
+    // La mesa es PRIVADA: quien no está sentado en ella recibe el mismo 404
+    // que si no existiera. 404 y no 403, igual que con las fichas ajenas: un
+    // 403 confirmaría que esa partida existe.
+    if (!this.esParticipante(partida, userId)) {
+      throw new NotFoundException(`Partida ${id} no encontrada`);
+    }
     const esMaster = partida.masterId === userId;
     return {
       ...this.aResumen(partida, userId),
@@ -223,13 +268,36 @@ export class PartidasService {
     return this.detalle(partidaId, userId);
   }
 
-  /** El fichero del mapa para servirlo; 404 si la mesa no tiene. */
-  async mapaDe(partidaId: string): Promise<string> {
+  /**
+   * El fichero del mapa para servirlo. Solo participantes: el mapa es parte
+   * de la mesa y antes lo veía cualquiera con sesión y el id.
+   */
+  async mapaDe(partidaId: string, userId: string): Promise<string> {
     const partida = await this.buscarEntidad(partidaId);
+    if (!this.esParticipante(partida, userId)) {
+      throw new NotFoundException(`Partida ${partidaId} no encontrada`);
+    }
     if (!partida.mapaFichero) {
       throw new NotFoundException('Esta partida no tiene mapa');
     }
     return partida.mapaFichero;
+  }
+
+  /**
+   * Genera un código de invitación nuevo. Es la respuesta barata a "se me
+   * ha filtrado": los que ya están dentro siguen dentro, y el viejo deja de
+   * abrir la puerta.
+   */
+  async regenerarCodigo(
+    partidaId: string,
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloElMaster(partida, userId);
+    partida.codigo = this.generarCodigo();
+    await this.partidas.save(partida);
+    this.gateway.emitirMesaCambiada(partidaId);
+    return this.detalle(partidaId, userId);
   }
 
   /**
@@ -279,8 +347,22 @@ export class PartidasService {
     partidaId: string,
     characterId: string,
     userId: string,
+    codigo?: string,
   ): Promise<PersonajeEnPartidaResumen> {
-    await this.buscarEntidad(partidaId);
+    const partida = await this.buscarEntidad(partidaId);
+
+    // EL CÓDIGO ES LA INVITACIÓN. Quien ya está en la mesa (el máster, o un
+    // jugador que trae un segundo personaje) no tiene que volver a teclearlo;
+    // para el resto es obligatorio y es lo único que da acceso.
+    if (!this.esParticipante(partida, userId)) {
+      const dado = codigo?.trim().toUpperCase();
+      if (!dado || dado !== partida.codigo) {
+        throw new ForbiddenException(
+          'Necesitas el código de invitación de esta mesa',
+        );
+      }
+    }
+
     // Reutiliza la regla de propiedad: el personaje de otro da 404
     const character = await this.characters.findOne(characterId, userId);
 
@@ -342,10 +424,10 @@ export class PartidasService {
   }
 
   /**
-   * Siembra PNJ en la mesa. Crea UNA FICHA POR COPIA (Goblin 1..N) porque
-   * un asiento es único por (partida, personaje): dos tokens del mismo
-   * goblin necesitan dos fichas. Las fichas quedan en el bestiario del
-   * máster para reutilizarlas en la siguiente sesión.
+   * Crea un monstruo NUEVO: guarda su PLANTILLA en el bestiario del máster
+   * y siembra N instancias en la mesa. Todo lo que creas queda reutilizable
+   * sin tener que decidirlo de antemano; si no lo quieres, se borra desde
+   * el bestiario.
    */
   async crearPnjs(
     partidaId: string,
@@ -355,32 +437,65 @@ export class PartidasService {
     const partida = await this.buscarEntidad(partidaId);
     this.soloElMaster(partida, userId);
 
-    const cantidad = dto.cantidad ?? 1;
-    const sheetData = this.sheetDePnj(dto);
+    const plantilla = await this.characters.create(
+      { name: dto.nombre, level: dto.nivel ?? 1, sheetData: this.sheetDePnj(dto) },
+      userId,
+      'pnj',
+    );
+    return this.sembrar(partida, plantilla, dto, userId);
+  }
+
+  /** Trae a la mesa copias de un monstruo YA guardado en el bestiario. */
+  async sembrarDesdePlantilla(
+    partidaId: string,
+    dto: SembrarPnjDto,
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloElMaster(partida, userId);
+    // Valida de paso que la plantilla es TUYA y es una plantilla
+    const plantilla = await this.characters.plantilla(dto.plantillaId, userId);
+    return this.sembrar(partida, plantilla, dto, userId);
+  }
+
+  /**
+   * Siembra N copias de una plantilla. UNA FICHA POR COPIA porque el
+   * asiento es único por (partida, personaje): dos tokens del mismo goblin
+   * necesitan dos fichas, cada una con sus PG y condiciones.
+   */
+  private async sembrar(
+    partida: Partida,
+    plantilla: Character,
+    opciones: { cantidad: number; actitud: ActitudPnj; oculto: boolean },
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const cantidad = opciones.cantidad ?? 1;
+    const pgTotal = plantilla.sheetData?.pg?.total ?? null;
 
     for (let i = 0; i < cantidad; i++) {
       // Con una sola copia no se numera: "Jefe goblin", no "Jefe goblin 1"
-      const nombre = cantidad > 1 ? `${dto.nombre} ${i + 1}` : dto.nombre;
-      const ficha = await this.characters.create(
-        { name: nombre, level: dto.nivel ?? 1, sheetData },
+      const nombre =
+        cantidad > 1 ? `${plantilla.name} ${i + 1}` : plantilla.name;
+      const instancia = await this.characters.crearInstancia(
+        plantilla,
+        nombre,
         userId,
-        'pnj',
       );
       await this.personajes.save(
         this.personajes.create({
-          partidaId,
-          characterId: ficha.id,
+          partidaId: partida.id,
+          characterId: instancia.id,
           // Arranca con los PG llenos, igual que un PJ al unirse
-          pgActuales: sheetData.pg?.total ?? null,
+          pgActuales: pgTotal,
           condiciones: [],
-          actitud: dto.actitud,
-          oculto: dto.oculto ?? false,
+          actitud: opciones.actitud,
+          oculto: opciones.oculto ?? false,
         }),
       );
     }
 
-    this.gateway.emitirMesaCambiada(partidaId);
-    return this.detalle(partidaId, userId);
+    this.gateway.emitirMesaCambiada(partida.id);
+    return this.detalle(partida.id, userId);
   }
 
   /**
@@ -440,7 +555,15 @@ export class PartidasService {
         'Solo el máster o el dueño del personaje pueden sacarlo',
       );
     }
+    const instancia = pep.character;
     await this.personajes.remove(pep);
+    // Las INSTANCIAS de PNJ son desechables: su ficha muere con el asiento.
+    // Si no, cada emboscada dejaría cuatro fichas fantasma para siempre.
+    // Ojo con la condición: un PJ (tipo 'pj') o una PLANTILLA del bestiario
+    // (plantillaId null) NO se borran jamás por sacarlos de una mesa.
+    if (instancia?.tipo === 'pnj' && instancia.plantillaId) {
+      await this.characters.borrarPorId(instancia.id);
+    }
     this.gateway.emitirMesaCambiada(partidaId);
   }
 
@@ -613,12 +736,15 @@ export class PartidasService {
   }
 
   /** Participante = el máster o el dueño de algún personaje de la mesa. */
-  private soloParticipantes(partida: Partida, userId: string): void {
-    const esMaster = partida.masterId === userId;
-    const esJugador = partida.personajes.some(
-      (pep) => pep.character?.ownerId === userId,
+  esParticipante(partida: Partida, userId: string): boolean {
+    return (
+      partida.masterId === userId ||
+      partida.personajes.some((pep) => pep.character?.ownerId === userId)
     );
-    if (!esMaster && !esJugador) {
+  }
+
+  private soloParticipantes(partida: Partida, userId: string): void {
+    if (!this.esParticipante(partida, userId)) {
       throw new ForbiddenException(
         'Solo los participantes de la mesa pueden tirar dados',
       );

@@ -45,6 +45,23 @@ export class Character implements CharacterModel {
   @Column({ type: 'varchar', length: 3, default: 'pj' })
   tipo: TipoPersonaje;
 
+  /**
+   * Solo en PNJ. Distingue las dos clases de ficha que conviven aquí:
+   *  - PLANTILLA (plantillaId null): el monstruo de tu bestiario. Persiste
+   *    y se reutiliza tantas veces como quieras.
+   *  - INSTANCIA (plantillaId = id de su plantilla): la copia concreta que
+   *    se sienta en una mesa, con sus PG y condiciones propios. Es
+   *    desechable: al sacarla de la mesa se borra.
+   * SET NULL y no CASCADE: borrar una plantilla del bestiario NO debe
+   * hacer desaparecer los monstruos que ya están puestos en una mesa.
+   */
+  @ManyToOne(() => Character, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'plantillaId' })
+  plantilla: Character | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  plantillaId: string | null;
+
   // JSONB: la ficha completa (atributos, inventario, dotes...) vive aquí
   // como documento, sin necesidad de una columna por campo.
   @Column({ type: 'jsonb', default: {} })

@@ -1,10 +1,11 @@
 <form class="partida__form" (ngSubmit)="buscar()">
   <label>
-    Código o nombre de la partida
+    Código de invitación (o el nombre de una de tus mesas)
     <input
       type="text"
       name="busqueda"
-      placeholder="p. ej. La corona carmesí"
+      placeholder="p. ej. ABC234"
+      maxlength="100"
       [(ngModel)]="busqueda"
     />
   </label>
@@ -36,8 +37,8 @@
 }
 
 <p class="partida__texto partida__hint">
-  Se muestran las últimas partidas. Escribe un nombre o código para afinar la
-  búsqueda.
+  Las mesas son privadas: para entrar en una nueva necesitas el código que te
+  pase su máster. Por nombre solo se buscan las tuyas.
 </p>
 <ul class="partida__resultados">
   @for (partida of resultados(); track partida.id) {
@@ -69,6 +70,13 @@
       </a>
     </li>
   } @empty {
-    <li class="partida__texto">Sin resultados.</li>
+    <li class="partida__texto">
+      @if (busqueda().trim()) {
+        Sin resultados. Comprueba el código, o busca por el nombre de una mesa
+        en la que ya juegues.
+      } @else {
+        Escribe un código o un nombre para buscar.
+      }
+    </li>
   }
 </ul>

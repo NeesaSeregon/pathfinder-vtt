@@ -6,17 +6,47 @@
     </button>
   </header>
 
+  <!-- El bestiario son los monstruos que has creado dirigiendo: viven en
+       su pestaña para no sepultar a los personajes de verdad. -->
+  <div class="characters__pestanas" role="tablist">
+    <button
+      type="button"
+      role="tab"
+      [class.characters__pestana--activa]="pestana() === 'pj'"
+      [attr.aria-selected]="pestana() === 'pj'"
+      (click)="verPestana('pj')"
+    >
+      Mis personajes
+    </button>
+    <button
+      type="button"
+      role="tab"
+      [class.characters__pestana--activa]="pestana() === 'pnj'"
+      [attr.aria-selected]="pestana() === 'pnj'"
+      (click)="verPestana('pnj')"
+    >
+      Bestiario
+    </button>
+  </div>
+
   @if (error()) {
     <p class="characters__error">{{ error() }}</p>
   }
 
   @if (loading()) {
     <p>Cargando…</p>
-  } @else if (characters().length === 0) {
-    <p>No hay personajes todavía. ¡Crea el primero!</p>
+  } @else if (visibles().length === 0) {
+    @if (pestana() === 'pj') {
+      <p>No hay personajes todavía. ¡Crea el primero!</p>
+    } @else {
+      <p>
+        Tu bestiario está vacío. Los monstruos que crees en una mesa con
+        «Añadir PNJ» se guardan aquí y podrás reutilizarlos.
+      </p>
+    }
   } @else {
     <ul class="characters__list">
-      @for (character of characters(); track character.id) {
+      @for (character of visibles(); track character.id) {
         <li>
           <span class="characters__name">{{ character.name }}</span>
           @if (character.sheetData.clase) {

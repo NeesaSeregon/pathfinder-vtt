@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import type { TipoPersonaje } from '@pathfinder/shared';
 import { CreateCharacterDto } from './dto/create-character.dto';
 import { UpdateCharacterDto } from './dto/update-character.dto';
@@ -36,12 +36,55 @@ export class CharactersService {
   }
 
   /**
-   * La lista de /personajes son TUS PJ. Los PNJ (el bestiario que generas
-   * en las mesas) se piden aparte: si no, cuatro goblins por combate
-   * sepultarían a los personajes de verdad.
+   * Tus fichas de un tipo. Para 'pnj' devuelve SOLO las plantillas del
+   * bestiario (plantillaId null): las instancias sentadas en las mesas son
+   * copias desechables y no deben aparecer en ninguna lista.
    */
   findAll(ownerId: string, tipo: TipoPersonaje = 'pj'): Promise<Character[]> {
-    return this.charactersRepository.findBy({ ownerId, tipo });
+    return this.charactersRepository.findBy(
+      tipo === 'pnj'
+        ? { ownerId, tipo, plantillaId: IsNull() }
+        : { ownerId, tipo },
+    );
+  }
+
+  /** Una plantilla del bestiario, comprobando que es tuya y es plantilla. */
+  async plantilla(id: string, ownerId: string): Promise<Character> {
+    const plantilla = await this.charactersRepository.findOneBy({
+      id,
+      ownerId,
+      tipo: 'pnj',
+      plantillaId: IsNull(),
+    });
+    if (!plantilla) {
+      throw new NotFoundException('Esa plantilla no está en tu bestiario');
+    }
+    return plantilla;
+  }
+
+  /** Copia de una plantilla para sentarla en una mesa (ficha desechable). */
+  crearInstancia(
+    plantilla: Character,
+    nombre: string,
+    ownerId: string,
+  ): Promise<Character> {
+    return this.charactersRepository.save(
+      this.charactersRepository.create({
+        name: nombre,
+        level: plantilla.level,
+        // Copia, no referencia: si luego retocas la plantilla, los
+        // monstruos ya puestos en la mesa no cambian a media partida.
+        sheetData: plantilla.sheetData,
+        tipo: 'pnj',
+        plantillaId: plantilla.id,
+        ownerId,
+      }),
+    );
+  }
+
+  /** Borra una ficha sin preguntar por el dueño (uso interno del servidor). */
+  async borrarPorId(id: string): Promise<void> {
+    await this.charactersRepository.delete({ id });
   }
 
   /**

@@ -80,6 +80,18 @@ export interface CrearPnj {
   modVarioIniciativa?: number;
 }
 
+/**
+ * Traer a la mesa copias de un monstruo YA guardado en el bestiario. No
+ * lleva estadísticas: se copian de la plantilla, que es justo el sentido
+ * de tenerla guardada.
+ */
+export interface SembrarPnj {
+  plantillaId: string;
+  cantidad: number;
+  actitud: ActitudPnj;
+  oculto: boolean;
+}
+
 /** Tope por siembra: evita que un cero de más llene la mesa de goblins. */
 export const PNJ_MAX_CANTIDAD = 12;
 

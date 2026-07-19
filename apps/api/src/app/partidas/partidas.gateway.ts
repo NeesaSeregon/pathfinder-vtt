@@ -7,6 +7,8 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Server, Socket } from 'socket.io';
 import {
   EntrarSala,
@@ -20,6 +22,8 @@ import {
   TiradaResultado,
 } from '@pathfinder/shared';
 import { COOKIE_SESION } from '../auth/auth.constants';
+import { Partida } from './entities/partida.entity';
+import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
 
 /**
  * Saca el JWT del header Cookie del handshake. El handshake de un
@@ -43,7 +47,13 @@ export class PartidasGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly jwt: JwtService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    @InjectRepository(Partida)
+    private readonly partidas: Repository<Partida>,
+    @InjectRepository(PersonajeEnPartida)
+    private readonly personajes: Repository<PersonajeEnPartida>,
+  ) {}
 
   /** Sin token válido no hay conexión: el tablero es solo para usuarios. */
   async handleConnection(socket: Socket): Promise<void> {
@@ -56,14 +66,43 @@ export class PartidasGateway implements OnGatewayConnection {
     }
   }
 
+  /**
+   * Entrar en la sala de una mesa. COMPRUEBA LA PERTENENCIA: antes bastaba
+   * con mandar un partidaId para engancharse al tiempo real de una mesa
+   * ajena y ver moverse los tokens sin haberse unido siquiera. El guard de
+   * HTTP no cubre esto: los WebSockets tienen su propia puerta.
+   */
   @SubscribeMessage(EVENTO_ENTRAR_SALA)
-  entrarSala(
+  async entrarSala(
     @ConnectedSocket() socket: Socket,
     @MessageBody() datos: EntrarSala,
-  ): void {
-    if (typeof datos?.partidaId === 'string') {
-      socket.join(sala(datos.partidaId));
+  ): Promise<void> {
+    const partidaId = datos?.partidaId;
+    const user = socket.data['user'] as JwtPayload | undefined;
+    if (typeof partidaId !== 'string' || !user) {
+      return;
     }
+    if (await this.puedeEntrar(partidaId, user.sub)) {
+      socket.join(sala(partidaId));
+    }
+  }
+
+  /** Máster de la mesa o dueño de un personaje sentado en ella. */
+  private async puedeEntrar(
+    partidaId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const esMaster = await this.partidas.countBy({
+      id: partidaId,
+      masterId: userId,
+    });
+    if (esMaster > 0) {
+      return true;
+    }
+    const sentado = await this.personajes.count({
+      where: { partidaId, character: { ownerId: userId } },
+    });
+    return sentado > 0;
   }
 
   /** Lo llama PartidasService tras guardar un cambio de estado. */

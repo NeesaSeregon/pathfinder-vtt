@@ -1,4 +1,32 @@
 .characters {
+  &__pestanas {
+    display: flex;
+    gap: 0.35rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.25rem;
+
+    button {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      padding: 0.5rem 0.9rem;
+      color: var(--text-muted);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--text);
+      }
+    }
+  }
+
+  &__pestana--activa {
+    color: var(--accent) !important;
+    border-bottom-color: var(--accent) !important;
+  }
+
   max-width: 48rem;
   margin: 2rem auto;
   padding: 0 1rem;

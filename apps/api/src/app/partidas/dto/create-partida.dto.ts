@@ -22,6 +22,7 @@ import {
   ESTADOS_PARTIDA,
   EstadoPartida,
   PNJ_MAX_CANTIDAD,
+  SembrarPnj,
   TABLERO_ALTO,
   TABLERO_ANCHO,
   Tamano,
@@ -61,6 +62,16 @@ export class UpdatePartidaDto {
 export class UnirsePartidaDto {
   @IsUUID()
   characterId: string;
+
+  /**
+   * El código de invitación. Opcional aquí porque quien YA está en la mesa
+   * (el máster, o un jugador que trae un segundo personaje) no tiene que
+   * volver a teclearlo; para el resto, el servicio lo exige.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  codigo?: string;
 }
 
 export class ActualizarPersonajeEnPartidaDto
@@ -192,6 +203,23 @@ export class CrearPnjDto implements CrearPnj {
 
 /** Revelar u ocultar un PNJ ya colocado. */
 export class RevelarPnjDto {
+  @IsBoolean()
+  oculto: boolean;
+}
+
+/** Traer a la mesa copias de un monstruo ya guardado en el bestiario. */
+export class SembrarPnjDto implements SembrarPnj {
+  @IsUUID()
+  plantillaId: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(PNJ_MAX_CANTIDAD)
+  cantidad: number;
+
+  @IsIn(ACTITUDES)
+  actitud: ActitudPnj;
+
   @IsBoolean()
   oculto: boolean;
 }

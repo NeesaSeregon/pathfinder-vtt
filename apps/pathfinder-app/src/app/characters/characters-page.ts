@@ -1,4 +1,11 @@
-import { Component, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  signal,
+  viewChild,
+  WritableSignal,
+} from '@angular/core';
 import { Character, CharacterUpsert } from '@pathfinder/shared';
 import { CharactersApi } from './characters-api';
 import { CharacterForm } from './character-form';
@@ -23,6 +30,18 @@ export class CharactersPage {
   protected readonly characters = signal<Character[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+
+  /**
+   * Pestaña visible: tus PJ o el bestiario (las plantillas de PNJ que has
+   * ido creando al dirigir). Son dos listas distintas del servidor, no un
+   * filtro en cliente: las instancias sentadas en las mesas no deben
+   * aparecer en ninguna de las dos.
+   */
+  protected readonly pestana = signal<'pj' | 'pnj'>('pj');
+  protected readonly bestiario = signal<Character[]>([]);
+  protected readonly visibles = computed(() =>
+    this.pestana() === 'pj' ? this.characters() : this.bestiario(),
+  );
 
   // Estado de la modal: personaje seleccionado y si está en modo edición.
   protected readonly selected = signal<Character | null>(null);
@@ -57,6 +76,29 @@ export class CharactersPage {
       },
       error: (err) =>
         this.error.set(`No se pudo crear el personaje: ${mensajeDeError(err)}`),
+    });
+  }
+
+  /** Cambia de pestaña; el bestiario se pide la primera vez que se abre. */
+  protected verPestana(cual: 'pj' | 'pnj'): void {
+    this.pestana.set(cual);
+    if (cual === 'pnj') {
+      this.cargarBestiario();
+    }
+  }
+
+  private cargarBestiario(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.api.bestiario().subscribe({
+      next: (plantillas) => {
+        this.bestiario.set(plantillas);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(`No se pudo cargar el bestiario: ${mensajeDeError(err)}`);
+        this.loading.set(false);
+      },
     });
   }
 
@@ -101,7 +143,7 @@ export class CharactersPage {
     }
     this.api.update(current.id, payload).subscribe({
       next: (updated) => {
-        this.characters.update((list) =>
+        this.listaActual().update((list) =>
           list.map((c) => (c.id === updated.id ? updated : c)),
         );
         // Volvemos al modo vista, ya con los datos guardados.
@@ -117,14 +159,17 @@ export class CharactersPage {
 
   protected remove(character: Character): void {
     this.api.remove(character.id).subscribe({
-      next: () =>
-        this.characters.update((list) =>
-          list.filter((c) => c.id !== character.id),
-        ),
+      // Quita de la lista que toque, según la pestaña abierta
+      next: () => this.listaActual().update((l) => l.filter((c) => c.id !== character.id)),
       error: (err) =>
         this.error.set(
           `No se pudo borrar el personaje: ${mensajeDeError(err)}`,
         ),
     });
+  }
+
+  /** La señal de la pestaña visible, para que editar y borrar acierten. */
+  private listaActual(): WritableSignal<Character[]> {
+    return this.pestana() === 'pj' ? this.characters : this.bestiario;
   }
 }
