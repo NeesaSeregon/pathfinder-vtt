@@ -1,62 +1,118 @@
-<main class="home">
-  <section class="home__hero">
-    <h1 class="home__titulo">
-      Tu mesa de Pathfinder,<br />
-      <span>en cualquier parte</span>
-    </h1>
-    <p class="home__lema">
-      Crea tus fichas de personaje, reúne a tu grupo y jugad sobre un tablero
-      virtual compartido, de máster a jugadores.
-    </p>
-  </section>
-
-  <section class="home__tarjetas">
-    <a class="home__tarjeta" routerLink="/personajes">
-      <h2>Personajes</h2>
-      <p>
-        La ficha completa de PF1e: atributos, combate, salvaciones,
-        habilidades, conjuros, dotes y equipo, con los cálculos hechos.
-      </p>
-      <span class="home__tarjeta-accion">Ir a mis personajes →</span>
-    </a>
-
-    <div class="home__tarjeta home__tarjeta--pasiva">
-      <h2>Partidas</h2>
-      <p>
-        Únete a la mesa de tu máster o dirige la tuya con el tablero
-        compartido.
-      </p>
-      <div class="home__tarjeta-botones">
-        <a routerLink="/partidas/buscar">Buscar partida</a>
-        <a routerLink="/partidas/crear">Crear partida</a>
+@if (sesion.username(); as username) {
+  <!-- ESCRITORIO: lo que ve quien ya está dentro. Manda lo que se juega
+       (tus mesas), no la publicidad del producto. -->
+  <main class="escritorio">
+    <header class="escritorio__cabecera">
+      <div>
+        <h1 class="escritorio__saludo">Hola, {{ username }}</h1>
+        <p class="escritorio__lema">Tu mesa de Pathfinder, en cualquier parte.</p>
       </div>
-      <span class="home__pronto">En construcción</span>
-    </div>
+      <nav class="escritorio__accesos" aria-label="Accesos rápidos">
+        <a routerLink="/personajes">Personajes</a>
+        <a routerLink="/cuenta">Tu cuenta</a>
+        <button type="button" (click)="salir()">Cerrar sesión</button>
+      </nav>
+    </header>
 
-    <div class="home__tarjeta home__tarjeta--pasiva">
-      @if (sesion.username(); as username) {
-        <h2>Tu cuenta</h2>
-        <p>
-          Has entrado como <strong>{{ username }}</strong
-          >. Tus personajes y partidas te siguen a cualquier dispositivo.
-        </p>
-        <div class="home__tarjeta-botones">
-          <a routerLink="/cuenta">Mis datos</a>
-          <button type="button" (click)="salir()">
-            Cerrar sesión
-          </button>
+    <div class="escritorio__columnas">
+      <section class="escritorio__bloque">
+        <div class="escritorio__bloque-cabecera">
+          <h2>Tus mesas</h2>
+          <a class="escritorio__crear" routerLink="/partidas/crear">
+            + Crear una mesa
+          </a>
         </div>
-      } @else {
-        <h2>Tu cuenta</h2>
+
+        @if (cargandoMesas()) {
+          <p class="escritorio__nota">Cargando tus mesas…</p>
+        } @else {
+          <ul class="escritorio__mesas">
+            @for (mesa of misMesas(); track mesa.id) {
+              <li class="mesa-tarjeta">
+                <div class="mesa-tarjeta__info">
+                  <strong>{{ mesa.nombre }}</strong>
+                  <small>
+                    {{ miPapel(mesa) }} · {{ estadoLabels[mesa.estado] }}
+                    @if (mesa.codigo) {
+                      · código {{ mesa.codigo }}
+                    }
+                  </small>
+                  @if (mesa.descripcion) {
+                    <small class="mesa-tarjeta__desc">
+                      {{ mesa.descripcion }}
+                    </small>
+                  }
+                </div>
+                <a
+                  class="mesa-tarjeta__entrar"
+                  [routerLink]="['/partidas', mesa.id]"
+                >
+                  Entrar
+                </a>
+              </li>
+            } @empty {
+              <li class="escritorio__vacio">
+                <p>
+                  Todavía no te sientas en ninguna mesa. Únete con el código
+                  que te pase tu máster, o crea la tuya y dirige tú.
+                </p>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <section class="escritorio__bloque">
+        <div class="escritorio__bloque-cabecera">
+          <h2>Unirse a una mesa</h2>
+        </div>
+        <!-- Al sentarte en una mesa nueva, la lista de la izquierda cambia -->
+        <app-unirse-panel (unido)="cargarMesas()" />
+      </section>
+    </div>
+  </main>
+} @else {
+  <!-- PORTADA: para quien aún no ha entrado. -->
+  <main class="home">
+    <section class="home__hero">
+      <h1 class="home__titulo">
+        Tu mesa de Pathfinder,<br />
+        <span>en cualquier parte</span>
+      </h1>
+      <p class="home__lema">
+        Crea tus fichas de personaje, reúne a tu grupo y jugad sobre un tablero
+        virtual compartido, de máster a jugadores.
+      </p>
+    </section>
+
+    <section class="home__tarjetas">
+      <div class="home__tarjeta">
+        <h2>Personajes</h2>
         <p>
-          Con tu perfil, tus personajes y partidas te esperan en cualquier
+          La ficha completa de PF1e: atributos, combate, salvaciones,
+          habilidades, conjuros, dotes y equipo, con los cálculos hechos.
+        </p>
+      </div>
+
+      <div class="home__tarjeta">
+        <h2>Partidas</h2>
+        <p>
+          Tablero compartido en tiempo real: mapa de fondo, tokens, iniciativa
+          y condiciones, de máster a jugadores.
+        </p>
+      </div>
+
+      <div class="home__tarjeta home__tarjeta--acceso">
+        <h2>Empieza</h2>
+        <p>
+          Con tu cuenta, tus personajes y partidas te esperan en cualquier
           dispositivo.
         </p>
         <div class="home__tarjeta-botones">
           <a routerLink="/entrar">Iniciar sesión</a>
           <a routerLink="/registro">Crear cuenta</a>
         </div>
-      }
-    </div>
-  </section>
-</main>
+      </div>
+    </section>
+  </main>
+}

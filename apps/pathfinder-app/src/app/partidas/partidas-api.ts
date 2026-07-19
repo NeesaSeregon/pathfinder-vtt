@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   ActualizarPersonajeEnPartida,
   CrearPartida,
+  MiPartidaResumen,
   PartidaDetalle,
   PartidaResumen,
   PersonajeEnPartidaResumen,
@@ -24,6 +25,11 @@ export class PartidasApi {
       ? new HttpParams().set('buscar', texto.trim())
       : undefined;
     return this.http.get<PartidaResumen[]>(this.baseUrl, { params });
+  }
+
+  /** Tus mesas: las que diriges y aquellas donde tienes un personaje. */
+  mias(): Observable<MiPartidaResumen[]> {
+    return this.http.get<MiPartidaResumen[]>(`${this.baseUrl}/mias`);
   }
 
   detalle(id: string): Observable<PartidaDetalle> {

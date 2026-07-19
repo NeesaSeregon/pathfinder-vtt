@@ -1,88 +1,11 @@
+/* Lo demás vive en unirse-panel.scss, junto al marcado que estiliza. */
 .busqueda {
   max-width: 46rem;
   margin: 3rem auto;
   padding: 0 1rem;
-}
 
-.partida__texto {
-  color: var(--text-muted);
-  margin-top: 0;
-}
-
-.partida__hint {
-  margin: 1.5rem 0 0.25rem;
-  font-size: 0.85rem;
-  color: var(--text-faint);
-}
-
-.partida__selector {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin: 1rem 0;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-
-  select {
-    max-width: 20rem;
-  }
-}
-
-.partida__exito {
-  color: #7bd88f;
-  margin: 0.75rem 0 0;
-}
-
-.acceso__error {
-  margin: 0.75rem 0 0;
-  color: #ff6b6b;
-  font-size: 0.9rem;
-}
-
-.partida__resultados {
-  list-style: none;
-  padding: 0;
-  margin: 0.5rem 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-
-  li {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.85rem 1rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    transition: border-color 120ms ease;
-
-    &:hover {
-      border-color: var(--border-strong);
-    }
-  }
-}
-
-.partida__entrar {
-  color: var(--accent);
-  text-decoration: none;
-  padding: 0.4rem 0.85rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 0.375rem;
-
-  &:hover {
-    border-color: var(--accent);
-    box-shadow: var(--glow);
-  }
-}
-
-.partida__resultado-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-
-  small {
+  &__texto {
     color: var(--text-muted);
+    margin-top: 0;
   }
 }

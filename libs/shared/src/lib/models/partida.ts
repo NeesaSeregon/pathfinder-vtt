@@ -30,6 +30,17 @@ export interface PartidaResumen {
   codigo?: string;
 }
 
+/**
+ * Una de TUS mesas en el escritorio de la home: el resumen de siempre más
+ * qué pintas tienes en ella. Se separa de PartidaResumen porque el
+ * buscador lista mesas ajenas, donde estos campos no significan nada.
+ */
+export interface MiPartidaResumen extends PartidaResumen {
+  soyMaster: boolean;
+  /** Nombres de TUS personajes sentados ahí; vacío si solo la diriges. */
+  misPersonajes: string[];
+}
+
 /** Dimensiones del tablero en casillas (1 casilla = 5 pies). */
 export const TABLERO_ANCHO = 20;
 export const TABLERO_ALTO = 15;

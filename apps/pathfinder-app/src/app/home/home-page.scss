@@ -1,3 +1,179 @@
+/* ---------- ESCRITORIO (con sesión) ----------
+   A ancho completo, como la mesa: la home era la única pantalla que se
+   quedaba en 64rem y sobraba medio monitor. */
+.escritorio {
+  max-width: 100rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+
+  &__cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+
+  &__saludo {
+    margin: 0;
+    font-size: clamp(1.5rem, 3.5vw, 2.1rem);
+  }
+
+  &__lema {
+    margin: 0.25rem 0 0;
+    color: var(--text-muted);
+  }
+
+  &__accesos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+
+    a,
+    button {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--border-strong);
+      border-radius: 0.375rem;
+      padding: 0.4rem 0.9rem;
+      text-decoration: none;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+
+      &:hover {
+        border-color: var(--accent);
+        box-shadow: var(--glow);
+      }
+    }
+  }
+
+  /* Las mesas mandan: se llevan el doble de ancho que el buscador. En
+     pantallas estrechas caen una debajo de otra. */
+  &__columnas {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.25rem;
+    align-items: start;
+
+    @media (max-width: 60rem) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__bloque {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+
+  &__bloque-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.02em;
+    }
+  }
+
+  &__crear {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__nota {
+    margin: 0;
+    color: var(--text-muted);
+  }
+
+  &__mesas {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: 0.75rem;
+  }
+
+  &__vacio {
+    grid-column: 1 / -1;
+    border: 1px dashed var(--border-strong);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    text-align: center;
+
+    p {
+      margin: 0;
+      color: var(--text-muted);
+      max-width: 32rem;
+      margin-inline: auto;
+    }
+  }
+}
+
+.mesa-tarjeta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+
+  &:hover {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    small {
+      color: var(--text-muted);
+    }
+  }
+
+  /* Una descripción larga no debe estirar la tarjeta */
+  &__desc {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__entrar {
+    color: var(--accent);
+    text-decoration: none;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 0.375rem;
+    white-space: nowrap;
+
+    &:hover {
+      border-color: var(--accent);
+    }
+  }
+}
+
+/* ---------- PORTADA (sin sesión) ---------- */
 .home {
   max-width: 64rem;
   margin: 0 auto;
@@ -41,9 +217,6 @@
     border: 1px solid var(--border);
     border-radius: 0.75rem;
     color: var(--text);
-    text-decoration: none;
-    transition: border-color 150ms ease, box-shadow 150ms ease,
-      transform 150ms ease;
 
     h2 {
       margin: 0;
@@ -57,21 +230,10 @@
       flex: 1;
     }
 
-    &:hover {
-      border-color: var(--accent);
-      box-shadow: var(--glow);
-      transform: translateY(-2px);
+    /* La única con acción: se destaca del par informativo */
+    &--acceso {
+      border-color: var(--border-strong);
     }
-
-    /* Las tarjetas que no son un único enlace no se elevan enteras */
-    &--pasiva:hover {
-      transform: none;
-    }
-  }
-
-  &__tarjeta-accion {
-    color: var(--accent);
-    font-weight: 600;
   }
 
   &__tarjeta-botones {
@@ -79,34 +241,19 @@
     gap: 0.6rem;
     flex-wrap: wrap;
 
-    a,
-    button {
+    a {
       color: var(--accent);
       background: var(--accent-soft);
       border: 1px solid var(--border-strong);
       border-radius: 0.375rem;
       padding: 0.4rem 0.9rem;
       text-decoration: none;
-      font: inherit;
       font-weight: 600;
-      cursor: pointer;
 
       &:hover {
         border-color: var(--accent);
         box-shadow: var(--glow);
       }
     }
-  }
-
-  &__pronto {
-    align-self: flex-start;
-    font-size: 0.75rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--accent-2);
-    border: 1px solid var(--accent-2);
-    border-radius: 999px;
-    padding: 0.1rem 0.6rem;
-    opacity: 0.85;
   }
 }

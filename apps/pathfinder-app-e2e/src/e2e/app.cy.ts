@@ -328,22 +328,69 @@ describe('partidas', () => {
 });
 
 describe('home y navegación', () => {
-  it('la home muestra las tres secciones y navega a personajes', () => {
-    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+  it('sin sesión la home enseña la portada con sus accesos', () => {
     cy.visit('/');
     cy.get('.home__tarjeta').should('have.length', 3);
-    cy.contains('.home__tarjeta', 'Personajes').click();
-    cy.get('h1').contains('Personajes');
+    cy.contains('a', 'Iniciar sesión');
+    cy.contains('.escritorio').should('not.exist');
   });
 
-  it('con sesión, la tarjeta de cuenta ofrece sus datos y el logout', () => {
+  it('con sesión la home es el escritorio: tus mesas y unirse al lado', () => {
+    const nombre = `Escritorio-${Date.now()}`;
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+
+    // Una mesa propia para que el escritorio tenga algo que enseñar
+    cy.request('POST', '/api/partidas', { nombre });
+
+    cy.visit('/');
+    cy.contains('.escritorio__saludo', 'tester-fijo');
+    cy.contains('.mesa-tarjeta', nombre).should('contain', 'diriges');
+    // El panel de unirse vive aquí mismo, no hay que ir a otra página
+    cy.get('.escritorio input[name="busqueda"]').should('exist');
+
+    // Y desde la tarjeta se entra a la mesa de un clic
+    cy.contains('.mesa-tarjeta', nombre).contains('a', 'Entrar').click();
+    cy.location('pathname').should('match', /^\/partidas\//);
+  });
+
+  it('el escritorio distingue las mesas que diriges de aquellas en que juegas', () => {
+    const sufijo = Date.now();
+    const nombre = `Ajena-${sufijo}`;
+
+    // Otro usuario crea la mesa y comparte su código
+    cy.login(`master-${sufijo}`, `master-${sufijo}@mesa.es`, 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre }).then((res) => {
+      const partidaId = res.body.id;
+
+      // Ahora entra el jugador, con su personaje, y se sienta en ella
+      cy.login(`jugador-${sufijo}`, `jugador-${sufijo}@mesa.es`, 'contraseña-larga');
+      cy.request('POST', '/api/characters', {
+        name: `Valeros-${sufijo}`,
+        level: 1,
+        sheetData: {},
+      }).then((personaje) => {
+        cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
+          characterId: personaje.body.id,
+        });
+      });
+
+      cy.visit('/');
+      // No la dirige: el escritorio dice con qué personaje se sienta
+      cy.contains('.mesa-tarjeta', nombre).should(
+        'contain',
+        `juegas con Valeros-${sufijo}`,
+      );
+      // Y no ve el código de invitación, que es cosa del máster
+      cy.contains('.mesa-tarjeta', nombre).should('not.contain', 'código');
+    });
+  });
+
+  it('desde el escritorio se llega a la cuenta y se cierra sesión', () => {
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
     cy.visit('/');
 
-    cy.contains('.home__tarjeta', 'Tu cuenta').within(() => {
-      cy.contains('tester-fijo');
-      cy.contains('a', 'Mis datos').click();
-    });
+    cy.contains('.escritorio__saludo', 'tester-fijo');
+    cy.get('.escritorio__accesos').contains('a', 'Tu cuenta').click();
 
     cy.location('pathname').should('eq', '/cuenta');
     cy.contains('tester-fijo@mesa.es');

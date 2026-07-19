@@ -181,13 +181,23 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   para evitar carreras de arranque en frío.)
 - Usuarios funcionando: /entrar y /registro con JWT en cookie httpOnly
   (ver sección Autenticación); los personajes tienen dueño.
-- Sección "Tu cuenta" de la home: ya NO está en construcción. Sin sesión
-  ofrece entrar/registrarse; con sesión saluda por el nombre y da acceso a
-  /cuenta ("Mis datos"), un botón de cerrar sesión y un enlace discreto de
-  borrado. Ese enlace NO borra: lleva a /cuenta, donde vive la zona
-  peligrosa (plegada; al desplegarla pide la contraseña y avisa de cuántos
-  personajes y partidas se pierden). Ninguna acción irreversible se dispara
-  desde la home: ahí solo hay "Mis datos" y "Cerrar sesión".
+- La home tiene DOS caras y ya no hay nada "en construcción" en ella:
+  · SIN sesión, PORTADA (.home, 64rem): el hero y tres tarjetas
+    informativas, con entrar/registrarse. No hace NI UNA petición a la API.
+  · CON sesión, ESCRITORIO (.escritorio, 100rem como la mesa): saludo +
+    accesos (Personajes, Tu cuenta, Cerrar sesión) y dos columnas 2fr/1fr —
+    "Tus mesas" a la izquierda y el panel de unirse a la derecha. En móvil
+    caen una debajo de otra (max-width: 60rem).
+  Las mesas se piden en un effect() atado a sesion.conectado(), NO en el
+  constructor: al arrancar la app todavía no se sabe quién eres (/auth/me
+  responde después), y un visitante anónimo no debe provocar un 401.
+- El panel de buscar/unirse es un componente propio (UnirsePanel) que usan
+  DOS sitios: el escritorio y /partidas/buscar (que se queda como página
+  completa). Antes vivía escrito a mano en la página. Emite (unido) para
+  que la home recargue sus mesas al sentarte en una nueva.
+- Ninguna acción irreversible se dispara desde la home: el borrado de cuenta
+  vive solo en /cuenta, en su zona peligrosa (plegada; al desplegarla pide
+  la contraseña y avisa de cuántos personajes y partidas se pierden).
   /cuenta tiene cuatro bloques: Datos, Tu material (cifras), Contraseña
   (cambio plegado, con actual + nueva + repetición) y Sesión, más la zona
   peligrosa del borrado al final.
@@ -196,6 +206,13 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la
   ficha al unirse—, danoNoLetal, condiciones, posX/posY). /partidas/crear
   y /partidas/buscar (por nombre o código) + unirse funcionan en el front.
+- GET /api/partidas/mias: las mesas del usuario (las que dirige + aquellas
+  donde tiene algún personaje sentado), sin tope. Devuelve MiPartidaResumen
+  (PartidaResumen + soyMaster + misPersonajes). Se declara ANTES de
+  @Get(':id') o 'mias' entraría por ahí y el ParseUUIDPipe daría un 400
+  desconcertante. Se consulta en DOS pasos (ids primero) a propósito:
+  filtrar por una relación anidada y cargar esa misma relación en una sola
+  consulta hace que TypeORM devuelva solo las filas que casan.
 - Vista de partida en /partidas/:id: layout a ancho completo (máx 100rem)
   con tablero responsive (rejilla de casillas cuadradas por aspect-ratio,
   acotada por el alto de la ventana) y panel lateral tipo tarjetas, pegajoso

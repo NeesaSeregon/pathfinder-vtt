@@ -9,7 +9,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 import {
   caConCondiciones,
   casillasQueOcupa,
@@ -21,6 +21,7 @@ import {
   lanzarDados,
   MAPA_MAX_BYTES,
   MAPA_TIPOS,
+  MiPartidaResumen,
   ordenarIniciativa,
   PartidaDetalle,
   PartidaResumen,
@@ -98,6 +99,37 @@ export class PartidasService {
       take: 12,
     });
     return partidas.map((partida) => this.aResumen(partida, userId));
+  }
+
+  /**
+   * Las mesas del usuario: las que dirige MÁS aquellas donde tiene algún
+   * personaje sentado. Sin tope: son tuyas, caben todas.
+   */
+  async mias(userId: string): Promise<MiPartidaResumen[]> {
+    // En dos pasos a propósito: filtrar por una relación anidada y cargar
+    // esa misma relación en la misma consulta hace que TypeORM devuelva
+    // SOLO las filas que casan (verías un personaje por mesa, el tuyo).
+    const sentados = await this.personajes.find({
+      where: { character: { ownerId: userId } },
+    });
+    const idsJugando = [...new Set(sentados.map((pep) => pep.partidaId))];
+
+    const partidas = await this.partidas.find({
+      where: [
+        { masterId: userId },
+        ...(idsJugando.length > 0 ? [{ id: In(idsJugando) }] : []),
+      ],
+      relations: { master: true, personajes: { character: true } },
+      order: { updatedAt: 'DESC' },
+    });
+
+    return partidas.map((partida) => ({
+      ...this.aResumen(partida, userId),
+      soyMaster: partida.masterId === userId,
+      misPersonajes: (partida.personajes ?? [])
+        .filter((pep) => pep.character?.ownerId === userId)
+        .map((pep) => pep.character.name),
+    }));
   }
 
   async detalle(id: string, userId: string): Promise<PartidaDetalle> {

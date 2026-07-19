@@ -45,6 +45,13 @@ export class PartidasController {
     return this.partidas.buscar(buscar, user.sub);
   }
 
+  // ANTES de @Get(':id'): si no, 'mias' entraría por ahí y el ParseUUIDPipe
+  // lo rechazaría con un 400 desconcertante.
+  @Get('mias')
+  mias(@CurrentUser() user: JwtPayload) {
+    return this.partidas.mias(user.sub);
+  }
+
   @Get(':id')
   detalle(
     @Param('id', ParseUUIDPipe) id: string,
