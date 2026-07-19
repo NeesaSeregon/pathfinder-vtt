@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   BadRequestException,
   ConflictException,
@@ -10,18 +12,23 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import {
   caConCondiciones,
+  casillasQueOcupa,
   claseDeArmadura,
   efectoDeCondiciones,
+  huellasSeSolapan,
   iniciativa,
   JwtPayload,
   lanzarDados,
+  MAPA_MAX_BYTES,
+  MAPA_TIPOS,
   ordenarIniciativa,
   PartidaDetalle,
   PartidaResumen,
   PersonajeEnPartidaResumen,
+  TABLERO_ALTO,
+  TABLERO_ANCHO,
   TiradaResultado,
 } from '@pathfinder/shared';
-import { Character } from '../characters/entities/character.entity';
 import { Partida } from './entities/partida.entity';
 import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
 import {
@@ -32,6 +39,17 @@ import {
 } from './dto/create-partida.dto';
 import { CharactersService } from '../characters/characters.service';
 import { PartidasGateway } from './partidas.gateway';
+
+/**
+ * Lo que multer nos entrega de un fichero subido (solo lo que usamos). Se
+ * declara aquí para no depender de @types/multer por cuatro campos.
+ */
+export interface FicheroSubido {
+  originalname: string;
+  mimetype: string;
+  size: number;
+  buffer: Buffer;
+}
 
 /** Sin caracteres ambiguos (0/O, 1/I/L) para dictarlo en voz alta en mesa. */
 const ALFABETO_CODIGO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -93,7 +111,98 @@ export class PartidasService {
       enCombate: partida.enCombate,
       ronda: partida.ronda,
       turnoPepId: partida.turnoPepId,
+      tieneMapa: partida.mapaFichero !== null,
     };
+  }
+
+  /**
+   * Carpeta donde viven los mapas subidos. Configurable con UPLOADS_DIR
+   * (en despliegue debe ser un volumen montado, no el sistema de ficheros
+   * efímero del contenedor). Por defecto, ./uploads/mapas del proyecto.
+   */
+  private carpetaMapas(): string {
+    return process.env.UPLOADS_DIR
+      ? join(process.env.UPLOADS_DIR, 'mapas')
+      : join(process.cwd(), 'uploads', 'mapas');
+  }
+
+  /** Ruta absoluta del mapa de una partida (para servirlo o borrarlo). */
+  rutaDelMapa(fichero: string): string {
+    return join(this.carpetaMapas(), fichero);
+  }
+
+  /** Sube (o reemplaza) el mapa de fondo. Solo el máster. */
+  async guardarMapa(
+    partidaId: string,
+    fichero: FicheroSubido | undefined,
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloElMaster(partida, userId);
+
+    if (!fichero?.buffer?.length) {
+      throw new BadRequestException('No llegó ninguna imagen');
+    }
+    const extension = MAPA_TIPOS[fichero.mimetype];
+    if (!extension) {
+      throw new BadRequestException(
+        `Formato no admitido (${fichero.mimetype}); usa PNG, JPG, WEBP o GIF`,
+      );
+    }
+    if (fichero.size > MAPA_MAX_BYTES) {
+      throw new BadRequestException('La imagen supera los 8 MB');
+    }
+
+    // Nombre generado: NUNCA usamos el nombre que manda el cliente
+    const nombre = `${randomUUID()}${extension}`;
+    await mkdir(this.carpetaMapas(), { recursive: true });
+    await writeFile(this.rutaDelMapa(nombre), fichero.buffer);
+
+    const anterior = partida.mapaFichero;
+    partida.mapaFichero = nombre;
+    await this.partidas.save(partida);
+    await this.borrarFichero(anterior);
+
+    this.gateway.emitirMesaCambiada(partidaId);
+    return this.detalle(partidaId, userId);
+  }
+
+  /** Quita el mapa de fondo (y su fichero). Solo el máster. */
+  async quitarMapa(
+    partidaId: string,
+    userId: string,
+  ): Promise<PartidaDetalle> {
+    const partida = await this.buscarEntidad(partidaId);
+    this.soloElMaster(partida, userId);
+
+    const anterior = partida.mapaFichero;
+    partida.mapaFichero = null;
+    await this.partidas.save(partida);
+    await this.borrarFichero(anterior);
+
+    this.gateway.emitirMesaCambiada(partidaId);
+    return this.detalle(partidaId, userId);
+  }
+
+  /** El fichero del mapa para servirlo; 404 si la mesa no tiene. */
+  async mapaDe(partidaId: string): Promise<string> {
+    const partida = await this.buscarEntidad(partidaId);
+    if (!partida.mapaFichero) {
+      throw new NotFoundException('Esta partida no tiene mapa');
+    }
+    return partida.mapaFichero;
+  }
+
+  /** Borrado best-effort: si el fichero ya no está, no es un error. */
+  private async borrarFichero(nombre: string | null): Promise<void> {
+    if (!nombre) {
+      return;
+    }
+    try {
+      await unlink(this.rutaDelMapa(nombre));
+    } catch {
+      // El fichero pudo borrarse a mano; el registro en BD ya está limpio
+    }
   }
 
   async actualizar(
@@ -164,6 +273,16 @@ export class PartidasService {
         'Solo el máster o el dueño pueden tocar a este personaje',
       );
     }
+    // Si es una colocación/movimiento, la huella debe caber y no pisar a nadie
+    if (dto.posX !== undefined || dto.posY !== undefined) {
+      this.validarColocacion(
+        partida,
+        pep,
+        dto.posX ?? pep.posX,
+        dto.posY ?? pep.posY,
+      );
+    }
+
     Object.assign(pep, dto);
     await this.personajes.save(pep);
     const resumen = this.aPersonajeResumen(pep, userId);
@@ -336,31 +455,6 @@ export class PartidasService {
     return resultado;
   }
 
-  /**
-   * Ficha COMPLETA de un personaje de la mesa, en solo lectura. La ve el
-   * máster (necesita las hojas de sus jugadores para dirigir) o el propio
-   * dueño; nadie más, ni siquiera otros jugadores de la misma partida.
-   */
-  async fichaDePersonaje(
-    partidaId: string,
-    pepId: string,
-    userId: string,
-  ): Promise<Character> {
-    const partida = await this.buscarEntidad(partidaId);
-    const pep = partida.personajes.find((p) => p.id === pepId);
-    if (!pep) {
-      throw new NotFoundException('Ese personaje no está en la partida');
-    }
-    const esMaster = partida.masterId === userId;
-    const esDueno = pep.character?.ownerId === userId;
-    if (!esMaster && !esDueno) {
-      throw new ForbiddenException(
-        'Solo el máster o el dueño pueden ver esta ficha',
-      );
-    }
-    return pep.character;
-  }
-
   private async buscarEntidad(id: string): Promise<Partida> {
     const partida = await this.partidas.findOne({
       where: { id },
@@ -382,6 +476,37 @@ export class PartidasService {
       throw new ForbiddenException(
         'Solo los participantes de la mesa pueden tirar dados',
       );
+    }
+  }
+
+  /**
+   * Un personaje ocupa una huella cuadrada según su tamaño (Grande = 2×2).
+   * Al colocarlo, esa huella debe caber entera en el tablero y no solaparse
+   * con la de nadie más. Lo valida el SERVIDOR: el cliente no es de fiar.
+   */
+  private validarColocacion(
+    partida: Partida,
+    pep: PersonajeEnPartida,
+    posX: number | null,
+    posY: number | null,
+  ): void {
+    if (posX === null || posY === null) {
+      return; // sigue en el banquillo, no hay nada que validar
+    }
+    const lado = casillasQueOcupa(pep.character?.sheetData ?? {});
+    if (posX + lado > TABLERO_ANCHO || posY + lado > TABLERO_ALTO) {
+      throw new BadRequestException(
+        `No cabe ahí: ocupa ${lado}×${lado} casillas`,
+      );
+    }
+    for (const otro of partida.personajes) {
+      if (otro.id === pep.id || otro.posX === null || otro.posY === null) {
+        continue;
+      }
+      const otroLado = casillasQueOcupa(otro.character?.sheetData ?? {});
+      if (huellasSeSolapan(posX, posY, lado, otro.posX, otro.posY, otroLado)) {
+        throw new BadRequestException('Esa casilla ya está ocupada');
+      }
     }
   }
 
@@ -452,6 +577,8 @@ export class PartidasService {
       condiciones: pep.condiciones ?? [],
       posX: pep.posX,
       posY: pep.posY,
+      // Huella en casillas según el tamaño de la ficha (Grande = 2×2)
+      casillas: casillasQueOcupa(sheet),
       iniciativa: pep.iniciativa,
       // El modificador de iniciativa lo deriva el servidor de la ficha
       iniciativaMod: iniciativa(pep.character?.sheetData ?? {}),

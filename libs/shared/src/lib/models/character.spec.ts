@@ -1,5 +1,7 @@
 import {
   ALINEAMIENTOS,
+  casillasQueOcupa,
+  huellasSeSolapan,
   bmc,
   bonificadorHabilidad,
   bonificadorRacial,
@@ -623,5 +625,29 @@ describe('normalizarDotes', () => {
     expect(normalizarDotes(undefined)).toEqual([]);
     expect(normalizarDotes(null)).toEqual([]);
     expect(normalizarDotes(42)).toEqual([]);
+  });
+});
+
+describe('huella en el tablero (tamaño)', () => {
+  it('el tamaño mediano (o sin tamaño) ocupa 1 casilla', () => {
+    expect(casillasQueOcupa({})).toBe(1);
+    expect(casillasQueOcupa({ tamano: 'mediano' })).toBe(1);
+    expect(casillasQueOcupa({ tamano: 'pequeno' })).toBe(1);
+  });
+
+  it('Grande ocupa 2, Enorme 3, Gargantuesco 4, Colosal 6', () => {
+    expect(casillasQueOcupa({ tamano: 'grande' })).toBe(2);
+    expect(casillasQueOcupa({ tamano: 'enorme' })).toBe(3);
+    expect(casillasQueOcupa({ tamano: 'gargantuesco' })).toBe(4);
+    expect(casillasQueOcupa({ tamano: 'colosal' })).toBe(6);
+  });
+
+  it('detecta solapes de huellas', () => {
+    // Un Grande en (0,0) 2×2 pisa la casilla (1,1)
+    expect(huellasSeSolapan(0, 0, 2, 1, 1, 1)).toBe(true);
+    // Pero no la (2,2), justo fuera de su huella
+    expect(huellasSeSolapan(0, 0, 2, 2, 2, 1)).toBe(false);
+    // Dos medianos adyacentes no se pisan
+    expect(huellasSeSolapan(3, 3, 1, 4, 3, 1)).toBe(false);
   });
 });

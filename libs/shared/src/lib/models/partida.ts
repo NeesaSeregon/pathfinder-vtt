@@ -59,6 +59,8 @@ export interface PersonajeEnPartidaResumen {
   condiciones: string[];
   posX: number | null;
   posY: number | null;
+  /** Lado de la huella en el tablero según el tamaño (Grande=2, etc.). */
+  casillas: number;
   /** Iniciativa TIRADA en el combate actual (null = aún no ha tirado). */
   iniciativa: number | null;
   /** Modificador de iniciativa de la ficha, derivado por el SERVIDOR. */
@@ -85,7 +87,20 @@ export interface PartidaDetalle extends PartidaResumen {
   ronda: number;
   /** pepId del personaje que tiene el turno (null fuera de combate). */
   turnoPepId: string | null;
+  /** ¿La mesa tiene mapa de fondo? (se sirve en GET :id/mapa) */
+  tieneMapa: boolean;
 }
+
+/** Tipos de imagen admitidos para el mapa y su extensión en disco. */
+export const MAPA_TIPOS: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
+/** Tope de tamaño del mapa subido (8 MB). */
+export const MAPA_MAX_BYTES = 8 * 1024 * 1024;
 
 /** Lo mínimo para ordenar el turno: la tirada y su desempate. */
 export interface Combatiente {

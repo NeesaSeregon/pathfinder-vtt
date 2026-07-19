@@ -48,3 +48,6 @@ Thumbs.db
 .claude/settings.local.json
 
 .angular
+
+# Mapas subidos por los másters (se sirven desde disco; en despliegue, volumen)
+uploads/

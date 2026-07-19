@@ -25,6 +25,8 @@ import './commands';
 function esperarApi(intentos = 40): void {
   cy.request({ url: '/api/auth/me', failOnStatusCode: false }).then((res) => {
     if (res.status >= 500 && intentos > 0) {
+      // Backoff legítimo entre sondeos a la API mientras arranca
+      // eslint-disable-next-line cypress/no-unnecessary-waiting
       cy.wait(300);
       esperarApi(intentos - 1);
     }

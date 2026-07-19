@@ -3,7 +3,6 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   ActualizarPersonajeEnPartida,
-  Character,
   CrearPartida,
   PartidaDetalle,
   PartidaResumen,
@@ -69,10 +68,18 @@ export class PartidasApi {
     );
   }
 
-  ficha(partidaId: string, pepId: string): Observable<Character> {
-    return this.http.get<Character>(
-      `${this.baseUrl}/${partidaId}/personajes/${pepId}/ficha`,
+  /** Sube el mapa de fondo (multipart; el navegador pone el Content-Type). */
+  subirMapa(partidaId: string, fichero: File): Observable<PartidaDetalle> {
+    const datos = new FormData();
+    datos.append('mapa', fichero);
+    return this.http.post<PartidaDetalle>(
+      `${this.baseUrl}/${partidaId}/mapa`,
+      datos,
     );
+  }
+
+  quitarMapa(partidaId: string): Observable<PartidaDetalle> {
+    return this.http.delete<PartidaDetalle>(`${this.baseUrl}/${partidaId}/mapa`);
   }
 
   tirarIniciativa(

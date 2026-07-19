@@ -15,6 +15,7 @@ import {
 } from '@pathfinder/shared';
 import { PartidasApi } from './partidas-api';
 import { PartidaSocket } from './partida-socket';
+import { CharactersApi } from '../characters/characters-api';
 import { FichaVista } from '../characters/ficha-vista';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
@@ -26,6 +27,7 @@ import { mensajeDeError } from '../characters/mensaje-de-error';
 })
 export class PartidaDetallePage {
   private readonly api = inject(PartidasApi);
+  private readonly charactersApi = inject(CharactersApi);
   private readonly partidaId =
     inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
@@ -39,6 +41,8 @@ export class PartidaDetallePage {
   protected readonly error = signal<string | null>(null);
   /** Id del personaje seleccionado para mover (dos clics: token → casilla). */
   protected readonly seleccionado = signal<string | null>(null);
+  /** Id del personaje que se está arrastrando (alternativa a los dos clics). */
+  protected readonly arrastrando = signal<string | null>(null);
 
   /** Personajes aún sin colocar en el tablero. */
   protected readonly banquillo = computed(() =>
@@ -54,6 +58,17 @@ export class PartidaDetallePage {
   protected readonly esParticipante = computed(() => {
     const p = this.partida();
     return !!p && (p.esMaster || p.personajes.some((pep) => pep.esMio));
+  });
+
+  /** Sube al cambiar el mapa: rompe la caché del navegador para la imagen. */
+  private readonly versionMapa = signal(0);
+
+  /** URL de fondo del tablero, o null si la mesa no tiene mapa. */
+  protected readonly fondoTablero = computed(() => {
+    const p = this.partida();
+    return p?.tieneMapa
+      ? `url(/api/partidas/${this.partidaId}/mapa?v=${this.versionMapa()})`
+      : null;
   });
 
   /** Ficha abierta en la modal de consulta (null = cerrada). */
@@ -89,7 +104,27 @@ export class PartidaDetallePage {
     });
   }
 
-  protected personajeEn(
+  /**
+   * Quién OCUPA la casilla, contando la huella completa: un Grande en (3,3)
+   * ocupa también (4,3), (3,4) y (4,4).
+   */
+  protected ocupanteDe(
+    x: number,
+    y: number,
+  ): PersonajeEnPartidaResumen | undefined {
+    return this.partida()?.personajes.find(
+      (pep) =>
+        pep.posX !== null &&
+        pep.posY !== null &&
+        x >= pep.posX &&
+        x < pep.posX + pep.casillas &&
+        y >= pep.posY &&
+        y < pep.posY + pep.casillas,
+    );
+  }
+
+  /** Solo en su casilla ORIGEN se pinta el token (que luego cubre su huella). */
+  protected tokenEn(
     x: number,
     y: number,
   ): PersonajeEnPartidaResumen | undefined {
@@ -98,12 +133,17 @@ export class PartidaDetallePage {
     );
   }
 
+  /** Lado del token para cubrir su huella, contando los huecos de la rejilla. */
+  protected ladoToken(pep: PersonajeEnPartidaResumen): string {
+    return `calc(${pep.casillas * 100}% + ${(pep.casillas - 1) * 2 - 4}px)`;
+  }
+
   protected puedeMover(pep: PersonajeEnPartidaResumen): boolean {
     return (this.partida()?.esMaster ?? false) || pep.esMio;
   }
 
   protected clickCelda(x: number, y: number): void {
-    const ocupante = this.personajeEn(x, y);
+    const ocupante = this.ocupanteDe(x, y);
     if (ocupante) {
       // Clic sobre un token: selecciona (o deselecciona) si puedes moverlo
       if (this.puedeMover(ocupante)) {
@@ -114,6 +154,73 @@ export class PartidaDetallePage {
       return;
     }
     const pepId = this.seleccionado();
+    if (pepId) {
+      this.mover(pepId, x, y);
+    }
+  }
+
+  /** El máster sube (o reemplaza) el mapa de fondo de la mesa. */
+  protected subirMapa(evento: Event): void {
+    const input = evento.target as HTMLInputElement;
+    const fichero = input.files?.[0];
+    if (!fichero) {
+      return;
+    }
+    this.error.set(null);
+    this.api.subirMapa(this.partidaId, fichero).subscribe({
+      next: (partida) => {
+        this.partida.set(partida);
+        this.versionMapa.update((v) => v + 1);
+        // Permite volver a elegir el MISMO fichero si hiciera falta
+        input.value = '';
+      },
+      error: (err) =>
+        this.error.set(`No se pudo subir el mapa: ${mensajeDeError(err)}`),
+    });
+  }
+
+  protected quitarMapa(): void {
+    this.error.set(null);
+    this.api.quitarMapa(this.partidaId).subscribe({
+      next: (partida) => {
+        this.partida.set(partida);
+        this.versionMapa.update((v) => v + 1);
+      },
+      error: (err) =>
+        this.error.set(`No se pudo quitar el mapa: ${mensajeDeError(err)}`),
+    });
+  }
+
+  /** Arrastre: empieza en el token (si puedes moverlo). */
+  protected iniciarArrastre(
+    evento: DragEvent,
+    pep: PersonajeEnPartidaResumen,
+  ): void {
+    if (!this.puedeMover(pep)) {
+      evento.preventDefault();
+      return;
+    }
+    this.arrastrando.set(pep.id);
+    // Opcional en algunos navegadores, pero hace el arrastre más fiable
+    evento.dataTransfer?.setData('text/plain', pep.id);
+    if (evento.dataTransfer) {
+      evento.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  protected terminarArrastre(): void {
+    this.arrastrando.set(null);
+  }
+
+  /** Sin preventDefault en dragover el navegador no admite el soltar. */
+  protected permitirSoltar(evento: DragEvent): void {
+    evento.preventDefault();
+  }
+
+  protected soltarEn(evento: DragEvent, x: number, y: number): void {
+    evento.preventDefault();
+    const pepId = this.arrastrando();
+    this.arrastrando.set(null);
     if (pepId) {
       this.mover(pepId, x, y);
     }
@@ -239,11 +346,12 @@ export class PartidaDetallePage {
     );
   }
 
-  /** Abre la ficha COMPLETA de un personaje (el servidor valida el acceso). */
+  /** Abre la ficha COMPLETA de un personaje (el servidor valida el acceso:
+   *  dueño o máster de la mesa donde está sentado). */
   protected verFicha(pep: PersonajeEnPartidaResumen): void {
     this.cargandoFicha.set(true);
     this.error.set(null);
-    this.api.ficha(this.partidaId, pep.id).subscribe({
+    this.charactersApi.get(pep.characterId).subscribe({
       next: (ficha) => {
         this.fichaAbierta.set(ficha);
         this.cargandoFicha.set(false);

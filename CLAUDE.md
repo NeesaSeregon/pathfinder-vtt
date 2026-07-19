@@ -70,9 +70,12 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   El authInterceptor ante un 401 limpia y redirige a /entrar.
 - Los personajes tienen dueño (Character.ownerId → users): cada usuario
   solo ve y toca los suyos; el personaje de otro devuelve 404, no 403.
-  EXCEPCIÓN: el máster de una partida puede LEER (no editar) la ficha
-  completa de los personajes de SU mesa (GET /api/partidas/:id/personajes/
-  :pepId/ficha); lo autoriza ser máster o el propio dueño, nadie más.
+  EXCEPCIÓN de LECTURA: GET /api/characters/:id lo sirve CharactersService.
+  leer(id, userId), que autoriza al dueño O al máster de una partida donde
+  el personaje esté sentado (en mesa real el máster necesita la hoja del
+  jugador). Sigue siendo 404 si no tienes acceso. Editar/borrar y el
+  findOne interno siguen siendo SOLO del dueño. La mesa ("Ver ficha") usa
+  este endpoint; antes había uno propio en partidas, ya retirado.
 
 ## Migraciones (TypeORM)
 - El esquema de la base de datos SOLO cambia mediante migraciones
@@ -161,6 +164,27 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   del nombre). Mover en dos clics (banquillo para los no colocados), PG y
   condiciones editables y CA derivada POR EL SERVIDOR. Permisos: máster toca
   todo, cada jugador lo suyo (PATCH /api/partidas/:id/personajes/:pepId).
+- Mapa de fondo del tablero: lo sube el MÁSTER (POST :id/mapa, multipart,
+  campo "mapa"); GET :id/mapa lo sirve y DELETE :id/mapa lo quita. Se guarda
+  EN DISCO, no en la BD: la columna partidas.mapaFichero solo lleva el nombre
+  generado (uuid + extensión por MIME — nunca el nombre del cliente). Carpeta
+  configurable con UPLOADS_DIR (por defecto ./uploads/mapas, en .gitignore);
+  en despliegue debe ser un VOLUMEN montado. Tipos admitidos y tope de 8 MB
+  en libs/shared (MAPA_TIPOS, MAPA_MAX_BYTES), validados también en servidor.
+  Se usa el almacenamiento en memoria de multer y escribimos el fichero a
+  mano (así no hace falta @types/multer). Al reemplazar o quitar se borra el
+  fichero anterior. En el front, el tablero lo pinta de fondo y las casillas
+  se vuelven translúcidas (clase tablero--con-mapa).
+- Mover tokens: dos clics (token → casilla) Y arrastrar (drag & drop nativo;
+  el dragover hace preventDefault para admitir el soltar). Ambas rutas acaban
+  en el mismo PATCH, así que el servidor valida la huella igual.
+- Tamaño y huella en el tablero: casillasQueOcupa(ficha) en libs/shared da el
+  lado de la huella según el tamaño de la ficha (Grande 2×2, Enorme 3×3,
+  Gargantuesco 4×4, Colosal 6×6; el resto 1×1). El resumen lleva casillas;
+  el token se pinta solo en su casilla ORIGEN y se dimensiona para cubrir la
+  huella (ladoToken), y ocupanteDe(x,y) considera la huella entera. El
+  SERVIDOR valida al colocar (validarColocacion): que quepa en el tablero y
+  que no se solape con otra huella (huellasSeSolapan) → 400 si no.
 - Buscar partida: el backend devuelve solo las 12 más recientes (take: 12);
   es para encontrar TU mesa por nombre/código, no un catálogo completo.
 - Tiempo real con Socket.IO: PartidasGateway autentica el handshake con la

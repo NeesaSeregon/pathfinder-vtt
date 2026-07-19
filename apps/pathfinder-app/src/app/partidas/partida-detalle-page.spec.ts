@@ -21,6 +21,7 @@ const DETALLE: PartidaDetalle = {
   enCombate: false,
   ronda: 0,
   turnoPepId: null,
+  tieneMapa: false,
   personajes: [
     {
       id: 'pep-1',
@@ -37,6 +38,7 @@ const DETALLE: PartidaDetalle = {
       condiciones: [],
       posX: null,
       posY: null,
+      casillas: 1,
       iniciativa: null,
       iniciativaMod: 2,
       esMio: false,

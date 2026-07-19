@@ -38,7 +38,8 @@ export class CharactersController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.charactersService.findOne(id, user.sub);
+    // Lectura ampliada: el dueño o el máster de una mesa donde esté sentado
+    return this.charactersService.leer(id, user.sub);
   }
 
   @Patch(':id')

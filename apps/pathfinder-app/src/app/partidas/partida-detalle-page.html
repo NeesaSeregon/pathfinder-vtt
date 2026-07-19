@@ -14,7 +14,23 @@
           }
         </p>
       </div>
-      <button type="button" (click)="cargar()">Actualizar</button>
+      <div class="mesa__cabecera-acciones">
+        @if (p.esMaster) {
+          <label class="mesa__mapa">
+            <span>Mapa de fondo</span>
+            <input
+              type="file"
+              name="mapa"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              (change)="subirMapa($event)"
+            />
+          </label>
+          @if (p.tieneMapa) {
+            <button type="button" (click)="quitarMapa()">Quitar mapa</button>
+          }
+        }
+        <button type="button" (click)="cargar()">Actualizar</button>
+      </div>
     </header>
 
     @if (banquillo().length > 0) {
@@ -28,7 +44,11 @@
             type="button"
             class="tablero__token"
             [style.background]="colorToken(pep.nombre)"
+            [attr.draggable]="puedeMover(pep)"
+            (dragstart)="iniciarArrastre($event, pep)"
+            (dragend)="terminarArrastre()"
             [class.tablero__token--seleccionado]="seleccionado() === pep.id"
+            [class.tablero__token--arrastrando]="arrastrando() === pep.id"
             [class.tablero__token--ajeno]="!puedeMover(pep)"
             (click)="seleccionarDelBanquillo(pep)"
           >
@@ -39,24 +59,38 @@
     }
 
     <div class="mesa__contenido">
-      <div class="tablero" role="grid">
+      <div
+        class="tablero"
+        role="grid"
+        [class.tablero--con-mapa]="fondoTablero()"
+        [style.background-image]="fondoTablero()"
+      >
         @for (y of filas; track y) {
           @for (x of columnas; track x) {
             <button
               type="button"
               class="tablero__celda"
               [class.tablero__celda--destino]="
-                seleccionado() && !personajeEn(x, y)
+                (seleccionado() || arrastrando()) && !ocupanteDe(x, y)
               "
               (click)="clickCelda(x, y)"
+              (dragover)="permitirSoltar($event)"
+              (drop)="soltarEn($event, x, y)"
             >
-              @if (personajeEn(x, y); as pep) {
+              @if (tokenEn(x, y); as pep) {
                 <span
                   class="tablero__token"
                   [style.background]="colorToken(pep.nombre)"
+                  [style.width]="ladoToken(pep)"
+                  [style.height]="ladoToken(pep)"
+                  [attr.data-casillas]="pep.casillas"
+                  [attr.draggable]="puedeMover(pep)"
+                  (dragstart)="iniciarArrastre($event, pep)"
+                  (dragend)="terminarArrastre()"
                   [class.tablero__token--seleccionado]="
                     seleccionado() === pep.id
                   "
+                  [class.tablero__token--arrastrando]="arrastrando() === pep.id"
                   [class.tablero__token--ajeno]="!puedeMover(pep)"
                   [title]="pep.nombre"
                 >

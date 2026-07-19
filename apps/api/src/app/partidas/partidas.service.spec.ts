@@ -1,3 +1,10 @@
+// El guardado del mapa toca disco: lo simulamos para que el test sea puro
+jest.mock('node:fs/promises', () => ({
+  mkdir: jest.fn().mockResolvedValue(undefined),
+  writeFile: jest.fn().mockResolvedValue(undefined),
+  unlink: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
@@ -262,37 +269,6 @@ describe('PartidasService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('ver ficha: la ven el máster y el dueño; un tercero recibe 403', async () => {
-    const partida = {
-      id: 'partida-1',
-      masterId: 'master',
-      personajes: [
-        { id: 'pep-1', character: { id: 'char-1', ownerId: 'dueno', sheetData: {} } },
-      ],
-    };
-    partidasRepo.findOne.mockResolvedValue(partida);
-
-    await expect(
-      service.fichaDePersonaje('partida-1', 'pep-1', 'un-tercero'),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-
-    const paraMaster = await service.fichaDePersonaje('partida-1', 'pep-1', 'master');
-    expect(paraMaster.id).toBe('char-1');
-    const paraDueno = await service.fichaDePersonaje('partida-1', 'pep-1', 'dueno');
-    expect(paraDueno.id).toBe('char-1');
-  });
-
-  it('ver la ficha de un personaje que no está en la mesa da 404', async () => {
-    partidasRepo.findOne.mockResolvedValue({
-      id: 'partida-1',
-      masterId: 'master',
-      personajes: [],
-    });
-    await expect(
-      service.fichaDePersonaje('partida-1', 'pep-inexistente', 'master'),
-    ).rejects.toBeInstanceOf(NotFoundException);
-  });
-
   const partidaConCombatientes = () => ({
     id: 'partida-1',
     nombre: 'Mesa',
@@ -384,6 +360,154 @@ describe('PartidasService', () => {
       'pep-a',
       expect.objectContaining({ iniciativa: resumen.iniciativa }),
     );
+  });
+
+  it('colocar: un Grande ocupa 2×2 y no cabe pegado al borde', async () => {
+    const grande = {
+      id: 'pep-grande',
+      characterId: 'char-1',
+      character: { ownerId: 'dueno', sheetData: { tamano: 'grande' } },
+      posX: null,
+      posY: null,
+      condiciones: [],
+    };
+    partidasRepo.findOne.mockResolvedValue({
+      id: 'partida-1',
+      masterId: 'master',
+      personajes: [grande],
+    });
+
+    // TABLERO_ANCHO = 20: en x=19 su huella 2×2 se saldría del tablero
+    await expect(
+      service.actualizarPersonaje(
+        'partida-1',
+        'pep-grande',
+        { posX: 19, posY: 5 },
+        'dueno',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    // En x=18 sí cabe (ocupa 18 y 19)
+    const colocado = await service.actualizarPersonaje(
+      'partida-1',
+      'pep-grande',
+      { posX: 18, posY: 5 },
+      'dueno',
+    );
+    expect(colocado.posX).toBe(18);
+    expect(colocado.casillas).toBe(2);
+  });
+
+  it('colocar: no se puede pisar la huella de otro personaje', async () => {
+    const grande = {
+      id: 'pep-grande',
+      character: { ownerId: 'dueno', sheetData: { tamano: 'grande' } },
+      posX: 3,
+      posY: 3,
+      condiciones: [],
+    };
+    const mediano = {
+      id: 'pep-mediano',
+      character: { ownerId: 'dueno', sheetData: {} },
+      posX: null,
+      posY: null,
+      condiciones: [],
+    };
+    partidasRepo.findOne.mockResolvedValue({
+      id: 'partida-1',
+      masterId: 'master',
+      personajes: [grande, mediano],
+    });
+
+    // (4,4) cae DENTRO de la huella del Grande, que va de (3,3) a (4,4)
+    await expect(
+      service.actualizarPersonaje(
+        'partida-1',
+        'pep-mediano',
+        { posX: 4, posY: 4 },
+        'dueno',
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    // (5,5) está libre
+    const ok = await service.actualizarPersonaje(
+      'partida-1',
+      'pep-mediano',
+      { posX: 5, posY: 5 },
+      'dueno',
+    );
+    expect(ok.posX).toBe(5);
+  });
+
+  describe('mapa de fondo', () => {
+    const imagen = {
+      originalname: 'mazmorra.png',
+      mimetype: 'image/png',
+      size: 1024,
+      buffer: Buffer.from('fake-png'),
+    };
+    const mesa = () => ({
+      id: 'partida-1',
+      nombre: 'Mesa',
+      descripcion: '',
+      estado: 'preparacion',
+      codigo: 'ABC234',
+      masterId: 'master',
+      master: { username: 'neesa' },
+      personajes: [],
+      mapaFichero: null as string | null,
+    });
+
+    it('solo el máster puede subirlo', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesa());
+      await expect(
+        service.guardarMapa('partida-1', imagen, 'jugador'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('rechaza formatos que no sean imagen admitida', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesa());
+      await expect(
+        service.guardarMapa(
+          'partida-1',
+          { ...imagen, mimetype: 'application/pdf' },
+          'master',
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rechaza una subida vacía', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesa());
+      await expect(
+        service.guardarMapa('partida-1', undefined, 'master'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('guarda con nombre generado (nunca el del cliente) y marca tieneMapa', async () => {
+      const partida = mesa();
+      partidasRepo.findOne.mockResolvedValue(partida);
+
+      const detalle = await service.guardarMapa('partida-1', imagen, 'master');
+
+      expect(detalle.tieneMapa).toBe(true);
+      // Nombre uuid + extensión por MIME; nada de "mazmorra.png"
+      expect(partida.mapaFichero).toMatch(/^[0-9a-f-]{36}\.png$/);
+      expect(gateway.emitirMesaCambiada).toHaveBeenCalledWith('partida-1');
+    });
+
+    it('quitar el mapa lo deja sin fondo (solo el máster)', async () => {
+      const partida = mesa();
+      partida.mapaFichero = 'algo.png';
+      partidasRepo.findOne.mockResolvedValue(partida);
+
+      await expect(
+        service.quitarMapa('partida-1', 'jugador'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      const detalle = await service.quitarMapa('partida-1', 'master');
+      expect(detalle.tieneMapa).toBe(false);
+      expect(partida.mapaFichero).toBeNull();
+    });
   });
 
   it('sacar a alguien que no está da 404', async () => {

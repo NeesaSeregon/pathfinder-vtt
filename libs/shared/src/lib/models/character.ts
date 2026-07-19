@@ -238,6 +238,41 @@ export function modificadorTamanoManiobras(sheet: CharacterSheetData): number {
 }
 
 /**
+ * Lado de la huella en el tablero (casillas de 5 pies) según el tamaño:
+ * Grande 2×2, Enorme 3×3, Gargantuesco 4×4, Colosal 6×6; el resto 1×1.
+ */
+const CASILLAS_POR_TAMANO: Record<Tamano, number> = {
+  fino: 1,
+  diminuto: 1,
+  menudo: 1,
+  pequeno: 1,
+  mediano: 1,
+  grande: 2,
+  enorme: 3,
+  gargantuesco: 4,
+  colosal: 6,
+};
+
+export function casillasQueOcupa(sheet: CharacterSheetData): number {
+  const tamano = sheet.tamano;
+  return tamano && tamano in CASILLAS_POR_TAMANO
+    ? CASILLAS_POR_TAMANO[tamano]
+    : 1;
+}
+
+/** ¿Se solapan dos huellas cuadradas (x,y,lado) en el tablero? */
+export function huellasSeSolapan(
+  ax: number,
+  ay: number,
+  aLado: number,
+  bx: number,
+  by: number,
+  bLado: number,
+): boolean {
+  return ax < bx + bLado && ax + aLado > bx && ay < by + bLado && ay + aLado > by;
+}
+
+/**
  * Casillas de combate que se rellenan a mano en la ficha. Los totales
  * (CA, iniciativa) NO se guardan: se derivan con las funciones de abajo.
  * El modificador de tamaño ya no es casilla: se deriva de sheet.tamano.

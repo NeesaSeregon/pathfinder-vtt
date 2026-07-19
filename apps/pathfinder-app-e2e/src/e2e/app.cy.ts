@@ -203,6 +203,99 @@ describe('partidas', () => {
       });
   });
 
+  it('arrastrar un token del banquillo lo coloca en la casilla destino', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.request('POST', '/api/characters', {
+      name: `Arrastre-${Date.now()}`,
+      level: 1,
+      sheetData: {},
+    })
+      .its('body.id')
+      .then((characterId) => {
+        cy.request('POST', '/api/partidas', {
+          nombre: `Arrastre-${Date.now()}`,
+        })
+          .its('body.id')
+          .then((partidaId) => {
+            cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
+              characterId,
+            });
+            cy.visit(`/partidas/${partidaId}`);
+
+            cy.get('.tablero__banquillo .tablero__token').trigger('dragstart');
+            cy.get('.tablero__celda').eq(0).trigger('drop');
+
+            // Ya no está en el banquillo: está sobre el tablero
+            cy.get('.tablero__banquillo').should('not.exist');
+            cy.get('.tablero .tablero__token').should('exist');
+          });
+      });
+  });
+
+  it('el máster sube un mapa de fondo al tablero y puede quitarlo', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre: `Mapa-${Date.now()}` })
+      .its('body.id')
+      .then((partidaId) => {
+        cy.visit(`/partidas/${partidaId}`);
+        cy.fixture('mapa.png', 'base64').then((base64) => {
+          cy.get('input[name="mapa"]').selectFile(
+            {
+              contents: Cypress.Buffer.from(base64, 'base64'),
+              fileName: 'mapa.png',
+              mimeType: 'image/png',
+            },
+            { force: true },
+          );
+        });
+        cy.get('.tablero').should('have.class', 'tablero--con-mapa');
+
+        cy.contains('button', 'Quitar mapa').click();
+        cy.get('.tablero').should('not.have.class', 'tablero--con-mapa');
+      });
+  });
+
+  it('un personaje Grande ocupa 2×2 y no cabe pegado al borde', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.request('POST', '/api/characters', {
+      name: `Ogro-${Date.now()}`,
+      level: 5,
+      sheetData: { tamano: 'grande' },
+    })
+      .its('body.id')
+      .then((characterId) => {
+        cy.request('POST', '/api/partidas', { nombre: `Grande-${Date.now()}` })
+          .its('body.id')
+          .then((partidaId) => {
+            cy.request('POST', `/api/partidas/${partidaId}/personajes`, {
+              characterId,
+            })
+              .its('body.id')
+              .then((pepId) => {
+                const url = `/api/partidas/${partidaId}/personajes/${pepId}`;
+                // En x=19 su huella 2×2 se saldría del tablero (ancho 20)
+                cy.request({
+                  method: 'PATCH',
+                  url,
+                  body: { posX: 19, posY: 5 },
+                  failOnStatusCode: false,
+                })
+                  .its('status')
+                  .should('eq', 400);
+
+                // Donde cabe, el token declara su huella de 2 casillas
+                cy.request('PATCH', url, { posX: 2, posY: 2 });
+                cy.visit(`/partidas/${partidaId}`);
+                cy.get('.tablero .tablero__token').should(
+                  'have.attr',
+                  'data-casillas',
+                  '2',
+                );
+              });
+          });
+      });
+  });
+
   it('añade y quita una condición estructurada del catálogo', () => {
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
     cy.request('POST', '/api/characters', {

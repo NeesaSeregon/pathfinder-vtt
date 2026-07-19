@@ -12,6 +12,11 @@ export class CharactersApi {
     return this.http.get<Character[]>(this.baseUrl);
   }
 
+  /** Una ficha por id. La API permite leerla al dueño o al máster de su mesa. */
+  get(id: string): Observable<Character> {
+    return this.http.get<Character>(`${this.baseUrl}/${id}`);
+  }
+
   create(data: CharacterUpsert): Observable<Character> {
     return this.http.post<Character>(this.baseUrl, data);
   }

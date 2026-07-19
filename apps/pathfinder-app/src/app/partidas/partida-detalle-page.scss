@@ -21,6 +21,27 @@
     margin: 0.35rem 0 0;
   }
 
+  &__cabecera-acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  &__mapa {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+
+    input[type='file'] {
+      max-width: 13rem;
+      padding: 0.25rem;
+      font-size: 0.8rem;
+    }
+  }
+
   &__codigo {
     display: inline-flex;
     align-items: center;
@@ -353,6 +374,23 @@
   background: var(--border);
   border: 1px solid var(--border-strong);
   border-radius: 0.5rem;
+  // El mapa de fondo lo pone el componente (fondoTablero)
+  background-size: cover;
+  background-position: center;
+
+  // Con mapa, las casillas se vuelven translúcidas para que se vea debajo
+  &--con-mapa &__celda,
+  &--con-mapa .tablero__celda {
+    background: rgba(11, 14, 20, 0.2);
+
+    &:hover:not(:disabled) {
+      background: rgba(11, 14, 20, 0.38);
+    }
+
+    &.tablero__celda--destino {
+      background: var(--accent-soft);
+    }
+  }
 
   &__celda {
     background: var(--surface);
@@ -363,6 +401,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    // Referencia para el token, que puede desbordar sobre las casillas
+    // vecinas cuando la criatura es Grande o mayor (huella 2×2, 3×3...).
+    position: relative;
 
     &:hover:not(:disabled) {
       background: var(--surface-2);
@@ -379,10 +420,13 @@
     }
   }
 
-  // Ficha-avatar: círculo con iniciales y color propio (estilo inline)
+  // Ficha-avatar: círculo con iniciales y color propio (estilo inline).
+  // El tamaño lo pone el componente (ladoToken) según su huella.
   &__token {
-    width: 82%;
-    height: 82%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    z-index: 2;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
@@ -402,6 +446,10 @@
       box-shadow: var(--glow);
     }
 
+    &--arrastrando {
+      opacity: 0.45;
+    }
+
     &--ajeno {
       filter: saturate(0.55) brightness(0.85);
       cursor: default;
@@ -411,6 +459,7 @@
 
 // Fichas del banquillo: pastillas con el nombre completo (no círculos)
 .mesa__banquillo .tablero__token {
+  position: static;
   width: auto;
   height: auto;
   border-radius: 999px;

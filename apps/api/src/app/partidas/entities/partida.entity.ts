@@ -41,6 +41,10 @@ export class Partida {
   @OneToMany(() => PersonajeEnPartida, (pep) => pep.partida)
   personajes: PersonajeEnPartida[];
 
+  /** Nombre del fichero del mapa en disco (no la ruta); null = sin mapa. */
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  mapaFichero: string | null;
+
   /** Rastreador de combate (estado de sesión de la mesa). */
   @Column({ type: 'boolean', default: false })
   enCombate: boolean;

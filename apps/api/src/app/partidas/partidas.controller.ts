@@ -1,8 +1,10 @@
+import { createReadStream } from 'node:fs';
 import {
   Body,
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -10,9 +12,13 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { JwtPayload } from '@pathfinder/shared';
-import { PartidasService } from './partidas.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { JwtPayload, MAPA_MAX_BYTES, MAPA_TIPOS } from '@pathfinder/shared';
+import { FicheroSubido, PartidasService } from './partidas.service';
 import {
   ActualizarPersonajeEnPartidaDto,
   CreatePartidaDto,
@@ -84,13 +90,42 @@ export class PartidasController {
     return this.partidas.actualizarPersonaje(id, pepId, dto, user.sub);
   }
 
-  @Get(':id/personajes/:pepId/ficha')
-  ficha(
+  /** Mapa de fondo: lo sube el máster (multipart, campo "mapa"). */
+  @Post(':id/mapa')
+  @UseInterceptors(
+    FileInterceptor('mapa', { limits: { fileSize: MAPA_MAX_BYTES } }),
+  )
+  subirMapa(
     @Param('id', ParseUUIDPipe) id: string,
-    @Param('pepId', ParseUUIDPipe) pepId: string,
+    @UploadedFile() mapa: FicheroSubido | undefined,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.partidas.fichaDePersonaje(id, pepId, user.sub);
+    return this.partidas.guardarMapa(id, mapa, user.sub);
+  }
+
+  /** Sirve la imagen del mapa (cualquier usuario con sesión puede verla). */
+  @Get(':id/mapa')
+  @Header('Cache-Control', 'private, max-age=60')
+  async verMapa(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<StreamableFile> {
+    const fichero = await this.partidas.mapaDe(id);
+    const extension = fichero.slice(fichero.lastIndexOf('.'));
+    const tipo =
+      Object.keys(MAPA_TIPOS).find((mime) => MAPA_TIPOS[mime] === extension) ??
+      'application/octet-stream';
+    return new StreamableFile(
+      createReadStream(this.partidas.rutaDelMapa(fichero)),
+      { type: tipo },
+    );
+  }
+
+  @Delete(':id/mapa')
+  quitarMapa(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.partidas.quitarMapa(id, user.sub);
   }
 
   @Post(':id/personajes/:pepId/iniciativa')
