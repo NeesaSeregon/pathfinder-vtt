@@ -58,11 +58,30 @@ export class CuentaService {
     };
   }
 
+  /** Cambio de contraseña estando dentro: hay que saber la actual. */
+  async cambiarPassword(
+    userId: string,
+    passwordActual: string,
+    passwordNueva: string,
+  ): Promise<void> {
+    await this.reautenticar(userId, passwordActual);
+    await this.auth.cambiarPassword(userId, passwordNueva);
+  }
+
   /**
    * Borra la cuenta y todo lo que cuelga de ella. Pide la contraseña otra
    * vez: la sesión sola no basta para una acción sin vuelta atrás.
    */
   async borrar(userId: string, password: string): Promise<void> {
+    await this.reautenticar(userId, password);
+    // Primero los ficheros: si fallara el borrado en BD, mejor un mapa de
+    // menos que un fichero huérfano que ya nadie sabe de quién era.
+    await this.partidas.borrarMapasDeMaster(userId);
+    await this.users.eliminar(userId);
+  }
+
+  /** Vuelve a pedir la contraseña antes de una acción delicada. */
+  private async reautenticar(userId: string, password: string): Promise<void> {
     if (!(await this.auth.verificarPassword(userId, password))) {
       // 403 y no 401 a propósito: la sesión es válida, lo que falla es la
       // reconfirmación. Un 401 aquí significaría "tu sesión ha caducado" y
@@ -70,9 +89,5 @@ export class CuentaService {
       // el error, que es justo lo contrario de lo que ha pasado.
       throw new ForbiddenException('La contraseña no es correcta');
     }
-    // Primero los ficheros: si fallara el borrado en BD, mejor un mapa de
-    // menos que un fichero huérfano que ya nadie sabe de quién era.
-    await this.partidas.borrarMapasDeMaster(userId);
-    await this.users.eliminar(userId);
   }
 }

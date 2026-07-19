@@ -22,6 +22,15 @@ export class CuentaPage {
   protected readonly cuenta = signal<CuentaDetalle | null>(null);
   protected readonly error = signal<string | null>(null);
 
+  /** Cambio de contraseña (plegado hasta que se pide). */
+  protected readonly cambiandoPassword = signal(false);
+  protected readonly passwordActual = signal('');
+  protected readonly passwordNueva = signal('');
+  protected readonly passwordRepetida = signal('');
+  protected readonly errorPassword = signal<string | null>(null);
+  protected readonly passwordCambiada = signal(false);
+  protected readonly guardandoPassword = signal(false);
+
   /** La zona peligrosa está plegada: no se borra una cuenta de un clic. */
   protected readonly confirmando = signal(false);
   protected readonly password = signal('');
@@ -64,6 +73,49 @@ export class CuentaPage {
       month: 'long',
       year: 'numeric',
     });
+  }
+
+  protected cambiarPassword(): void {
+    this.errorPassword.set(null);
+    this.passwordCambiada.set(false);
+
+    // La comprobación de que coinciden es solo del front: al servidor le
+    // llega una única contraseña nueva, la repetición no viaja.
+    if (this.passwordNueva() !== this.passwordRepetida()) {
+      this.errorPassword.set('Las dos contraseñas nuevas no coinciden');
+      return;
+    }
+
+    this.guardandoPassword.set(true);
+    this.api
+      .cambiarPassword({
+        passwordActual: this.passwordActual(),
+        passwordNueva: this.passwordNueva(),
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoPassword.set(false);
+          this.passwordCambiada.set(true);
+          this.cambiandoPassword.set(false);
+          this.limpiarCamposPassword();
+        },
+        error: (err) => {
+          this.guardandoPassword.set(false);
+          this.errorPassword.set(mensajeDeError(err));
+        },
+      });
+  }
+
+  protected cancelarCambioPassword(): void {
+    this.cambiandoPassword.set(false);
+    this.errorPassword.set(null);
+    this.limpiarCamposPassword();
+  }
+
+  private limpiarCamposPassword(): void {
+    this.passwordActual.set('');
+    this.passwordNueva.set('');
+    this.passwordRepetida.set('');
   }
 
   protected salir(): void {

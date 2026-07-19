@@ -72,8 +72,15 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   devuelve datos + contadores (personajes, mesas que diriges, mesas donde
   juegas) y DELETE la borra. Nunca hay :id en la ruta: siempre actúa sobre
   el usuario de la cookie, así que nadie puede tocar la cuenta de otro.
-  El borrado pide LA CONTRASEÑA otra vez (reautenticación:
-  AuthService.verificarPassword); si falla responde 403, NO 401 — un 401
+  PATCH /api/cuenta/password la cambia estando dentro (contraseña actual +
+  nueva; la repetición de la nueva se comprueba solo en el front y no
+  viaja). El hash lo hace AuthService con las mismas rondas que el registro.
+  OJO: los JWT ya emitidos siguen valiendo hasta caducar (8h) — cambiar la
+  contraseña NO cierra las sesiones abiertas en otros dispositivos; la
+  página lo dice en voz alta. Cerrarlas exigiría versionar el token.
+  Tanto el cambio como el borrado pasan por CuentaService.reautenticar(),
+  que pide LA CONTRASEÑA otra vez (AuthService.verificarPassword);
+  si falla responde 403, NO 401 — un 401
   significa "sesión caducada" y el authInterceptor te echaría a /entrar en
   vez de enseñarte el error. Personajes y partidas caen por el ON DELETE
   CASCADE de la BD; los ficheros de mapas hay que borrarlos a mano antes
@@ -118,6 +125,19 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   para trabajar con vistas a la integración ficha-tablero.
 
 ## Mejoras futuras
+- Recuperar contraseña por email ("la he olvidado"). Descartado de momento
+  a conciencia: exige tabla de tokens de un solo uso con caducidad (+ su
+  migración) y, sobre todo, un SERVICIO DE ENVÍO DE CORREO externo (Resend,
+  Postmark, SMTP) con cuenta, clave y dominio verificado — un tema nuevo
+  entero. Mientras la mesa sean amigos, el cambio desde dentro cubre el caso
+  normal y una contraseña perdida se arregla por BD a mano. Hacerlo el día
+  que la app salga del círculo cercano.
+- Cerrar las demás sesiones al cambiar la contraseña. Hoy no ocurre: el JWT
+  es autocontenido y sigue valiendo sus 8h. Haría falta VERSIONAR el token
+  (columna tokenVersion en users, incluida en el payload y comparada por el
+  AuthGuard en cada petición); al cambiar la contraseña se incrementa y los
+  tokens viejos dejan de validar. Pequeño, pero toca el guard y añade una
+  lectura de usuario por petición: hacerlo junto con lo de arriba.
 - Catálogo de dotes con autocompletar: importar un JSON de dotes del
   contenido OGL de PF1e (nombre, tipo, prerrequisitos, beneficio; fuentes
   candidatas: compendios del sistema PF1 de Foundry u otros datasets OGL de
@@ -167,7 +187,10 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   borrado. Ese enlace NO borra: lleva a /cuenta, donde vive la zona
   peligrosa (plegada; al desplegarla pide la contraseña y avisa de cuántos
   personajes y partidas se pierden). Ninguna acción irreversible se dispara
-  desde la home.
+  desde la home: ahí solo hay "Mis datos" y "Cerrar sesión".
+  /cuenta tiene cuatro bloques: Datos, Tu material (cifras), Contraseña
+  (cambio plegado, con actual + nueva + repetición) y Sesión, más la zona
+  peligrosa del borrado al final.
 - Partidas: entidad Partida (el creador es el máster; código de invitación
   de 6 caracteres, visible solo para él) y PersonajeEnPartida (tabla
   intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la

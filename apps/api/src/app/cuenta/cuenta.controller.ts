@@ -1,8 +1,16 @@
-import { Body, Controller, Delete, Get, HttpCode, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Patch,
+  Res,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { CuentaDetalle, JwtPayload } from '@pathfinder/shared';
 import { CuentaService } from './cuenta.service';
-import { BorrarCuentaDto } from './dto/borrar-cuenta.dto';
+import { BorrarCuentaDto, CambiarPasswordDto } from './dto/cuenta.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { COOKIE_SESION } from '../auth/auth.constants';
 
@@ -17,6 +25,19 @@ export class CuentaController {
   @Get()
   detalle(@CurrentUser() user: JwtPayload): Promise<CuentaDetalle> {
     return this.cuenta.detalle(user.sub);
+  }
+
+  @HttpCode(204)
+  @Patch('password')
+  cambiarPassword(
+    @Body() dto: CambiarPasswordDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<void> {
+    return this.cuenta.cambiarPassword(
+      user.sub,
+      dto.passwordActual,
+      dto.passwordNueva,
+    );
   }
 
   @HttpCode(204)

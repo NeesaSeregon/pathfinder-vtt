@@ -25,6 +25,11 @@ export class UsersService {
     return this.repo.save(this.repo.create({ username, email, passwordHash }));
   }
 
+  /** Recibe el hash ya calculado: aquí nunca entra una contraseña en claro. */
+  async actualizarPassword(id: string, passwordHash: string): Promise<void> {
+    await this.repo.update({ id }, { passwordHash });
+  }
+
   /**
    * Borra el usuario. Sus personajes y sus partidas caen con él por las
    * FK ON DELETE CASCADE de las entidades; los ficheros de los mapas hay

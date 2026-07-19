@@ -132,6 +132,12 @@
     margin-top: 0.25rem;
   }
 
+  &__aviso {
+    margin: 0 0 0.9rem;
+    color: var(--accent);
+    font-size: 0.95rem;
+  }
+
   &__error {
     color: var(--danger);
     font-size: 0.9rem;

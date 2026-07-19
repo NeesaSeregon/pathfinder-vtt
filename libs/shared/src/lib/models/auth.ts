@@ -43,6 +43,16 @@ export interface BorrarCuentaDatos {
   password: string;
 }
 
+/**
+ * Cambiar la contraseña estando dentro. Se pide la actual por el mismo
+ * motivo que para borrar: una sesión abierta no debe bastar para
+ * quedarse con la cuenta de otro.
+ */
+export interface CambiarPasswordDatos {
+  passwordActual: string;
+  passwordNueva: string;
+}
+
 /** El contenido firmado dentro del JWT (el payload). */
 export interface JwtPayload {
   /** "subject": el id del usuario. Nombre estándar del claim en JWT. */

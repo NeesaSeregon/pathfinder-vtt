@@ -62,6 +62,52 @@ describe('CuentaPage', () => {
     ).toBeNull();
   });
 
+  it('cambiar contraseña: envía actual y nueva, y confirma al volver', async () => {
+    component['cambiandoPassword'].set(true);
+    component['passwordActual'].set('la-de-ahora');
+    component['passwordNueva'].set('la-nueva-larga');
+    component['passwordRepetida'].set('la-nueva-larga');
+    await fixture.whenStable();
+
+    const submit: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '.cuenta__confirmar button[type="submit"]',
+    );
+    submit.click();
+
+    const peticion = httpMock.expectOne('/api/cuenta/password');
+    expect(peticion.request.method).toBe('PATCH');
+    expect(peticion.request.body).toEqual({
+      passwordActual: 'la-de-ahora',
+      passwordNueva: 'la-nueva-larga',
+    });
+    peticion.flush(null);
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Contraseña cambiada',
+    );
+    // Los campos no se quedan con la contraseña escrita
+    expect(component['passwordActual']()).toBe('');
+  });
+
+  it('cambiar contraseña: si las nuevas no coinciden, ni sale del navegador', async () => {
+    component['cambiandoPassword'].set(true);
+    component['passwordActual'].set('la-de-ahora');
+    component['passwordNueva'].set('la-nueva-larga');
+    component['passwordRepetida'].set('me-he-equivocado');
+    await fixture.whenStable();
+
+    const submit: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '.cuenta__confirmar button[type="submit"]',
+    );
+    submit.click();
+    await fixture.whenStable();
+
+    // Sin petición: lo detecta el front antes de molestar al servidor
+    httpMock.expectNone('/api/cuenta/password');
+    expect(fixture.nativeElement.textContent).toContain('no coinciden');
+  });
+
   it('confirmar con la contraseña envía el DELETE y cierra la sesión', async () => {
     const sesion = TestBed.inject(SesionStore);
     sesion.establecer('neesa');

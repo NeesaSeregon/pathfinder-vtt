@@ -37,6 +37,88 @@
     </section>
 
     <section class="cuenta__bloque">
+      <h2>Contraseña</h2>
+
+      @if (!cambiandoPassword()) {
+        @if (passwordCambiada()) {
+          <p class="cuenta__aviso" role="status">
+            Contraseña cambiada. La próxima vez entra con la nueva.
+          </p>
+        }
+        <p class="cuenta__nota">
+          Para cambiarla tendrás que escribir la que tienes ahora. Las
+          sesiones ya abiertas en otros dispositivos seguirán activas hasta
+          que caduquen.
+        </p>
+        <button
+          type="button"
+          class="cuenta__boton"
+          (click)="cambiandoPassword.set(true)"
+        >
+          Cambiar contraseña
+        </button>
+      } @else {
+        <form class="cuenta__confirmar" (ngSubmit)="cambiarPassword()">
+          <label for="password-actual">Contraseña actual</label>
+          <input
+            id="password-actual"
+            name="passwordActual"
+            type="password"
+            autocomplete="current-password"
+            [ngModel]="passwordActual()"
+            (ngModelChange)="passwordActual.set($event)"
+          />
+
+          <label for="password-nueva">Contraseña nueva</label>
+          <input
+            id="password-nueva"
+            name="passwordNueva"
+            type="password"
+            autocomplete="new-password"
+            [ngModel]="passwordNueva()"
+            (ngModelChange)="passwordNueva.set($event)"
+          />
+
+          <label for="password-repetida">Repite la nueva</label>
+          <input
+            id="password-repetida"
+            name="passwordRepetida"
+            type="password"
+            autocomplete="new-password"
+            [ngModel]="passwordRepetida()"
+            (ngModelChange)="passwordRepetida.set($event)"
+          />
+
+          @if (errorPassword(); as mensaje) {
+            <p class="cuenta__error" role="alert">{{ mensaje }}</p>
+          }
+
+          <div class="cuenta__confirmar-botones">
+            <button
+              type="submit"
+              class="cuenta__boton"
+              [disabled]="
+                guardandoPassword() ||
+                !passwordActual() ||
+                !passwordNueva() ||
+                !passwordRepetida()
+              "
+            >
+              {{ guardandoPassword() ? 'Guardando…' : 'Guardar' }}
+            </button>
+            <button
+              type="button"
+              class="cuenta__boton"
+              (click)="cancelarCambioPassword()"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+
+    <section class="cuenta__bloque">
       <h2>Sesión</h2>
       <p class="cuenta__nota">
         Cierra la sesión en este dispositivo. Tus datos no se tocan.

@@ -353,6 +353,39 @@ describe('home y navegación', () => {
     cy.contains('a', 'Iniciar sesión');
   });
 
+  it('cambiar la contraseña: la nueva entra y la vieja deja de valer', () => {
+    // Cuenta de usar y tirar: este test le cambia las credenciales
+    const sufijo = Date.now();
+    const email = `cambio-${sufijo}@mesa.es`;
+    cy.login(`cambio-${sufijo}`, email, 'contraseña-larga');
+    cy.visit('/cuenta');
+
+    cy.contains('button', 'Cambiar contraseña').click();
+    cy.get('input[name="passwordActual"]').type('contraseña-larga');
+    cy.get('input[name="passwordNueva"]').type('contraseña-nueva-2');
+    cy.get('input[name="passwordRepetida"]').type('contraseña-nueva-2');
+    cy.contains('button', 'Guardar').click();
+    cy.contains('Contraseña cambiada');
+
+    // La vieja ya no vale...
+    cy.request({
+      method: 'POST',
+      url: '/api/auth/login',
+      body: { email, password: 'contraseña-larga' },
+      failOnStatusCode: false,
+    })
+      .its('status')
+      .should('eq', 401);
+
+    // ...y la nueva sí
+    cy.request('POST', '/api/auth/login', {
+      email,
+      password: 'contraseña-nueva-2',
+    })
+      .its('status')
+      .should('eq', 200);
+  });
+
   it('borrar la cuenta pide la contraseña y la deja inservible', () => {
     // Cuenta de usar y tirar: este test la destruye a propósito
     const sufijo = Date.now();

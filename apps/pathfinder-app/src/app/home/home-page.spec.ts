@@ -54,9 +54,10 @@ describe('HomePage', () => {
     expect(texto).toContain('neesa');
     expect(texto).toContain('Mis datos');
     expect(texto).toContain('Cerrar sesión');
-    expect(texto).toContain('Borrar mi cuenta');
     // Ya no ofrece entrar: eso era lo que se quedaba fijo antes
     expect(texto).not.toContain('Iniciar sesión');
+    // Nada irreversible desde la home: el borrado vive dentro de /cuenta
+    expect(texto).not.toContain('Borrar');
   });
 
   it('cerrar sesión llama al servidor y limpia el estado local', async () => {

@@ -19,7 +19,7 @@ const USER = {
 describe('CuentaService', () => {
   let service: CuentaService;
   let users: { findById: jest.Mock; eliminar: jest.Mock };
-  let auth: { verificarPassword: jest.Mock };
+  let auth: { verificarPassword: jest.Mock; cambiarPassword: jest.Mock };
   let partidas: { borrarMapasDeMaster: jest.Mock };
 
   beforeEach(async () => {
@@ -27,7 +27,10 @@ describe('CuentaService', () => {
       findById: jest.fn().mockResolvedValue(USER),
       eliminar: jest.fn().mockResolvedValue(undefined),
     };
-    auth = { verificarPassword: jest.fn().mockResolvedValue(true) };
+    auth = {
+      verificarPassword: jest.fn().mockResolvedValue(true),
+      cambiarPassword: jest.fn().mockResolvedValue(undefined),
+    };
     partidas = { borrarMapasDeMaster: jest.fn().mockResolvedValue(undefined) };
 
     const modulo = await Test.createTestingModule({
@@ -68,6 +71,28 @@ describe('CuentaService', () => {
   it('detalle: 404 si el usuario de la cookie ya no existe', async () => {
     users.findById.mockResolvedValue(null);
     await expect(service.detalle('user-1')).rejects.toThrow(NotFoundException);
+  });
+
+  it('cambiarPassword: comprueba la actual antes de guardar la nueva', async () => {
+    await service.cambiarPassword('user-1', 'la-de-ahora', 'la-nueva-larga');
+
+    expect(auth.verificarPassword).toHaveBeenCalledWith(
+      'user-1',
+      'la-de-ahora',
+    );
+    expect(auth.cambiarPassword).toHaveBeenCalledWith(
+      'user-1',
+      'la-nueva-larga',
+    );
+  });
+
+  it('cambiarPassword: si la actual falla, no cambia nada', async () => {
+    auth.verificarPassword.mockResolvedValue(false);
+
+    await expect(
+      service.cambiarPassword('user-1', 'la-que-no-es', 'la-nueva-larga'),
+    ).rejects.toThrow(ForbiddenException);
+    expect(auth.cambiarPassword).not.toHaveBeenCalled();
   });
 
   it('borrar: limpia los mapas de disco y luego el usuario', async () => {

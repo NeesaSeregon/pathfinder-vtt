@@ -1,7 +1,11 @@
 import { inject, Service } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { BorrarCuentaDatos, CuentaDetalle } from '@pathfinder/shared';
+import {
+  BorrarCuentaDatos,
+  CambiarPasswordDatos,
+  CuentaDetalle,
+} from '@pathfinder/shared';
 
 @Service()
 export class CuentaApi {
@@ -9,6 +13,10 @@ export class CuentaApi {
 
   detalle(): Observable<CuentaDetalle> {
     return this.http.get<CuentaDetalle>('/api/cuenta');
+  }
+
+  cambiarPassword(datos: CambiarPasswordDatos): Observable<void> {
+    return this.http.patch<void>('/api/cuenta/password', datos);
   }
 
   /** El cuerpo viaja en un DELETE: es la contraseña de confirmación. */

@@ -98,19 +98,6 @@
     }
   }
 
-  /* Discreto a propósito: no invita al clic, pero está donde se busca */
-  &__borrar {
-    align-self: flex-start;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
-
-    &:hover {
-      color: var(--danger);
-    }
-  }
-
   &__pronto {
     align-self: flex-start;
     font-size: 0.75rem;

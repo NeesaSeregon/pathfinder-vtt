@@ -60,6 +60,17 @@ export class AuthService {
     return user ? compare(password, user.passwordHash) : false;
   }
 
+  /**
+   * Cambia la contraseña con la misma política de hash que el registro.
+   * OJO: los tokens ya emitidos siguen siendo válidos hasta que caduquen
+   * (8h) — el JWT es autocontenido y no sabe de este cambio. Cerrar las
+   * demás sesiones exigiría versionar el token (ver Mejoras futuras).
+   */
+  async cambiarPassword(userId: string, passwordNueva: string): Promise<void> {
+    const passwordHash = await hash(passwordNueva, RONDAS_BCRYPT);
+    await this.users.actualizarPassword(userId, passwordHash);
+  }
+
   private async emitirSesion(user: User): Promise<SesionConToken> {
     const payload: JwtPayload = { sub: user.id, username: user.username };
     return {
