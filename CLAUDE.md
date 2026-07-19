@@ -68,6 +68,16 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Front: SesionStore guarda solo el username; la sesión se restaura
   preguntando a GET /api/auth/me (el authGuard lo hace la primera vez).
   El authInterceptor ante un 401 limpia y redirige a /entrar.
+- Gestión de la propia cuenta en /api/cuenta (módulo CuentaModule): GET
+  devuelve datos + contadores (personajes, mesas que diriges, mesas donde
+  juegas) y DELETE la borra. Nunca hay :id en la ruta: siempre actúa sobre
+  el usuario de la cookie, así que nadie puede tocar la cuenta de otro.
+  El borrado pide LA CONTRASEÑA otra vez (reautenticación:
+  AuthService.verificarPassword); si falla responde 403, NO 401 — un 401
+  significa "sesión caducada" y el authInterceptor te echaría a /entrar en
+  vez de enseñarte el error. Personajes y partidas caen por el ON DELETE
+  CASCADE de la BD; los ficheros de mapas hay que borrarlos a mano antes
+  (PartidasService.borrarMapasDeMaster) o quedarían huérfanos en uploads/.
 - Los personajes tienen dueño (Character.ownerId → users): cada usuario
   solo ve y toca los suyos; el personaje de otro devuelve 404, no 403.
   EXCEPCIÓN de LECTURA: GET /api/characters/:id lo sirve CharactersService.
@@ -151,6 +161,13 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   para evitar carreras de arranque en frío.)
 - Usuarios funcionando: /entrar y /registro con JWT en cookie httpOnly
   (ver sección Autenticación); los personajes tienen dueño.
+- Sección "Tu cuenta" de la home: ya NO está en construcción. Sin sesión
+  ofrece entrar/registrarse; con sesión saluda por el nombre y da acceso a
+  /cuenta ("Mis datos"), un botón de cerrar sesión y un enlace discreto de
+  borrado. Ese enlace NO borra: lleva a /cuenta, donde vive la zona
+  peligrosa (plegada; al desplegarla pide la contraseña y avisa de cuántos
+  personajes y partidas se pierden). Ninguna acción irreversible se dispara
+  desde la home.
 - Partidas: entidad Partida (el creador es el máster; código de invitación
   de 6 caracteres, visible solo para él) y PersonajeEnPartida (tabla
   intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la

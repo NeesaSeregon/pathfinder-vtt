@@ -37,6 +37,12 @@ export const appRoutes: Route[] = [
       ),
   },
   {
+    path: 'cuenta',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./cuenta/cuenta-page').then((m) => m.CuentaPage),
+  },
+  {
     path: 'entrar',
     loadComponent: () => import('./auth/login-page').then((m) => m.LoginPage),
   },

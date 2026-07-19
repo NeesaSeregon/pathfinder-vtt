@@ -51,6 +51,15 @@ export class AuthService {
     return this.emitirSesion(user);
   }
 
+  /**
+   * ¿La contraseña que acaba de teclear este usuario es la suya? Se usa
+   * para reautenticar antes de una acción irreversible (borrar la cuenta).
+   */
+  async verificarPassword(userId: string, password: string): Promise<boolean> {
+    const user = await this.users.findById(userId);
+    return user ? compare(password, user.passwordHash) : false;
+  }
+
   private async emitirSesion(user: User): Promise<SesionConToken> {
     const payload: JwtPayload = { sub: user.id, username: user.username };
     return {

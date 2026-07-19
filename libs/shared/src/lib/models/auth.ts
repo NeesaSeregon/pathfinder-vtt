@@ -20,6 +20,29 @@ export interface SesionRespuesta {
   username: string;
 }
 
+/**
+ * Los datos de la cuenta que ve su dueño en /cuenta. Los contadores están
+ * aquí para que el aviso de borrado diga QUÉ se va a perder: un "vas a
+ * borrar 4 personajes y 2 partidas" pesa más que un "¿seguro?".
+ */
+export interface CuentaDetalle {
+  username: string;
+  email: string;
+  /** Fecha de alta en ISO; el front la formatea. */
+  creadaEl: string;
+  numPersonajes: number;
+  numPartidasComoMaster: number;
+  numPartidasComoJugador: number;
+}
+
+/**
+ * Borrar la cuenta es irreversible, así que se pide la contraseña otra vez:
+ * si alguien se deja la sesión abierta, no basta con pulsar un botón.
+ */
+export interface BorrarCuentaDatos {
+  password: string;
+}
+
 /** El contenido firmado dentro del JWT (el payload). */
 export interface JwtPayload {
   /** "subject": el id del usuario. Nombre estándar del claim en JWT. */

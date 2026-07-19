@@ -1,0 +1,105 @@
+<main class="cuenta">
+  <h1 class="cuenta__titulo">Tu cuenta</h1>
+
+  @if (error(); as mensaje) {
+    <p class="cuenta__error" role="alert">{{ mensaje }}</p>
+  }
+
+  @if (cuenta(); as c) {
+    <section class="cuenta__bloque">
+      <h2>Datos</h2>
+      <dl class="cuenta__datos">
+        <dt>Usuario</dt>
+        <dd>{{ c.username }}</dd>
+        <dt>Email</dt>
+        <dd>{{ c.email }}</dd>
+        <dt>Miembro desde</dt>
+        <dd>{{ fecha(c.creadaEl) }}</dd>
+      </dl>
+    </section>
+
+    <section class="cuenta__bloque">
+      <h2>Tu material</h2>
+      <div class="cuenta__cifras">
+        <div class="cuenta__cifra">
+          <strong>{{ c.numPersonajes }}</strong>
+          <span>personajes</span>
+        </div>
+        <div class="cuenta__cifra">
+          <strong>{{ c.numPartidasComoMaster }}</strong>
+          <span>partidas que diriges</span>
+        </div>
+        <div class="cuenta__cifra">
+          <strong>{{ c.numPartidasComoJugador }}</strong>
+          <span>mesas donde juegas</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="cuenta__bloque">
+      <h2>Sesión</h2>
+      <p class="cuenta__nota">
+        Cierra la sesión en este dispositivo. Tus datos no se tocan.
+      </p>
+      <button type="button" class="cuenta__boton" (click)="salir()">
+        Cerrar sesión
+      </button>
+    </section>
+
+    <section class="cuenta__bloque cuenta__bloque--peligro">
+      <h2>Borrar la cuenta</h2>
+      <p class="cuenta__nota">
+        Se borrará tu cuenta
+        @if (loQueSePierde()) {
+          junto con <strong>{{ loQueSePierde() }}</strong>
+        }
+        . Esto no se puede deshacer.
+      </p>
+
+      @if (!confirmando()) {
+        <button
+          type="button"
+          class="cuenta__boton cuenta__boton--peligro"
+          (click)="confirmando.set(true)"
+        >
+          Quiero borrar mi cuenta
+        </button>
+      } @else {
+        <form class="cuenta__confirmar" (ngSubmit)="borrar()">
+          <label for="password-borrado">
+            Escribe tu contraseña para confirmar
+          </label>
+          <input
+            id="password-borrado"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+          />
+
+          @if (errorBorrado(); as mensaje) {
+            <p class="cuenta__error" role="alert">{{ mensaje }}</p>
+          }
+
+          <div class="cuenta__confirmar-botones">
+            <button
+              type="submit"
+              class="cuenta__boton cuenta__boton--peligro"
+              [disabled]="borrando() || !password()"
+            >
+              {{ borrando() ? 'Borrando…' : 'Borrar definitivamente' }}
+            </button>
+            <button
+              type="button"
+              class="cuenta__boton"
+              (click)="confirmando.set(false)"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+  }
+</main>

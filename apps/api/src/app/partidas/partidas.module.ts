@@ -15,5 +15,7 @@ import { CharactersModule } from '../characters/characters.module';
   ],
   controllers: [PartidasController],
   providers: [PartidasService, PartidasGateway],
+  // Exportado para que CuentaModule limpie los mapas al borrar la cuenta
+  exports: [PartidasService],
 })
 export class PartidasModule {}

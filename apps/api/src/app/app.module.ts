@@ -7,6 +7,7 @@ import { CharactersModule } from './characters/characters.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PartidasModule } from './partidas/partidas.module';
+import { CuentaModule } from './cuenta/cuenta.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { PartidasModule } from './partidas/partidas.module';
     UsersModule,
     AuthModule,
     PartidasModule,
+    CuentaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

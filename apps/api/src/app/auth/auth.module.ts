@@ -26,5 +26,7 @@ import { UsersModule } from '../users/users.module';
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
   controllers: [AuthController],
+  // Exportado para que CuentaModule pueda reautenticar antes de borrar
+  exports: [AuthService],
 })
 export class AuthModule {}

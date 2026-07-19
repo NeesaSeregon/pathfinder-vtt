@@ -193,6 +193,18 @@ export class PartidasService {
     return partida.mapaFichero;
   }
 
+  /**
+   * Borra de disco los mapas de todas las partidas de un máster. Las filas
+   * las borra el CASCADE de la BD, pero los ficheros no los ve nadie: sin
+   * esto quedarían huérfanos en uploads/ para siempre.
+   */
+  async borrarMapasDeMaster(masterId: string): Promise<void> {
+    const partidas = await this.partidas.find({ where: { masterId } });
+    for (const partida of partidas) {
+      await this.borrarFichero(partida.mapaFichero);
+    }
+  }
+
   /** Borrado best-effort: si el fichero ya no está, no es un error. */
   private async borrarFichero(nombre: string | null): Promise<void> {
     if (!nombre) {

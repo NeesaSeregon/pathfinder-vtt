@@ -336,6 +336,56 @@ describe('home y navegación', () => {
     cy.get('h1').contains('Personajes');
   });
 
+  it('con sesión, la tarjeta de cuenta ofrece sus datos y el logout', () => {
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.visit('/');
+
+    cy.contains('.home__tarjeta', 'Tu cuenta').within(() => {
+      cy.contains('tester-fijo');
+      cy.contains('a', 'Mis datos').click();
+    });
+
+    cy.location('pathname').should('eq', '/cuenta');
+    cy.contains('tester-fijo@mesa.es');
+
+    cy.contains('button', 'Cerrar sesión').click();
+    cy.location('pathname').should('eq', '/');
+    cy.contains('a', 'Iniciar sesión');
+  });
+
+  it('borrar la cuenta pide la contraseña y la deja inservible', () => {
+    // Cuenta de usar y tirar: este test la destruye a propósito
+    const sufijo = Date.now();
+    const email = `adios-${sufijo}@mesa.es`;
+    cy.login(`adios-${sufijo}`, email, 'contraseña-larga');
+    cy.visit('/cuenta');
+
+    cy.contains('button', 'Quiero borrar mi cuenta').click();
+    // Con la contraseña equivocada no se borra nada
+    cy.get('input[name="password"]').type('equivocada-aposta');
+    cy.contains('button', 'Borrar definitivamente').click();
+    cy.get('.cuenta__error').should('contain', 'contraseña');
+    cy.location('pathname').should('eq', '/cuenta');
+
+    cy.get('input[name="password"]').clear();
+    cy.get('input[name="password"]').type('contraseña-larga');
+    cy.contains('button', 'Borrar definitivamente').click();
+
+    // Fuera: vuelve a la home sin sesión
+    cy.location('pathname').should('eq', '/');
+    cy.contains('a', 'Iniciar sesión');
+
+    // Y la cuenta ya no existe: no se puede volver a entrar con ella
+    cy.request({
+      method: 'POST',
+      url: '/api/auth/login',
+      body: { email, password: 'contraseña-larga' },
+      failOnStatusCode: false,
+    })
+      .its('status')
+      .should('eq', 401);
+  });
+
   it('el menú Partidas de la navbar lleva a las maquetas', () => {
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
     cy.visit('/');
