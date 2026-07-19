@@ -66,6 +66,12 @@ jobs:
       - name: Lint y tests unitarios
         run: npx nx run-many -t lint test
 
+      # Compilar de verdad, en modo produccion. Sin esto el CI pasaba en
+      # verde con una aplicacion que NO se podia construir para desplegar
+      # (los presupuestos de CSS de Angular solo se aplican en produccion).
+      - name: Build de produccion
+        run: npx nx run-many -t build --configuration=production -p api pathfinder-app
+
       # El Postgres del job arranca vacío: creamos el esquema con las
       # migraciones (synchronize está desactivado, igual que en producción)
       - name: Aplicar migraciones (crea el esquema en el Postgres del job)

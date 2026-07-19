@@ -3,6 +3,9 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpException,
+  HttpStatus,
+  Ip,
   Post,
   Res,
 } from '@nestjs/common';
@@ -13,12 +16,16 @@ import { CredencialesDto, RegistroDto } from './dto/credenciales.dto';
 import { Public } from './public.decorator';
 import { CurrentUser } from './current-user.decorator';
 import { COOKIE_SESION } from './auth.constants';
+import { IntentosLoginService } from './intentos-login.service';
 
 const OCHO_HORAS_MS = 8 * 60 * 60 * 1000;
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly intentos: IntentosLoginService,
+  ) {}
 
   @Public()
   @Post('register')
@@ -37,13 +44,32 @@ export class AuthController {
   async login(
     @Body() credenciales: CredencialesDto,
     @Res({ passthrough: true }) res: Response,
+    @Ip() ip: string,
   ): Promise<SesionRespuesta> {
-    const sesion = await this.auth.login(
-      credenciales.email,
-      credenciales.password,
-    );
-    this.ponerCookie(res, sesion.token);
-    return { username: sesion.username };
+    const { email, password } = credenciales;
+
+    // Freno de fuerza bruta: tras varios fallos seguidos, esta pareja de
+    // email e IP descansa un rato. 429 y no 401, para que quede claro que
+    // no es "la contraseña está mal" sino "deja de insistir".
+    const espera = this.intentos.segundosBloqueado(email, ip);
+    if (espera > 0) {
+      throw new HttpException(
+        `Demasiados intentos fallidos. Prueba de nuevo en ${Math.ceil(
+          espera / 60,
+        )} minutos.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    try {
+      const sesion = await this.auth.login(email, password);
+      this.intentos.limpiar(email, ip);
+      this.ponerCookie(res, sesion.token);
+      return { username: sesion.username };
+    } catch (error) {
+      this.intentos.registrarFallo(email, ip);
+      throw error;
+    }
   }
 
   /** ¿Quién soy? El front lo usa para restaurar la sesión al recargar. */

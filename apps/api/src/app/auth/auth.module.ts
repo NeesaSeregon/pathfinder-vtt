@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
+import { IntentosLoginService } from './intentos-login.service';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { UsersModule } from '../users/users.module';
   ],
   providers: [
     AuthService,
+    IntentosLoginService,
     // APP_GUARD: el AuthGuard se aplica a TODOS los endpoints de la API.
     // Solo lo marcado @Public() (register, login) queda abierto.
     { provide: APP_GUARD, useClass: AuthGuard },

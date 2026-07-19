@@ -1,0 +1,82 @@
+# Despliegue. El docker-compose.yml de al lado es para DESARROLLO (solo
+# levanta PostgreSQL y la app va con `nx serve`); este monta la aplicación
+# entera ya compilada.
+#
+#   docker compose -f docker-compose.prod.yml build
+#   docker compose -f docker-compose.prod.yml run --rm migrate
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Las migraciones van en su propio paso, ANTES de arrancar: si el esquema
+# falla, prefieres enterarte ahí y no con el contenedor reiniciándose solo.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-pathfinder}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
+      POSTGRES_DB: ${DB_NAME:-pathfinder}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # SIN 'ports': la base de datos no se asoma a internet, solo la ve la
+    # red interna de compose.
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${DB_USER:-pathfinder} -d ${DB_NAME:-pathfinder}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-pathfinder}
+      DB_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
+      DB_NAME: ${DB_NAME:-pathfinder}
+      JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET en .env}
+      UPLOADS_DIR: /datos/uploads
+      LOGIN_MAX_FALLOS: ${LOGIN_MAX_FALLOS:-5}
+      LOGIN_BLOQUEO_SEGUNDOS: ${LOGIN_BLOQUEO_SEGUNDOS:-900}
+    volumes:
+      # Los mapas subidos viven aquí. Si esto no fuera un volumen, se
+      # perderían al recrear el contenedor.
+      - uploads:/datos/uploads
+    ports:
+      # Solo a localhost: delante debe ir un proxy inverso que termine
+      # HTTPS. La cookie de sesión lleva secure:true en producción y sin
+      # TLS el navegador NO la guardaría — nadie podría iniciar sesión.
+      - '127.0.0.1:${PORT:-3000}:3000'
+
+  # Paso suelto, no un servicio permanente: se ejecuta con `run --rm`.
+  # Usa la fase de compilación porque las migraciones necesitan el código
+  # TypeScript y ts-node, que no están en la imagen final.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: build
+    profiles: ['tools']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-pathfinder}
+      DB_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
+      DB_NAME: ${DB_NAME:-pathfinder}
+    command: npm run migration:run
+
+volumes:
+  pgdata:
+  uploads:

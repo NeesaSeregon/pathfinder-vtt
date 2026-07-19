@@ -1,0 +1,15 @@
+# Lo que NUNCA debe entrar en la imagen
+.env
+uploads/
+
+# Se instalan y compilan dentro; copiarlos rompería el build (binarios de
+# otra plataforma) y lo haría mucho más lento
+node_modules
+dist
+.nx
+.angular
+
+.git
+.github
+.vscode
+**/*.md

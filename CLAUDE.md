@@ -26,6 +26,35 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   - Generar una tras cambiar entidades: npm run migration:generate -- apps/api/src/migrations/NombreDescriptivo
   - Deshacer la última: npm run migration:revert
   - Ver estado: npm run migration:show
+- Despliegue (ver sección Despliegue):
+  - docker compose -f docker-compose.prod.yml build
+  - docker compose -f docker-compose.prod.yml run --rm migrate
+  - docker compose -f docker-compose.prod.yml up -d
+
+## Despliegue
+- UNA imagen (Dockerfile multifase): la API sirve TAMBIÉN el front compilado
+  desde ../pathfinder-app/browser, así todo va por el MISMO origen — la
+  cookie SameSite=Strict sigue viajando y no hace falta CORS. main.ts añade
+  un respaldo de SPA: lo que no empiece por /api ni tenga extensión devuelve
+  index.html (si no, recargar en /partidas/:id daría 404).
+- HTTPS ES OBLIGATORIO en producción. La cookie lleva secure:true cuando
+  NODE_ENV=production, así que sin TLS por delante el navegador NO la guarda
+  y NADIE puede iniciar sesión. El contenedor publica solo en 127.0.0.1: hay
+  que poner delante un proxy inverso (Caddy o nginx) que termine el TLS.
+- app.set('trust proxy', 1) en main.ts: detrás de un proxy, req.ip sería la
+  del proxy y el freno de login trataría a todo el mundo como una sola IP.
+- Las migraciones van en un paso APARTE (`run --rm migrate`) antes de
+  arrancar; usa la fase `build` de la imagen porque necesitan TypeScript y
+  ts-node, que no están en la imagen final. Así un fallo de esquema no deja
+  el contenedor reiniciándose en bucle.
+- En el runtime NO se usa el package.json/lockfile podado que genera Nx en
+  dist/apps/api: sale INCOMPLETO (le faltaba content-type, de express) y
+  `npm ci` lo rechaza. Se poda el árbol completo con `npm prune --omit=dev`,
+  más pesado pero reproducible.
+- La base de datos NO publica puertos en prod: solo la ve la red interna.
+- COPIAS DE SEGURIDAD: pendientes, y pasan a ser urgentes el día del
+  despliegue. Hay que salvar el volumen pgdata (pg_dump) Y la carpeta de
+  uploads (los mapas no están en la base de datos).
 
 ## Convenciones
 - Todo modelo o evento compartido entre front y back se define en
@@ -68,6 +97,14 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Front: SesionStore guarda solo el username; la sesión se restaura
   preguntando a GET /api/auth/me (el authGuard lo hace la primera vez).
   El authInterceptor ante un 401 limpia y redirige a /entrar.
+- Freno de fuerza bruta en el login (IntentosLoginService): cuenta SOLO LOS
+  FALLOS, por pareja email+IP, y responde 429 sin llegar a comprobar la
+  contraseña. Se descartó @nestjs/throttler porque limita TODAS las
+  peticiones por IP: habría obligado a un tope tan alto que no protegería
+  (el e2e hace ~60 logins en 40s desde la misma máquina). Por email+IP y no
+  solo email para que nadie pueda dejar fuera a otro fallando con su correo.
+  Está EN MEMORIA: vale para una instancia; con varias haría falta Redis.
+  Ajustable con LOGIN_MAX_FALLOS y LOGIN_BLOQUEO_SEGUNDOS.
 - Gestión de la propia cuenta en /api/cuenta (módulo CuentaModule): GET
   devuelve datos + contadores (personajes, mesas que diriges, mesas donde
   juegas) y DELETE la borra. Nunca hay :id en la ruta: siempre actúa sobre
