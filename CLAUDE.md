@@ -243,10 +243,14 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   Las mesas se piden en un effect() atado a sesion.conectado(), NO en el
   constructor: al arrancar la app todavía no se sabe quién eres (/auth/me
   responde después), y un visitante anónimo no debe provocar un 401.
-- El panel de buscar/unirse es un componente propio (UnirsePanel) que usan
-  DOS sitios: el escritorio y /partidas/buscar (que se queda como página
-  completa). Antes vivía escrito a mano en la página. Emite (unido) para
-  que la home recargue sus mesas al sentarte en una nueva.
+- El panel de buscar/unirse es un componente propio (UnirsePanel) que vive
+  en el escritorio de la home ("Unirse a una mesa"). Emite (unido) para que
+  la home recargue sus mesas al sentarte en una nueva. Hubo una página
+  /partidas/buscar que solo lo envolvía con un título; se retiró por
+  redundante (2026-07-20) junto con el desplegable "Partidas" de la navbar,
+  que ahora es un enlace "Mesas" → "/" (el escritorio ya reúne tus mesas,
+  crear y unirse). Crear SÍ sigue siendo página aparte (/partidas/crear:
+  formulario), enlazada desde el escritorio.
 - Ninguna acción irreversible se dispara desde la home: el borrado de cuenta
   vive solo en /cuenta, en su zona peligrosa (plegada; al desplegarla pide
   la contraseña y avisa de cuántos personajes y partidas se pierden).
@@ -256,8 +260,9 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Partidas: entidad Partida (el creador es el máster; código de invitación
   de 6 caracteres, visible solo para él) y PersonajeEnPartida (tabla
   intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la
-  ficha al unirse—, danoNoLetal, condiciones, posX/posY). /partidas/crear
-  y /partidas/buscar (por nombre o código) + unirse funcionan en el front.
+  ficha al unirse—, danoNoLetal, condiciones, posX/posY). Crear
+  (/partidas/crear) y buscar por nombre o código + unirse (en el escritorio
+  de la home) funcionan en el front.
 - PNJ (enemigos, aliados, figurantes): un PNJ es un Character con
   tipo='pnj', propiedad del MÁSTER. Se decidió así (frente a una entidad
   aparte) porque en PF1e un monstruo tiene CA, PG, iniciativa y tamaño
@@ -341,12 +346,40 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   27rem) y clamp(23rem, 21vw, 29rem) — con tope, porque pasado un punto un
   panel más ancho solo aleja el tablero del centro. El padding lateral
   coincide con el de la navbar (1.25rem) para que todo alinee. Tablero
-  responsive (rejilla de casillas cuadradas por aspect-ratio,
-  acotada por el alto de la ventana) y TRES columnas por grid-template-areas
+  responsive (rejilla de casillas cuadradas por aspect-ratio). Mide 24 de
+  ancho × 30 de alto (TABLERO_ANCHO/TABLERO_ALTO en libs/shared), la medida
+  de los mapas grandes de PF1e; hasta 2026-07-20 era 20×15. OJO: el .scss
+  repite esos números a mano (el CSS no puede leer las constantes); si
+  cambian, hay que tocar grid-template-columns/rows y aspect-ratio.
+  Al ser MÁS ALTO QUE ANCHO no cabe entero en un monitor apaisado, y el
+  primer intento (encogerlo hasta que cupiera) dejaba casillas de ~25px y
+  dos franjas negras a los lados. Ahora el tablero LLENA el ancho
+  disponible y se sale por abajo: .tablero-marco lo recorta y se RECORRE
+  AGARRANDO EL FONDO (casillas de ~43px). Se pierden filas, nunca columnas,
+  para no perder de vista un flanco en combate.
+  · El agarre convive con lo que ya hacía el ratón: pulsar una casilla
+    COLOCA. Se distinguen por distancia (UMBRAL_AGARRE, 5px); si hubo
+    recorrido, el click posterior se traga en fase de CAPTURA para que no
+    coloque a nadie. Sobre un token no se agarra: ahí manda el arrastre
+    nativo. En táctil no se toca nada: el overflow:auto ya da el gesto.
+  · Para que el tablero reciba "el hueco que sobre" (que cambia según haya
+    banquillo o no, así que ningún valor fijo en rem servía) la mesa ocupa
+    EXACTAMENTE el alto de la ventana y no hay scroll de página: body tiene
+    height:100vh (no min-height: con min-height el body crece con su
+    contenido y no hay tope contra el que repartir) + display:flex, y la
+    cadena app-root → :host → .mesa → .mesa__contenido baja con flex:1 y
+    min-height:0. .mesa__contenido declara grid-template-rows: minmax(0,1fr)
+    porque contra una fila automática el tablero no tendría contra qué
+    medirse. Los paneles laterales ya no son sticky: sin scroll de página no
+    hace falta.
+  · A ≤85rem se vuelve al flujo normal (display:block, tablero entero y
+    scroll de página): ahí los personajes van debajo y no cabe de una
+    pantallada.
+  Y TRES columnas por grid-template-areas
   ('personajes tablero juego', 21rem | 1fr | 23rem): las fichas de los
   personajes a la IZQUIERDA y combate + dados a la DERECHA. Antes iba todo
   apilado en el panel derecho, que quedaba larguísimo y estrechaba el
-  tablero. Ambos paneles son pegajosos y con scroll propio. Responsive:
+  tablero. Ambos paneles tienen scroll propio. Responsive:
   a ≤85rem los personajes bajan a lo ancho bajo el tablero en rejilla de
   tarjetas (auto-fill, 18rem) y a ≤60rem va todo en una columna. Tokens = avatares circulares con color propio por
   personaje (paleta --token-0..5 en styles.scss; colorToken() elige por hash

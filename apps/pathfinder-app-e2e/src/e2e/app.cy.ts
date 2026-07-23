@@ -52,8 +52,9 @@ describe('partidas', () => {
       .invoke('text')
       .should('match', /^[A-HJ-KM-NP-Z2-9]{6}$/);
 
-    // El jugador la encuentra por nombre y se une con su personaje
-    cy.visit('/partidas/buscar');
+    // El jugador la encuentra por nombre y se une con su personaje. La
+    // búsqueda vive en el escritorio de la home (ya no hay página aparte).
+    cy.visit('/');
     cy.get('input[name="busqueda"]').type(nombre);
     cy.contains('button', 'Buscar').click();
     cy.contains('.partida__resultados li', nombre).should(
@@ -219,12 +220,46 @@ describe('partidas', () => {
           expect(1920 - $der[0].getBoundingClientRect().right).to.be.lessThan(30);
         });
 
-        // El tablero queda centrado entre ambas: márgenes similares
+        // El tablero llena el hueco entre columnas. Antes se quedaba en
+        // ~600px porque se encogía hasta caber entero a lo alto, dejando dos
+        // franjas negras a los lados.
         cy.get('.tablero').then(($t) => {
-          const caja = $t[0].getBoundingClientRect();
-          const izquierda = caja.left;
-          const derecha = 1920 - caja.right;
-          expect(Math.abs(izquierda - derecha)).to.be.lessThan(40);
+          expect($t[0].getBoundingClientRect().width).to.be.greaterThan(900);
+        });
+
+        // Y la mesa cabe de UNA pantallada: lo que se desplaza es el tablero
+        // por dentro, nunca la página.
+        cy.document().then((doc) => {
+          expect(doc.documentElement.scrollHeight).to.be.at.most(1080);
+        });
+      },
+    );
+  });
+
+  it('el tablero se recorre agarrando el fondo', () => {
+    cy.viewport(1920, 1080);
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre: `Agarre-${Date.now()}` }).then(
+      (res) => {
+        cy.visit(`/partidas/${res.body.id}`);
+
+        // El tablero (30 filas) no cabe entero: por eso hay que recorrerlo
+        cy.get('.tablero-marco').should(($m) => {
+          expect($m[0].scrollHeight).to.be.greaterThan($m[0].clientHeight);
+          expect($m[0].scrollTop).to.eq(0);
+        });
+
+        // Arrastrar hacia arriba enseña lo de abajo, como un mapa de papel
+        cy.get('.tablero-marco').trigger('pointerdown', {
+          button: 0,
+          clientX: 900,
+          clientY: 600,
+        });
+        cy.document().trigger('pointermove', { clientX: 900, clientY: 400 });
+        cy.document().trigger('pointerup');
+
+        cy.get('.tablero-marco').should(($m) => {
+          expect($m[0].scrollTop).to.be.greaterThan(150);
         });
       },
     );
@@ -606,11 +641,12 @@ describe('partidas', () => {
               .its('body.id')
               .then((pepId) => {
                 const url = `/api/partidas/${partidaId}/personajes/${pepId}`;
-                // En x=19 su huella 2×2 se saldría del tablero (ancho 20)
+                // En la última columna (TABLERO_ANCHO 24 → x=23) su huella
+                // 2×2 se saldría del tablero
                 cy.request({
                   method: 'PATCH',
                   url,
-                  body: { posX: 19, posY: 5 },
+                  body: { posX: 23, posY: 5 },
                   failOnStatusCode: false,
                 })
                   .its('status')
@@ -801,12 +837,15 @@ describe('home y navegación', () => {
       .should('eq', 401);
   });
 
-  it('el menú Partidas de la navbar lleva a las maquetas', () => {
+  it('el enlace Mesas de la navbar lleva al escritorio', () => {
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
-    cy.visit('/');
-    cy.contains('summary', 'Partidas').click();
-    cy.contains('a', 'Buscar partida').click();
-    cy.get('h1').contains('Buscar partida');
+    // Desde otra página, "Mesas" devuelve al escritorio con tus mesas y el
+    // panel de unirse (ya no hay desplegable Partidas ni página de buscar).
+    cy.visit('/personajes');
+    cy.get('.navbar').contains('a', 'Mesas').click();
+    cy.location('pathname').should('eq', '/');
+    cy.contains('h2', 'Tus mesas').should('exist');
+    cy.contains('h2', 'Unirse a una mesa').should('exist');
   });
 });
 

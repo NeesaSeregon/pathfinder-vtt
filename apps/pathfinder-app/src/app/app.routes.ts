@@ -12,22 +12,16 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./characters/characters-page').then((m) => m.CharactersPage),
   },
-  // Maquetas sin funcionalidad todavía: partidas
-  {
-    path: 'partidas/buscar',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./partidas/buscar-partida-page').then(
-        (m) => m.BuscarPartidaPage,
-      ),
-  },
+  // Buscar/unirse ya no tiene página propia: vive en el escritorio de la
+  // home (UnirsePanel). Crear sí es un formulario aparte, al que enlaza el
+  // escritorio.
   {
     path: 'partidas/crear',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./partidas/crear-partida-page').then((m) => m.CrearPartidaPage),
   },
-  // Tras las rutas fijas: 'partidas/buscar' debe ganar a 'partidas/:id'
+  // Tras la ruta fija: 'partidas/crear' debe ganar a 'partidas/:id'
   {
     path: 'partidas/:id',
     canActivate: [authGuard],

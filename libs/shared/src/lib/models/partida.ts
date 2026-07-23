@@ -95,9 +95,16 @@ export interface SembrarPnj {
 /** Tope por siembra: evita que un cero de más llene la mesa de goblins. */
 export const PNJ_MAX_CANTIDAD = 12;
 
-/** Dimensiones del tablero en casillas (1 casilla = 5 pies). */
-export const TABLERO_ANCHO = 20;
-export const TABLERO_ALTO = 15;
+/**
+ * Dimensiones del tablero en casillas (1 casilla = 5 pies).
+ *
+ * 24×30 es la medida de los mapas grandes de PF1e (los flip-mat de 24×30
+ * pulgadas a una pulgada por casilla). Hay otros formatos que se montan
+ * uniendo trozos, pero con este espacio el máster puede colocar sus piezas
+ * por su cuenta y usarlo igual.
+ */
+export const TABLERO_ANCHO = 24;
+export const TABLERO_ALTO = 30;
 
 /**
  * Un personaje sentado a la mesa: referencia a su ficha + el ESTADO DE

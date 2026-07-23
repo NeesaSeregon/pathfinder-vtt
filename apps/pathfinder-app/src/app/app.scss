@@ -36,7 +36,6 @@
     padding: 0.35rem 0.75rem;
     border-radius: 0.375rem;
     cursor: pointer;
-    list-style: none; /* quita la flecha del summary */
 
     &:hover {
       color: var(--text);
@@ -46,33 +45,6 @@
     &--activo {
       color: var(--accent);
     }
-  }
-
-  &__menu {
-    position: relative;
-
-    summary::-webkit-details-marker {
-      display: none;
-    }
-
-    &[open] > summary {
-      color: var(--text);
-      background: var(--accent-soft);
-    }
-  }
-
-  &__submenu {
-    position: absolute;
-    top: calc(100% + 0.35rem);
-    left: 0;
-    min-width: 11rem;
-    display: flex;
-    flex-direction: column;
-    padding: 0.35rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.5);
   }
 
   &__sesion {

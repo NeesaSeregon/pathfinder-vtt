@@ -8,25 +8,15 @@
       routerLinkActive="navbar__enlace--activo"
       >Personajes</a
     >
-    <details class="navbar__menu" #menuPartidas>
-      <summary class="navbar__enlace">Partidas</summary>
-      <div class="navbar__submenu">
-        <a
-          class="navbar__enlace"
-          routerLink="/partidas/buscar"
-          routerLinkActive="navbar__enlace--activo"
-          (click)="menuPartidas.removeAttribute('open')"
-          >Buscar partida</a
-        >
-        <a
-          class="navbar__enlace"
-          routerLink="/partidas/crear"
-          routerLinkActive="navbar__enlace--activo"
-          (click)="menuPartidas.removeAttribute('open')"
-          >Crear partida</a
-        >
-      </div>
-    </details>
+    <!-- El escritorio de la home (/) ya reúne tus mesas, crear y unirse:
+         este enlace lleva allí en vez de duplicarlo en un desplegable. -->
+    <a
+      class="navbar__enlace"
+      routerLink="/"
+      routerLinkActive="navbar__enlace--activo"
+      [routerLinkActiveOptions]="{ exact: true }"
+      >Mesas</a
+    >
   </nav>
 
   <div class="navbar__sesion">

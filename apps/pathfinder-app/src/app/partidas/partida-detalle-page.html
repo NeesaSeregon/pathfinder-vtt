@@ -206,48 +206,62 @@
         }
       </aside>
 
+      <!--
+        El tablero (24×30) es MÁS ALTO que el hueco disponible: este marco lo
+        recorta y se agarra con el ratón para recorrerlo, como la mesa de
+        verdad cuando desplazas el mapa. El ancho sí cabe entero.
+      -->
       <div
-        class="tablero"
-        role="grid"
-        [class.tablero--con-mapa]="fondoTablero()"
-        [style.background-image]="fondoTablero()"
+        #marcoTablero
+        class="tablero-marco"
+        [class.tablero-marco--agarrando]="agarrando()"
+        (pointerdown)="empezarAgarre($event)"
       >
-        @for (y of filas; track y) {
-          @for (x of columnas; track x) {
-            <button
-              type="button"
-              class="tablero__celda"
-              [class.tablero__celda--destino]="
-                (seleccionado() || arrastrando()) && !ocupanteDe(x, y)
-              "
-              (click)="clickCelda(x, y)"
-              (dragover)="permitirSoltar($event)"
-              (drop)="soltarEn($event, x, y)"
-            >
-              @if (tokenEn(x, y); as pep) {
-                <span
-                  class="tablero__token"
-                  [style.background]="colorToken(pep)"
-                  [style.width]="ladoToken(pep)"
-                  [style.height]="ladoToken(pep)"
-                  [attr.data-casillas]="pep.casillas"
-                  [attr.draggable]="puedeMover(pep)"
-                  (dragstart)="iniciarArrastre($event, pep)"
-                  (dragend)="terminarArrastre()"
-                  [class.tablero__token--seleccionado]="
-                    seleccionado() === pep.id
-                  "
-                  [class.tablero__token--arrastrando]="arrastrando() === pep.id"
-                  [class.tablero__token--ajeno]="!puedeMover(pep)"
-            [class.tablero__token--oculto]="pep.oculto"
-                  [title]="pep.nombre"
-                >
-                  {{ iniciales(pep.nombre) }}
-                </span>
-              }
-            </button>
+        <div
+          class="tablero"
+          role="grid"
+          [class.tablero--con-mapa]="fondoTablero()"
+          [style.background-image]="fondoTablero()"
+        >
+          @for (y of filas; track y) {
+            @for (x of columnas; track x) {
+              <button
+                type="button"
+                class="tablero__celda"
+                [class.tablero__celda--destino]="
+                  (seleccionado() || arrastrando()) && !ocupanteDe(x, y)
+                "
+                (click)="clickCelda(x, y)"
+                (dragover)="permitirSoltar($event)"
+                (drop)="soltarEn($event, x, y)"
+              >
+                @if (tokenEn(x, y); as pep) {
+                  <span
+                    class="tablero__token"
+                    [style.background]="colorToken(pep)"
+                    [style.width]="ladoToken(pep)"
+                    [style.height]="ladoToken(pep)"
+                    [attr.data-casillas]="pep.casillas"
+                    [attr.draggable]="puedeMover(pep)"
+                    (dragstart)="iniciarArrastre($event, pep)"
+                    (dragend)="terminarArrastre()"
+                    [class.tablero__token--seleccionado]="
+                      seleccionado() === pep.id
+                    "
+                    [class.tablero__token--arrastrando]="
+                      arrastrando() === pep.id
+                    "
+                    [class.tablero__token--ajeno]="!puedeMover(pep)"
+                    [class.tablero__token--oculto]="pep.oculto"
+                    [title]="pep.nombre"
+                  >
+                    {{ iniciales(pep.nombre) }}
+                  </span>
+                }
+              </button>
+            }
           }
-        }
+        </div>
       </div>
 
       <!-- Columna derecha: lo que pasa en el turno (combate y dados) -->

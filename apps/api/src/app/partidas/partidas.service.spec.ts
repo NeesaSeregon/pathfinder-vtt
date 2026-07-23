@@ -14,6 +14,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  TABLERO_ANCHO,
   casillasQueOcupa,
   claseDeArmadura,
   iniciativa,
@@ -390,24 +391,27 @@ describe('PartidasService', () => {
       personajes: [grande],
     });
 
-    // TABLERO_ANCHO = 20: en x=19 su huella 2×2 se saldría del tablero
+    // En la ÚLTIMA columna su huella 2×2 se saldría del tablero. Se calcula
+    // desde la constante y no a mano: así el test sigue probando el borde
+    // aunque cambien las medidas del tablero.
+    const ultima = TABLERO_ANCHO - 1;
     await expect(
       service.actualizarPersonaje(
         'partida-1',
         'pep-grande',
-        { posX: 19, posY: 5 },
+        { posX: ultima, posY: 5 },
         'dueno',
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
 
-    // En x=18 sí cabe (ocupa 18 y 19)
+    // Una casilla antes sí cabe (ocupa esa y la última)
     const colocado = await service.actualizarPersonaje(
       'partida-1',
       'pep-grande',
-      { posX: 18, posY: 5 },
+      { posX: ultima - 1, posY: 5 },
       'dueno',
     );
-    expect(colocado.posX).toBe(18);
+    expect(colocado.posX).toBe(ultima - 1);
     expect(colocado.casillas).toBe(2);
   });
 

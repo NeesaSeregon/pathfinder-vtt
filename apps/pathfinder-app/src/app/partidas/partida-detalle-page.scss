@@ -1,9 +1,25 @@
+// La mesa se queda con TODO el alto que deja la navbar y no hace scroll de
+// página: lo que se desplaza es cada panel y el tablero, por dentro. Así el
+// tablero recibe el hueco que sobre de verdad, que cambia según haya
+// banquillo o no — con un número fijo de rem no habría acertado nunca.
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .mesa {
   // A sangre: la mesa es la pantalla de trabajo y ocupa TODO el monitor.
   // No lleva max-width (el resto de páginas sí) para que las columnas se
   // peguen a los extremos y el tablero quede centrado entre ellas.
   margin: 0;
-  padding: 1.25rem clamp(0.75rem, 1.2vw, 1.25rem) 2.5rem;
+  padding: 1.25rem clamp(0.75rem, 1.2vw, 1.25rem) 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 
   &__cabecera {
     display: flex;
@@ -85,15 +101,23 @@
       minmax(0, 1fr)
       clamp(23rem, 21vw, 29rem);
     grid-template-areas: 'personajes tablero juego';
+    // UNA fila de alto fijo, no "lo que ocupe el contenido". Es lo que hace
+    // que el tablero pueda pedir "el 100% de mi hueco": contra una fila
+    // automática ese 100% no tendría contra qué medirse y crecería sin tope.
+    grid-template-rows: minmax(0, 1fr);
     gap: clamp(1rem, 1.5vw, 2rem);
     align-items: start;
+    // Se queda con el alto restante; el min-height evita que un panel largo
+    // estire la mesa en vez de desplazarse por dentro.
+    flex: 1;
+    min-height: 0;
   }
 
-  // -- Paneles laterales: tarjetas apiladas, pegajosos y con scroll propio -
+  // -- Paneles laterales: tarjetas apiladas, con scroll propio -------------
+  // Ya no hacen falta pegajosos: la página no se desplaza, así que basta con
+  // no pasar del alto de la rejilla y desplazarse por dentro.
   &__panel {
-    position: sticky;
-    top: 1rem;
-    max-height: calc(100vh - 6rem);
+    max-height: 100%;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -543,17 +567,41 @@
   }
 }
 
+// -- Marco del tablero: la ventana por la que se ve la mesa ----------------
+// El tablero es MÁS ALTO que la pantalla (24×30 sobre un monitor apaisado),
+// así que en vez de encogerlo hasta que quepa entero —lo que dejaba las
+// casillas en ~25px y un hueco negro a cada lado— se recorta aquí y se
+// recorre agarrándolo. A lo ANCHO sí cabe entero: se pierden filas, nunca
+// columnas, para no perder de vista un flanco en pleno combate.
+.tablero-marco {
+  grid-area: tablero;
+  overflow: auto;
+  // Ocupa EXACTAMENTE la fila (la rejilla alinea al principio por los
+  // paneles; el tablero sí quiere todo el alto)
+  align-self: stretch;
+  min-height: 0;
+  border-radius: 0.5rem;
+  cursor: grab;
+  // Sin esto, arrastrar por encima selecciona el texto de las casillas
+  user-select: none;
+
+  &--agarrando {
+    cursor: grabbing;
+  }
+}
+
 // -- Tablero: rejilla responsive de celdas cuadradas -----------------------
 .tablero {
-  grid-area: tablero;
   display: grid;
-  grid-template-columns: repeat(20, 1fr);
-  grid-template-rows: repeat(15, 1fr);
-  aspect-ratio: 20 / 15;
+  // OJO: estos números son TABLERO_ANCHO y TABLERO_ALTO de libs/shared. El
+  // CSS no puede leerlos, así que si cambian allí hay que cambiarlos aquí.
+  grid-template-columns: repeat(24, 1fr);
+  grid-template-rows: repeat(30, 1fr);
+  aspect-ratio: 24 / 30;
+  // Llena el ancho del marco y se sale por abajo: el alto sale solo de la
+  // proporción. Ya NO hay max-width atado a la altura de la ventana — era
+  // justo lo que ahogaba el tablero.
   width: 100%;
-  // El alto de la ventana acota el ancho (proporción 20:15 = 4:3)
-  max-width: calc((100vh - 10rem) * 4 / 3);
-  margin: 0 auto;
   gap: 2px;
   padding: 2px;
   background: var(--border);
@@ -665,6 +713,15 @@
 // Pantalla mediana: no caben tres columnas sin ahogar el tablero. Los
 // personajes bajan a lo ancho, debajo del tablero, en rejilla de tarjetas.
 @media (max-width: 85rem) {
+  // Aquí ya no cabe todo de una pantallada: los personajes van DEBAJO del
+  // tablero, así que se vuelve al flujo normal y quien se desplaza es la
+  // página. El tablero deja de estar recortado y se ve entero.
+  :host,
+  .mesa {
+    display: block;
+    overflow: visible;
+  }
+
   .mesa__contenido {
     grid-template-columns: minmax(0, 1fr) 23rem;
     grid-template-areas:
@@ -672,8 +729,17 @@
       'personajes personajes';
   }
 
+  .tablero-marco {
+    max-height: none;
+    overflow: visible;
+    cursor: default;
+  }
+
+  .mesa__panel {
+    max-height: none;
+  }
+
   .mesa__panel--personajes {
-    position: static;
     max-height: none;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
@@ -697,12 +763,7 @@
   }
 
   .mesa__panel {
-    position: static;
     max-height: none;
-  }
-
-  .tablero {
-    max-width: none;
   }
 }
 

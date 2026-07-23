@@ -2,6 +2,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  ElementRef,
   inject,
   signal,
   viewChild,
@@ -33,6 +34,13 @@ import { CharacterForm } from '../characters/character-form';
 import { PnjForm } from './pnj-form';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
+/**
+ * Píxeles que hay que recorrer con el botón pulsado para que el gesto deje
+ * de ser un clic (colocar) y pase a ser un desplazamiento del tablero. Un
+ * clic normal mueve el ratón uno o dos píxeles sin querer.
+ */
+const UMBRAL_AGARRE = 5;
+
 @Component({
   selector: 'app-partida-detalle-page',
   imports: [FichaVista, CharacterForm, PnjForm],
@@ -57,6 +65,12 @@ export class PartidaDetallePage {
   protected readonly seleccionado = signal<string | null>(null);
   /** Id del personaje que se está arrastrando (alternativa a los dos clics). */
   protected readonly arrastrando = signal<string | null>(null);
+
+  /** El marco que recorta el tablero; se desplaza al agarrar el fondo. */
+  private readonly marcoTablero =
+    viewChild<ElementRef<HTMLElement>>('marcoTablero');
+  /** ¿Se está recorriendo el tablero ahora mismo? (solo para el cursor). */
+  protected readonly agarrando = signal(false);
 
   /** Personajes aún sin colocar en el tablero. */
   protected readonly banquillo = computed(() =>
@@ -282,6 +296,68 @@ export class PartidaDetallePage {
     if (pepId) {
       this.mover(pepId, x, y);
     }
+  }
+
+  /**
+   * Recorrer el tablero agarrando el fondo. El tablero es más alto que el
+   * hueco disponible, así que hay que poder moverse por él.
+   *
+   * Lo delicado es que el mismo gesto ya significa otra cosa: pulsar una
+   * casilla COLOCA al personaje seleccionado. Se distinguen por la
+   * distancia — hasta UMBRAL_AGARRE píxeles sigue siendo un clic; a partir
+   * de ahí es un desplazamiento y el clic de después se descarta. Sobre un
+   * token no se agarra nada: ahí manda el arrastre nativo, que lo mueve.
+   */
+  protected empezarAgarre(evento: PointerEvent): void {
+    if (evento.button !== 0) return;
+    const destino = evento.target as HTMLElement | null;
+    if (destino?.closest('.tablero__token')) return;
+
+    const marco = this.marcoTablero()?.nativeElement;
+    if (!marco) return;
+
+    const inicioX = evento.clientX;
+    const inicioY = evento.clientY;
+    const arribaAlEmpezar = marco.scrollTop;
+    const izquierdaAlEmpezar = marco.scrollLeft;
+    let recorrido = false;
+
+    const tragarClic = (e: Event) => {
+      e.stopPropagation();
+      e.preventDefault();
+    };
+
+    const mover = (e: PointerEvent) => {
+      const dx = e.clientX - inicioX;
+      const dy = e.clientY - inicioY;
+      if (!recorrido && Math.hypot(dx, dy) < UMBRAL_AGARRE) return;
+      recorrido = true;
+      this.agarrando.set(true);
+      // Al revés que el puntero: arrastrar hacia arriba enseña lo de abajo,
+      // como cuando empujas un mapa de papel.
+      marco.scrollTop = arribaAlEmpezar - dy;
+      marco.scrollLeft = izquierdaAlEmpezar - dx;
+    };
+
+    const soltar = () => {
+      document.removeEventListener('pointermove', mover);
+      document.removeEventListener('pointerup', soltar);
+      document.removeEventListener('pointercancel', soltar);
+      this.agarrando.set(false);
+      if (!recorrido) return;
+      // El navegador dispara un click al soltar: si acabamos de recorrer el
+      // tablero, ese click NO debe colocar a nadie. Se intercepta en fase de
+      // captura, antes de llegar a la casilla.
+      marco.addEventListener('click', tragarClic, { capture: true });
+      // Y se retira enseguida: el click llega en el mismo ciclo, así que si
+      // no ha llegado (soltaste fuera del marco) no queda nada acechando al
+      // siguiente clic legítimo.
+      setTimeout(() => marco.removeEventListener('click', tragarClic, true));
+    };
+
+    document.addEventListener('pointermove', mover);
+    document.addEventListener('pointerup', soltar);
+    document.addEventListener('pointercancel', soltar);
   }
 
   protected seleccionarDelBanquillo(pep: PersonajeEnPartidaResumen): void {

@@ -12,8 +12,9 @@ import { mensajeDeError } from '../characters/mensaje-de-error';
 
 /**
  * Buscar una mesa y sentarse en ella con uno de tus personajes. Vive en su
- * propio componente porque lo usan DOS sitios: el escritorio de la home y
- * la página /partidas/buscar. Antes estaba escrito a mano en la página.
+ * propio componente: es el panel "Unirse a una mesa" del escritorio de la
+ * home. Antes también lo montaba una página /partidas/buscar, ya retirada
+ * por redundante.
  */
 @Component({
   selector: 'app-unirse-panel',
