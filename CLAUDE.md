@@ -26,10 +26,10 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   - Generar una tras cambiar entidades: npm run migration:generate -- apps/api/src/migrations/NombreDescriptivo
   - Deshacer la última: npm run migration:revert
   - Ver estado: npm run migration:show
-- Despliegue (ver sección Despliegue):
-  - docker compose -f docker-compose.prod.yml build
-  - docker compose -f docker-compose.prod.yml run --rm migrate
-  - docker compose -f docker-compose.prod.yml up -d
+- Despliegue: con COOLIFY (panel que gestiona proxy, HTTPS, variables y
+  backups). Se pulsa Deploy en su panel; ver sección Despliegue y
+  DESPLIEGUE.md. Para probar el compose en local sin Coolify:
+  DB_PASSWORD=... JWT_SECRET=... docker compose -f docker-compose.prod.yml up --build
 
 ## Despliegue
 - UNA imagen (Dockerfile multifase): la API sirve TAMBIÉN el front compilado
@@ -39,22 +39,51 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   index.html (si no, recargar en /partidas/:id daría 404).
 - HTTPS ES OBLIGATORIO en producción. La cookie lleva secure:true cuando
   NODE_ENV=production, así que sin TLS por delante el navegador NO la guarda
-  y NADIE puede iniciar sesión. El contenedor publica solo en 127.0.0.1: hay
-  que poner delante un proxy inverso (Caddy o nginx) que termine el TLS.
-- app.set('trust proxy', 1) en main.ts: detrás de un proxy, req.ip sería la
-  del proxy y el freno de login trataría a todo el mundo como una sola IP.
-- Las migraciones van en un paso APARTE (`run --rm migrate`) antes de
-  arrancar; usa la fase `build` de la imagen porque necesitan TypeScript y
-  ts-node, que no están en la imagen final. Así un fallo de esquema no deja
-  el contenedor reiniciándose en bucle.
+  y NADIE puede iniciar sesión. Lo termina el PROXY DE COOLIFY (Traefik):
+  gestiona el certificado de Let's Encrypt y enruta el dominio al servicio
+  `api` en el puerto 3000 (incluido el upgrade de WebSocket). Por eso el
+  compose NO tiene servicio de proxy ni puertos 80/443, y la API solo
+  declara `expose: 3000` (no `ports`): la alcanza Traefik por la red de
+  Coolify. El dominio y los secretos se ponen en el PANEL de Coolify, no en
+  un .env del servidor. Hubo un servicio Caddy en el compose (jubilado el
+  2026-07-20 al elegir Coolify, que trae su propio proxy: dos porteros
+  pelearían por el 80/443).
+- La guía de despliegue paso a paso para el usuario está en DESPLIEGUE.md
+  (VPS Ubuntu LTS, instalar Coolify, Cloudflare, variables, deploy, backups).
+  Va dirigida a Luis; esta sección es la versión para mí.
+- app.set('trust proxy', 1) en main.ts: NO es para la IP del visitante, sino
+  para que Express lea X-Forwarded-Proto del proxy (Traefik) y permita la
+  cookie secure:true (si no, creería que la conexión es http y la rechazaría).
+- La IP real del visitante (para el freno de login) la da el decorador
+  IpCliente (auth/ip-cliente.decorator.ts), que prefiere la cabecera
+  CF-Connecting-IP de Cloudflare y cae en req.ip si no está (dev, LAN, o
+  Cloudflare en modo "DNS only"). trust proxy solo daría la IP del proxy.
+  OJO: esa cabecera es de fiar SOLO si el origen no admite tráfico que no
+  venga de Cloudflare — hay que cerrar el cortafuegos a los rangos de
+  Cloudflare cuando se active la nube naranja (ver DESPLIEGUE.md §9).
+- Las migraciones corren AUTOMÁTICAS en cada despliegue: un servicio
+  `migrate` de un solo uso (restart: 'no') aplica lo pendiente y termina, y
+  la API tiene depends_on: migrate con condition: service_completed_successfully,
+  así que NO arranca hasta que las migraciones acaban bien. Si una falla, el
+  contenedor sale con error, la API no arranca y Coolify marca el despliegue
+  en rojo (la versión anterior sigue en pie) — en vez de arrancar sobre un
+  esquema roto. Usa la fase `build` de la imagen porque las migraciones
+  necesitan TypeScript y ts-node, que no están en la imagen final. (Antes era
+  un paso manual `run --rm migrate`; con Coolify, que despliega sin SSH,
+  automatizarlo por depends_on es lo natural.)
 - En el runtime NO se usa el package.json/lockfile podado que genera Nx en
   dist/apps/api: sale INCOMPLETO (le faltaba content-type, de express) y
   `npm ci` lo rechaza. Se poda el árbol completo con `npm prune --omit=dev`,
   más pesado pero reproducible.
 - La base de datos NO publica puertos en prod: solo la ve la red interna.
 - COPIAS DE SEGURIDAD: pendientes, y pasan a ser urgentes el día del
-  despliegue. Hay que salvar el volumen pgdata (pg_dump) Y la carpeta de
-  uploads (los mapas no están en la base de datos).
+  despliegue. Hay que salvar el volumen pgdata (pg_dump) Y el volumen de
+  uploads (los mapas no están en la base de datos). Comandos concretos en
+  DESPLIEGUE.md §6; automatizar con cron cuando haya datos reales.
+- WebEmpresa (lo que tiene Luis a día de 2026-07-20) es HOSTING COMPARTIDO
+  (cPanel): NO sirve para esta app (sin Docker, sin PostgreSQL —da MySQL—,
+  sin proceso Node permanente ni WebSockets estables). Hace falta un VPS con
+  root. El dominio de Cloudflare sí vale con cualquier host.
 
 ## Convenciones
 - Todo modelo o evento compartido entre front y back se define en

@@ -19,10 +19,12 @@ async function bootstrap() {
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
 
-  // Detrás de un proxy inverso (nginx, Caddy, el balanceador del hosting)
-  // req.ip sería la del proxy y no la del visitante. Sin esto, el freno de
-  // intentos de login contaría a TODO el mundo como la misma IP y un solo
-  // atacante dejaría a los demás sin poder entrar.
+  // Detrás de un proxy inverso (el Traefik de Coolify) hace falta confiar en él para que
+  // Express lea el protocolo real del X-Forwarded-Proto y deje poner la
+  // cookie con secure:true (si no, creería que la conexión es http y la
+  // rechazaría). La IP del visitante NO se saca de aquí: en producción va
+  // detrás de Cloudflare y la lee el decorador IpCliente de la cabecera
+  // CF-Connecting-IP (trust proxy solo daría la IP del proxy).
   app.set('trust proxy', 1);
 
   // Necesario para leer la cookie de sesión (req.cookies)

@@ -5,7 +5,6 @@ import {
   HttpCode,
   HttpException,
   HttpStatus,
-  Ip,
   Post,
   Res,
 } from '@nestjs/common';
@@ -15,6 +14,7 @@ import { AuthService } from './auth.service';
 import { CredencialesDto, RegistroDto } from './dto/credenciales.dto';
 import { Public } from './public.decorator';
 import { CurrentUser } from './current-user.decorator';
+import { IpCliente } from './ip-cliente.decorator';
 import { COOKIE_SESION } from './auth.constants';
 import { IntentosLoginService } from './intentos-login.service';
 
@@ -44,7 +44,7 @@ export class AuthController {
   async login(
     @Body() credenciales: CredencialesDto,
     @Res({ passthrough: true }) res: Response,
-    @Ip() ip: string,
+    @IpCliente() ip: string,
   ): Promise<SesionRespuesta> {
     const { email, password } = credenciales;
 
