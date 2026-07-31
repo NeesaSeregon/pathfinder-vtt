@@ -128,24 +128,40 @@ Comprueba lo esencial, sobre todo la cookie (es lo que más se rompe):
 ## 7. Copias de seguridad
 
 Hay que salvar DOS cosas: la base de datos y los mapas subidos (que NO están
-en la base de datos).
+en la base de datos). Como el PostgreSQL vive DENTRO de nuestro docker-compose
+(no es un recurso "Database" propio de Coolify), no usamos el backup de
+Coolify: un único script las salva las dos y lo programamos con cron.
 
-- **Base de datos:** Coolify tiene backups programados para PostgreSQL. En el
-  recurso `postgres`, activa **Scheduled Backups** (diario) y, si puedes,
-  configura un destino externo (S3) para no guardarlos solo en el mismo VPS.
-- **Mapas subidos:** viven en el volumen `uploads`. Desde la terminal del
-  VPS, un respaldo puntual:
+El script está en el repo: [scripts/backup.sh](scripts/backup.sh). Localiza el
+contenedor de postgres por sus etiquetas de compose, hace `pg_dump` + archiva
+el volumen `uploads`, y borra las copias más viejas que `RETENER_DIAS`.
 
-  ```bash
-  docker run --rm -v <nombre_del_volumen_uploads>:/datos -v $PWD:/salida alpine \
-    tar czf /salida/backup-uploads-$(date +%F).tar.gz -C /datos .
-  ```
+**Instalarlo en el servidor** (por SSH):
 
-  (El nombre exacto del volumen lo ves con `docker volume ls | grep uploads`.)
-  Guárdalos **fuera del VPS**.
+```bash
+# 1. Traer el repo (público) solo para tener el script
+git clone https://github.com/TU_USUARIO/pathfinder-vtt.git /root/pathfinder-vtt
 
-> Muchos proveedores ofrecen además "snapshots" de la máquina entera:
-> actívalos, son la red de seguridad más cómoda.
+# 2. Probarlo una vez a mano
+bash /root/pathfinder-vtt/scripts/backup.sh
+ls -lh /root/backups/pathfinder     # deberían aparecer db-*.sql.gz y uploads-*.tar.gz
+
+# 3. Programarlo cada noche a las 3:00 (sin abrir editor)
+(crontab -l 2>/dev/null; echo "0 3 * * * bash /root/pathfinder-vtt/scripts/backup.sh >> /var/log/pathfinder-backup.log 2>&1") | crontab -
+```
+
+Para actualizar el script el día que cambie: `cd /root/pathfinder-vtt && git pull`.
+
+> **Importante:** estas copias viven EN el propio VPS. Si el VPS muere, mueren
+> con él. Descárgatelas de vez en cuando a tu ordenador (o configura un
+> destino externo tipo S3 más adelante). Y si tu proveedor ofrece "snapshots"
+> de la máquina entera, actívalos: son la red de seguridad más cómoda.
+
+Para **descargar** una copia a tu PC (desde PowerShell, en tu ordenador):
+
+```powershell
+scp root@LA_IP:/root/backups/pathfinder/db-*.sql.gz .
+```
 
 ---
 
