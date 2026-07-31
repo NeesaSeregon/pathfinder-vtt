@@ -75,6 +75,15 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   dist/apps/api: sale INCOMPLETO (le faltaba content-type, de express) y
   `npm ci` lo rechaza. Se poda el árbol completo con `npm prune --omit=dev`,
   más pesado pero reproducible.
+- El Dockerfile tiene TRES fases: `build` (compila con TODAS las deps, sin
+  podar), `prod-deps` (FROM build + `npm prune --omit=dev`) y `runtime` (copia
+  el node_modules podado de prod-deps y los dist de build). La poda vive en su
+  fase aparte A PROPÓSITO: el servicio `migrate` usa la fase `build`, y las
+  migraciones corren con ts-node + cross-env, que son devDependencies. Cuando
+  la poda estaba dentro de `build` (2026-07-31, primer deploy en Coolify), el
+  migrate arrancaba sin esas herramientas y moría con exit 127 ("command not
+  found"), tumbando el despliegue. Regla: NADA que la fase build comparta con
+  migrate puede depender de tener las devDependencies podadas.
 - La base de datos NO publica puertos en prod: solo la ve la red interna.
 - COPIAS DE SEGURIDAD: pendientes, y pasan a ser urgentes el día del
   despliegue. Hay que salvar el volumen pgdata (pg_dump) Y el volumen de
