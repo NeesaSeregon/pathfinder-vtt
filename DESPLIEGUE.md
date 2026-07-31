@@ -178,9 +178,22 @@ pero requiere dos ajustes:
 2. **Cierra el cortafuegos del VPS para que SOLO Cloudflare entre** por los
    puertos 80/443. Si no, alguien podría saltarse Cloudflare llamando a la IP
    directa y falsificar la cabecera de IP del visitante, engañando al freno de
-   login. Rangos oficiales en https://www.cloudflare.com/ips/. (Cuando llegues
-   aquí te paso un script que lo aplica; es mecánico pero conviene hacerlo
-   bien.)
+   login. OJO: `ufw` NO sirve — Docker publica esos puertos y se lo salta; hay
+   que usar la cadena `DOCKER-USER` de iptables. El script
+   [scripts/cortafuegos-cloudflare.sh](scripts/cortafuegos-cloudflare.sh) lo
+   hace: descarga los rangos oficiales de Cloudflare y bloquea al resto en
+   80/443, sin tocar SSH (22) ni el panel de Coolify (8000).
+
+   ```bash
+   # Con el SSH ABIERTO como red de seguridad. Rescate si algo va mal:
+   #   iptables -F DOCKER-USER && ip6tables -F DOCKER-USER
+   bash /root/pathfinder-vtt/scripts/cortafuegos-cloudflare.sh
+
+   # Persistencia: reaplicar en cada arranque y refrescar los rangos cada semana
+   (crontab -l 2>/dev/null; \
+    echo "@reboot bash /root/pathfinder-vtt/scripts/cortafuegos-cloudflare.sh >> /var/log/pathfinder-cortafuegos.log 2>&1"; \
+    echo "0 4 * * 1 bash /root/pathfinder-vtt/scripts/cortafuegos-cloudflare.sh >> /var/log/pathfinder-cortafuegos.log 2>&1") | crontab -
+   ```
 
 **Nada que tocar en el código:** la app ya lee la IP real del visitante de la
 cabecera `CF-Connecting-IP` de Cloudflare (decorador `IpCliente`), así que el
