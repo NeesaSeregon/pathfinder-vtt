@@ -61,6 +61,23 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   OJO: esa cabecera es de fiar SOLO si el origen no admite tráfico que no
   venga de Cloudflare — hay que cerrar el cortafuegos a los rangos de
   Cloudflare cuando se active la nube naranja (ver DESPLIEGUE.md §9).
+- CORTAFUEGOS Y DOCKER-USER: las reglas de scripts/cortafuegos-cloudflare.sh
+  DEBEN llevar `-i <interfaz pública>`. DOCKER-USER cuelga de FORWARD, y por
+  FORWARD pasan LOS DOS SENTIDOS del tráfico de un contenedor (lo que entra
+  hacia él y lo que él manda a internet): para el kernel ambos son tráfico
+  enrutado entre dos interfaces. Sin `-i`, un DROP a `--dport 443` mata
+  también las SALIDAS de los contenedores hacia cualquier :443 ajeno, porque
+  --dport es "el puerto del servicio al que va el paquete" — tanto da que sea
+  nuestro Traefik o el de github.com. Así tumbamos el despliegue del
+  2026-08-03: Coolify no pudo hacer git ls-remote (y el npm ci del build
+  habría muerto igual), mientras la web seguía cargando perfectamente, porque
+  las RESPUESTAS de una conexión entrante van al puerto efímero del cliente y
+  no casan con el DROP. Se filtra por la interfaz pública y NO excluyendo los
+  puentes de Docker: los `br-xxxx` llevan un hash y cambian al recrear la red.
+  Todo cambio en ese script se valida con SUS DOS MITADES (el propio script
+  comprueba la salida de un contenedor; que el origen siga cerrado hay que
+  probarlo DESDE FUERA — desde el VPS no pasa por FORWARD y siempre diría que
+  está abierto).
 - Las migraciones corren AUTOMÁTICAS en cada despliegue: un servicio
   `migrate` de un solo uso (restart: 'no') aplica lo pendiente y termina, y
   la API tiene depends_on: migrate con condition: service_completed_successfully,

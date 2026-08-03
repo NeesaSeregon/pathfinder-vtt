@@ -195,6 +195,24 @@ pero requiere dos ajustes:
     echo "0 4 * * 1 bash /root/pathfinder-vtt/scripts/cortafuegos-cloudflare.sh >> /var/log/pathfinder-cortafuegos.log 2>&1") | crontab -
    ```
 
+   **Comprueba SIEMPRE las dos mitades.** Un cortafuegos puede quedar mal de
+   dos maneras opuestas, y la web sigue cargando igual en ambos casos:
+
+   - *Que los contenedores conserven salida a internet.* Lo hace ya el propio
+     script al terminar (debe decir `OK: un contenedor llega a github.com`).
+     Si esto falla, la web funciona pero **los despliegues fallan**: Coolify no
+     puede ni leer el repositorio. Nos pasó el 2026-08-03.
+   - *Que el origen siga cerrado.* Esto **no se puede probar desde el VPS** (un
+     paquete que nace en el host hacia su propia IP no pasa por `FORWARD`, así
+     que no toca estas reglas). Desde tu portátil, saltándote Cloudflare:
+
+     ```bash
+     curl -sk -m 10 --resolve TUDOMINIO:443:<IP-DEL-VPS> https://TUDOMINIO
+     ```
+
+     Debe quedarse colgado hasta el timeout. Si responde, el origen está
+     abierto y cualquiera puede falsificar `CF-Connecting-IP`.
+
 **Nada que tocar en el código:** la app ya lee la IP real del visitante de la
 cabecera `CF-Connecting-IP` de Cloudflare (decorador `IpCliente`), así que el
 freno de fuerza bruta sigue distinguiendo a cada persona. En "DNS only" esa
