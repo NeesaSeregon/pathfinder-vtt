@@ -29,7 +29,11 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Despliegue: con COOLIFY (panel que gestiona proxy, HTTPS, variables y
   backups). Se pulsa Deploy en su panel; ver sección Despliegue y
   DESPLIEGUE.md. Para probar el compose en local sin Coolify:
-  DB_PASSWORD=... JWT_SECRET=... docker compose -f docker-compose.prod.yml up --build
+  DB_PASSWORD=... JWT_SECRET=... APP_URL=http://localhost:3000
+  docker compose -f docker-compose.prod.yml up --build
+  (APP_URL es OBLIGATORIA desde que existe la recuperación por correo: sin
+  ella el compose ni arranca. Las MAIL_* no lo son; sin ellas los correos
+  van al log.)
 
 ## Despliegue
 - UNA imagen (Dockerfile multifase): la API sirve TAMBIÉN el front compilado
@@ -139,6 +143,19 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   npm ci (sin scripts) + rebuilds permitidos + lint + tests + e2e, con
   PostgreSQL 17 como service container y JWT_SECRET propio del runner.
 - El binario de Cypress se cachea por hash del package-lock.
+- Si el e2e falla, el workflow SUBE LAS CAPTURAS de Cypress como artefacto
+  ("cypress-capturas", 7 días) desde la propia página del run. Se añadió el
+  2026-08-03 tras un rojo que no se reproducía en local: los logs de
+  Actions piden permisos de admin del repo, así que sin la captura hay que
+  deducir el fallo a ciegas.
+- OJO CON LAS CARRERAS EN CYPRESS: el CI corre en una máquina más lenta y
+  saca a la luz esperas implícitas que en local nunca fallan. El caso que
+  nos pasó: leer texto con .invoke('text') justo tras un click, sobre un
+  contenedor que YA existía (.panel envuelve el formulario y la
+  confirmación), devolvía la pantalla de antes de responder la API. Regla:
+  antes de leer contenido, poner una aserción que espere al estado nuevo
+  (cy.contains(...).should('be.visible')), no confiar en que la petición
+  haya terminado.
 
 ## Autenticación
 - JWT emitido por /api/auth/register y /api/auth/login (se entra con email);
@@ -223,6 +240,18 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   diagnosticar: todo responde bien y el correo no llega nunca). Un fallo de
   envío se registra y se traga, nunca propaga: convertirlo en un 500 sería
   además una pista sobre qué cuentas existen.
+  · TODA VARIABLE NUEVA HAY QUE DECLARARLA EN docker-compose.prod.yml, en
+    el bloque environment del servicio api. Rellenarla en el panel de
+    Coolify NO basta: el compose solo pasa al contenedor lo que enumera, y
+    además es de ahí de donde Coolify saca los campos que te enseña. Se nos
+    escapó al montar esto (2026-08-03): las MAIL_* estaban documentadas
+    pero no cableadas, así que no habrían llegado nunca.
+  · Las variables llegan DEFINIDAS AUNQUE ESTÉN VACÍAS (docker-compose pone
+    cadena vacía cuando el campo del panel está en blanco). Por eso
+    EnviadorSmtp no usa getOrThrow —que solo se queja de lo indefinido—
+    sino la función exigir(), que trata "" como ausente y revienta el
+    arranque. Con getOrThrow se arrancaría feliz y se intentaría enviar sin
+    remitente ni contraseña, fallando en cada correo.
 - Gestión de la propia cuenta en /api/cuenta (módulo CuentaModule): GET
   devuelve datos + contadores (personajes, mesas que diriges, mesas donde
   juegas) y DELETE la borra. Nunca hay :id en la ruta: siempre actúa sobre
@@ -299,6 +328,25 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   sesiones al cambiarla. Ver la sección Autenticación. Se hicieron juntas
   porque comparten toda la fontanería y porque un restablecimiento que no
   echa al intruso no sirve de mucho.)
+- BOTÓN "CERRAR SESIÓN EN TODOS LOS DISPOSITIVOS" en /cuenta. La fontanería
+  YA ESTÁ HECHA: basta un endpoint que incremente users.tokenVersion (lo
+  mismo que hace actualizarPassword, pero sin tocar el hash) y reponer la
+  cookie de quien lo pulsa, igual que en el cambio de contraseña — si no,
+  se expulsaría a sí mismo. Es la respuesta a "creo que alguien ha entrado
+  en mi cuenta" SIN obligar a cambiar la contraseña, y es de las mejoras
+  más baratas que quedan. Debería pedir la contraseña (reautenticar), como
+  el resto de acciones delicadas de esa página.
+- CONTRASEÑAS FILTRADAS al registrarse y al cambiarla. Hoy la única regla
+  es PASSWORD_MIN_LONGITUD (8). NIST SP 800-63B desaconseja las reglas de
+  composición ("una mayúscula y un símbolo") y recomienda EN SU LUGAR
+  comprobar la contraseña contra listas de contraseñas comprometidas: sube
+  mucho más la seguridad real. Se puede hacer sin enviar la contraseña, con
+  la API de HaveIBeenPwned por k-anonymity (se manda solo los 5 primeros
+  caracteres del SHA-1 y se busca el resto en la respuesta). Vigilar dos
+  cosas: que un fallo o una caída de ese servicio NO impida registrarse
+  (ante la duda, dejar pasar) y que el aviso al usuario sea comprensible
+  ("esa contraseña aparece en filtraciones conocidas, elige otra").
+  Afectaría a los tres sitios a la vez: registro, /cuenta y restablecer.
 - Correo de recuperación cuando el email NO tiene cuenta ("alguien ha
   pedido restablecer, pero aquí no hay cuenta con este correo"). OWASP lo
   sugiere para que el usuario no se quede esperando un correo que no va a

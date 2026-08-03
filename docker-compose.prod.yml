@@ -10,7 +10,10 @@
 #   · el dominio: se asigna en el panel al servicio `api`, puerto 3000.
 #
 # Para probarlo en local sin Coolify:
-#   DB_PASSWORD=... JWT_SECRET=... docker compose -f docker-compose.prod.yml up --build
+#   DB_PASSWORD=... JWT_SECRET=... APP_URL=http://localhost:3000 \
+#     docker compose -f docker-compose.prod.yml up --build
+#   (APP_URL es obligatoria: sin ella el compose se niega a arrancar. Sin
+#   las MAIL_* sí arranca, pero los correos van al log en vez de enviarse.)
 
 services:
   postgres:
