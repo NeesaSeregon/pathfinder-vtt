@@ -304,7 +304,7 @@ describe('PartidasService', () => {
       personajes: [{ id: 'pep-1', character: { ownerId: 'jugador' } }],
     };
     partidasRepo.findOne.mockResolvedValue(partida);
-    const user = (sub: string) => ({ sub, username: `nombre-${sub}` });
+    const user = (sub: string) => ({ sub, username: `nombre-${sub}`, tv: 0 });
 
     // Un extraño a la mesa no puede tirar
     await expect(
@@ -342,6 +342,7 @@ describe('PartidasService', () => {
       service.tirarDados('partida-1', { notacion: 'patata' }, {
         sub: 'master',
         username: 'neesa',
+        tv: 0,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });

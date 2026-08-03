@@ -3,7 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   Credenciales,
+  OlvidePasswordDatos,
   RegistroDatos,
+  RestablecerPasswordDatos,
   SesionRespuesta,
 } from '@pathfinder/shared';
 
@@ -26,5 +28,19 @@ export class AuthApi {
 
   logout(): Observable<void> {
     return this.http.post<void>('/api/auth/logout', {});
+  }
+
+  /**
+   * Paso 1 de "he olvidado mi contraseña". Devuelve 204 exista o no la
+   * cuenta: el front NO puede saber si el correo estaba registrado, y esa
+   * es justamente la idea.
+   */
+  olvidePassword(datos: OlvidePasswordDatos): Observable<void> {
+    return this.http.post<void>('/api/auth/password/olvidada', datos);
+  }
+
+  /** Paso 2: canjear el token del correo por una contraseña nueva. */
+  restablecerPassword(datos: RestablecerPasswordDatos): Observable<void> {
+    return this.http.post<void>('/api/auth/password/restablecer', datos);
   }
 }

@@ -45,5 +45,19 @@ export const appRoutes: Route[] = [
     loadComponent: () =>
       import('./auth/registro-page').then((m) => m.RegistroPage),
   },
+  // Las dos de recuperar contraseña son PÚBLICAS por definición: a ellas se
+  // llega justo cuando no se puede iniciar sesión. Nada de authGuard.
+  {
+    path: 'recuperar',
+    loadComponent: () =>
+      import('./auth/recuperar-page').then((m) => m.RecuperarPage),
+  },
+  {
+    // La ruta del enlace del correo (llega con ?token=…). Si cambia, hay que
+    // cambiar también RecuperacionService.enlaceDe() en la API.
+    path: 'restablecer',
+    loadComponent: () =>
+      import('./auth/restablecer-page').then((m) => m.RestablecerPage),
+  },
   { path: '**', redirectTo: '' },
 ];

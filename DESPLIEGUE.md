@@ -72,6 +72,10 @@ Coolify te muestra como campos las variables que el compose pide. Rellena:
 
 - **`DB_PASSWORD`** — una cadena larga y aleatoria.
 - **`JWT_SECRET`** — otra distinta, larga y aleatoria.
+- **`APP_URL`** — la dirección pública, con https y **sin barra final**:
+  `https://rolnees.com`. De aquí sale el enlace de los correos de
+  recuperación. Si la pones mal, los enlaces no llevarán a ninguna parte.
+- **Las cinco `MAIL_*`** — ver la sección 4.1, justo debajo.
 
 Para generarlas, en cualquier terminal:
 
@@ -87,6 +91,56 @@ fijado en el compose.)
 En el servicio **`api`**, asigna el dominio: `https://pathfinder.tudominio.com`
 apuntando al puerto **3000**. Coolify se encarga solo de Traefik y del
 certificado de Let's Encrypt para ese nombre.
+
+---
+
+## 4.1. Correo saliente (Resend)
+
+Hace falta para que funcione **"he olvidado mi contraseña"**. Sin esto la app
+arranca igual y todo parece correcto, pero **los correos no salen nunca** y
+nadie puede recuperar su cuenta. (La API responde lo mismo pase lo que pase:
+no puede decir si el correo salió sin delatar qué cuentas existen. El único
+sitio donde se ve el problema es el log, que al arrancar deja un error si
+falta `MAIL_HOST`.)
+
+**1. Crear la cuenta.** En [resend.com](https://resend.com), plan gratuito
+(3.000 correos/mes, 100/día — de sobra: aquí un correo es alguien que ha
+perdido su contraseña).
+
+**2. Verificar el dominio.** En Resend, *Domains → Add Domain* → `rolnees.com`.
+Te dará **tres registros DNS** (DKIM, SPF y, si lo ofrece, DMARC). Añádelos en
+**Cloudflare** → tu dominio → *DNS* → *Add record*, copiando tipo, nombre y
+valor tal cual.
+
+> ⚠️ Los registros de correo van con la nube **GRIS** (*DNS only*), nunca
+> naranja. La nube naranja es para tráfico web; sobre un registro TXT o MX no
+> hace nada bueno.
+
+Vuelve a Resend y pulsa *Verify*. Suele tardar unos minutos.
+
+**Estos tres registros no son burocracia.** Le dicen al servidor de tu amigo
+que un correo firmado como `@rolnees.com` salió de verdad de nosotros. Sin
+ellos, Gmail manda el mensaje a spam o lo rechaza — y un correo de
+recuperación en spam es lo mismo que un correo que no existe.
+
+**3. Crear la API key.** *API Keys → Create*, permiso de envío. **Cópiala en
+ese momento**: no se vuelve a mostrar.
+
+**4. Rellenar las variables en el panel de Coolify:**
+
+| Variable | Valor |
+|---|---|
+| `MAIL_HOST` | `smtp.resend.com` |
+| `MAIL_PORT` | `465` |
+| `MAIL_USER` | `resend` (literal, no tu correo) |
+| `MAIL_PASSWORD` | la API key del paso 3 |
+| `MAIL_FROM` | `Pathfinder VTT <no-responder@rolnees.com>` |
+
+El remitente **tiene que ser del dominio verificado**. Con un `@gmail.com`
+Resend rechazará el envío.
+
+> **Cambiar de proveedor** (Brevo, Postmark, Amazon SES) es cambiar estas
+> cinco variables y nada más: la app habla SMTP, no el SDK de nadie.
 
 ---
 
@@ -122,6 +176,17 @@ Comprueba lo esencial, sobre todo la cookie (es lo que más se rompe):
 3. Crea una mesa y **mueve un token con dos navegadores** a la vez: verifica
    que el tiempo real (WebSocket) atraviesa el proxy.
 4. Sube un mapa a una mesa y recarga: debe seguir ahí (volumen persistente).
+5. **Recuperar contraseña, de punta a punta** — es lo único que depende de un
+   servicio externo, así que se prueba entero:
+   - En `/entrar`, pulsa *¿Has olvidado tu contraseña?* y pide el enlace con
+     tu correo. **Mira también la carpeta de spam.**
+   - Abre el enlace, elige una contraseña nueva y entra con ella.
+   - Comprueba que llega el segundo correo, el de aviso del cambio.
+   - Y que **la contraseña vieja ya no entra**.
+
+   Si el correo no llega: revisa las `MAIL_*` en el panel, que el dominio
+   esté *verified* en Resend, y el log de la API — un fallo de envío se
+   registra ahí con el texto `No se pudo enviar el correo`.
 
 ---
 
@@ -243,3 +308,17 @@ la versión nueva. Los datos de PostgreSQL y los mapas siguen intactos.
 - **El despliegue falla en `migrate`.** Mira los logs de ese contenedor en
   Coolify: casi siempre es la conexión a la base de datos (¿está bien
   `DB_PASSWORD`?) o un error en una migración nueva.
+- **El correo de recuperación no llega.** La pantalla siempre dice lo mismo
+  (no puede revelar si esa cuenta existe), así que hay que mirar el log de la
+  API. Por orden:
+  1. `Correo en modo CONSOLA` al arrancar → falta `MAIL_HOST`: los correos se
+     están escribiendo en el log en vez de enviarse.
+  2. `No se pudo enviar el correo` → la clave o el remitente. Comprueba que
+     `MAIL_FROM` sea del dominio verificado y que la API key siga viva.
+  3. Nada en el log → el correo salió. Mirad **spam**, y en el panel de
+     Resend (*Emails*) se ve si fue entregado o rebotado.
+- **El enlace del correo lleva a un sitio raro o da 404.** `APP_URL` está mal:
+  tiene que ser la URL pública completa, con `https://` y sin barra final.
+- **"Este enlace ya no sirve".** Es lo normal si han pasado más de 30 minutos
+  o si ya se usó una vez (los dos son a propósito). También pasa si se pidió
+  el enlace dos veces: solo vale el último. Que pida uno nuevo.

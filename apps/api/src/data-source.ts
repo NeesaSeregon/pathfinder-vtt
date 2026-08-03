@@ -6,6 +6,7 @@ import { Character } from './app/characters/entities/character.entity';
 import { User } from './app/users/entities/user.entity';
 import { Partida } from './app/partidas/entities/partida.entity';
 import { PersonajeEnPartida } from './app/partidas/entities/personaje-en-partida.entity';
+import { TokenRecuperacion } from './app/auth/entities/token-recuperacion.entity';
 
 // El CLI de migraciones vive FUERA de Nest, así que no dispone del
 // ConfigModule que carga el .env. Lo cargamos aquí a mano para leer las
@@ -27,7 +28,7 @@ export default new DataSource({
   database: process.env.DB_NAME ?? 'pathfinder',
   // Entidades listadas explícitamente (no por glob): más robusto bajo
   // ts-node en Windows y deja claro qué tablas gobierna el esquema.
-  entities: [Character, User, Partida, PersonajeEnPartida],
+  entities: [Character, User, Partida, PersonajeEnPartida, TokenRecuperacion],
   // Las migraciones viven junto al datasource; el glob cubre tanto los
   // .ts (dev/CI vía ts-node) como los .js (si algún día se compilan).
   migrations: [join(__dirname, 'migrations', '*.{ts,js}')],

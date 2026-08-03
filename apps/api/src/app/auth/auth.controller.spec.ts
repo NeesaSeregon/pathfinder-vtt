@@ -4,11 +4,14 @@ import { Response } from 'express';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { IntentosLoginService } from './intentos-login.service';
+import { RecuperacionService } from './recuperacion.service';
+import { FrenoRecuperacionService } from './freno-recuperacion.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let auth: { register: jest.Mock; login: jest.Mock };
   let intentos: IntentosLoginService;
+  let recuperacion: { solicitar: jest.Mock; restablecer: jest.Mock };
 
   /** Respuesta falsa: solo nos importa que se pueda poner la cookie. */
   const respuesta = () =>
@@ -17,13 +20,20 @@ describe('AuthController', () => {
   beforeEach(async () => {
     process.env.LOGIN_MAX_FALLOS = '3';
     process.env.LOGIN_BLOQUEO_SEGUNDOS = '60';
+    process.env.RECUPERACION_MAX_POR_EMAIL = '2';
     auth = { register: jest.fn(), login: jest.fn() };
+    recuperacion = {
+      solicitar: jest.fn().mockResolvedValue(undefined),
+      restablecer: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
         { provide: AuthService, useValue: auth },
+        { provide: RecuperacionService, useValue: recuperacion },
         IntentosLoginService,
+        FrenoRecuperacionService,
       ],
     }).compile();
 
@@ -34,6 +44,7 @@ describe('AuthController', () => {
   afterEach(() => {
     delete process.env.LOGIN_MAX_FALLOS;
     delete process.env.LOGIN_BLOQUEO_SEGUNDOS;
+    delete process.env.RECUPERACION_MAX_POR_EMAIL;
   });
 
   it('should be defined', () => {
@@ -82,6 +93,40 @@ describe('AuthController', () => {
       ),
     ).rejects.toBeInstanceOf(HttpException);
     expect(auth.login).toHaveBeenCalledTimes(3);
+  });
+
+  it('olvidada responde igual (204, sin cuerpo) exista o no la cuenta', async () => {
+    // El controlador no distingue: quien decide es RecuperacionService, y
+    // tampoco cuenta nada. Aquí se fija que la respuesta es la misma.
+    await expect(
+      controller.olvidada({ email: 'existe@mesa.es' }, '1.1.1.1'),
+    ).resolves.toBeUndefined();
+    await expect(
+      controller.olvidada({ email: 'no-existe@mesa.es' }, '2.2.2.2'),
+    ).resolves.toBeUndefined();
+    expect(recuperacion.solicitar).toHaveBeenCalledTimes(2);
+  });
+
+  it('olvidada corta con 429 al pasarse del tope, sin mandar más correos', async () => {
+    for (let i = 0; i < 2; i++) {
+      await controller.olvidada({ email: 'a@mesa.es' }, '1.1.1.1');
+    }
+    await expect(
+      controller.olvidada({ email: 'a@mesa.es' }, '1.1.1.1'),
+    ).rejects.toBeInstanceOf(HttpException);
+    // La tercera ni llega al servicio: no se manda el correo
+    expect(recuperacion.solicitar).toHaveBeenCalledTimes(2);
+  });
+
+  it('restablecer NO inicia sesión: no pone ninguna cookie', async () => {
+    // OWASP: tras restablecer se manda al login. Si esto empezara a poner
+    // la cookie, un enlace de correo bastaría para entrar en la cuenta.
+    const res = respuesta();
+    await controller.restablecer({
+      token: 'un-token-suficientemente-largo-de-prueba',
+      passwordNueva: 'contraseña-nueva',
+    });
+    expect(res.cookie).not.toHaveBeenCalled();
   });
 
   it('el bloqueo no afecta a otro usuario desde la misma IP', async () => {

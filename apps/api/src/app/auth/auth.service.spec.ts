@@ -39,10 +39,21 @@ describe('AuthService', () => {
                 username,
                 email,
                 passwordHash,
+                tokenVersion: 0,
               } as User;
               usuarios.push(user);
               return Promise.resolve(user);
             },
+            actualizarPassword: (id: string, passwordHash: string) => {
+              const user = usuarios.find((u) => u.id === id);
+              if (user) {
+                user.passwordHash = passwordHash;
+                user.tokenVersion += 1;
+              }
+              return Promise.resolve();
+            },
+            findById: (id: string) =>
+              Promise.resolve(usuarios.find((u) => u.id === id) ?? null),
           },
         },
       ],
@@ -84,6 +95,26 @@ describe('AuthService', () => {
     await expect(
       service.login(LUIS.email, 'equivocada'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('el token lleva el tokenVersion vigente del usuario', async () => {
+    const sesion = await service.register(LUIS);
+    const payload = await jwt.verifyAsync<JwtPayload>(sesion.token);
+    expect(payload.tv).toBe(0);
+  });
+
+  /**
+   * La otra mitad del cierre de sesiones: al cambiar la contraseña sube el
+   * tokenVersion (aquí) y el AuthGuard rechaza los tokens viejos (allí).
+   */
+  it('cambiarPassword sube el tokenVersion, y el token nuevo lo refleja', async () => {
+    await service.register(LUIS);
+    await service.cambiarPassword(usuarios[0].id, 'otra-contraseña-larga');
+    expect(usuarios[0].tokenVersion).toBe(1);
+
+    const sesion = await service.login(LUIS.email, 'otra-contraseña-larga');
+    const payload = await jwt.verifyAsync<JwtPayload>(sesion.token);
+    expect(payload.tv).toBe(1);
   });
 
   it('login de un email inexistente da el MISMO error que contraseña mala', async () => {

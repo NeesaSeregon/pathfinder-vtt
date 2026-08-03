@@ -1,0 +1,64 @@
+<main class="pagina-estrecha">
+  <section class="panel">
+    <h1>Elegir contraseña nueva</h1>
+
+    @if (!token()) {
+      <!-- Llegar aquí sin token es entrar a mano o con un enlace roto al
+           copiarlo del correo. Se dice qué ha pasado en vez de dejar un
+           formulario que fallaría al enviarlo. -->
+      <p class="acceso__error">
+        Este enlace está incompleto. Cópialo entero desde el correo, o pide
+        uno nuevo.
+      </p>
+      <p class="acceso__alternativa">
+        <a routerLink="/recuperar">Pedir otro enlace</a>
+      </p>
+    } @else {
+      <form class="acceso__form" (ngSubmit)="guardar()">
+        <label>
+          Contraseña nueva
+          <input
+            type="password"
+            name="password"
+            autocomplete="new-password"
+            required
+            [attr.minlength]="minimo"
+            [(ngModel)]="password"
+          />
+        </label>
+        <label>
+          Repite la contraseña nueva
+          <input
+            type="password"
+            name="password2"
+            autocomplete="new-password"
+            required
+            [(ngModel)]="password2"
+          />
+        </label>
+        @if (password() && !bastanteLarga()) {
+          <p class="acceso__error">
+            La contraseña debe tener al menos {{ minimo }} caracteres
+          </p>
+        }
+        @if (password2() && !coinciden()) {
+          <p class="acceso__error">Las contraseñas no coinciden</p>
+        }
+        <button
+          type="submit"
+          class="boton-primario"
+          [disabled]="cargando() || !bastanteLarga() || !coinciden()"
+        >
+          {{ cargando() ? 'Guardando…' : 'Guardar contraseña' }}
+        </button>
+      </form>
+      @if (error()) {
+        <p class="acceso__error">{{ error() }}</p>
+      }
+      <p class="acceso__alternativa">
+        Al guardarla se cerrarán todas las sesiones abiertas en otros
+        dispositivos.
+      </p>
+    }
+  </section>
+</main>

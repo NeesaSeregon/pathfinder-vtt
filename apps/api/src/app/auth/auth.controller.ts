@@ -12,19 +12,26 @@ import { Response } from 'express';
 import { JwtPayload, SesionRespuesta } from '@pathfinder/shared';
 import { AuthService } from './auth.service';
 import { CredencialesDto, RegistroDto } from './dto/credenciales.dto';
+import {
+  OlvidePasswordDto,
+  RestablecerPasswordDto,
+} from './dto/recuperacion.dto';
 import { Public } from './public.decorator';
 import { CurrentUser } from './current-user.decorator';
 import { IpCliente } from './ip-cliente.decorator';
 import { COOKIE_SESION } from './auth.constants';
+import { ponerCookieSesion } from './auth.cookie';
 import { IntentosLoginService } from './intentos-login.service';
-
-const OCHO_HORAS_MS = 8 * 60 * 60 * 1000;
+import { RecuperacionService } from './recuperacion.service';
+import { FrenoRecuperacionService } from './freno-recuperacion.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly intentos: IntentosLoginService,
+    private readonly recuperacion: RecuperacionService,
+    private readonly freno: FrenoRecuperacionService,
   ) {}
 
   @Public()
@@ -86,17 +93,45 @@ export class AuthController {
     res.clearCookie(COOKIE_SESION, { path: '/' });
   }
 
+  /**
+   * "He olvidado mi contraseña". SIEMPRE 204, exista o no esa cuenta: si
+   * respondiera distinto, este formulario sería un comprobador gratuito de
+   * qué correos están registrados aquí.
+   */
+  @Public()
+  @HttpCode(204)
+  @Post('password/olvidada')
+  async olvidada(
+    @Body() dto: OlvidePasswordDto,
+    @IpCliente() ip: string,
+  ): Promise<void> {
+    // El 429 no delata nada (se cuentan las peticiones, no los aciertos) y
+    // sin él cualquiera podría usar nuestro servidor para llenarle el buzón
+    // a otro y quemarnos la cuota del proveedor de correo.
+    if (!this.freno.registrarYComprobar(dto.email, ip)) {
+      throw new HttpException(
+        'Has pedido demasiados correos de recuperación. Espera un rato antes de volver a intentarlo.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    await this.recuperacion.solicitar(dto.email);
+  }
+
+  /**
+   * Canjear el enlace del correo por una contraseña nueva.
+   *
+   * NO se inicia sesión al terminar (nada de poner la cookie aquí): se
+   * manda al usuario a /entrar para que estrene la contraseña. Lo pide
+   * OWASP y de paso confirma que se ha quedado con la que acaba de elegir.
+   */
+  @Public()
+  @HttpCode(204)
+  @Post('password/restablecer')
+  async restablecer(@Body() dto: RestablecerPasswordDto): Promise<void> {
+    await this.recuperacion.restablecer(dto.token, dto.passwordNueva);
+  }
+
   private ponerCookie(res: Response, token: string): void {
-    res.cookie(COOKIE_SESION, token, {
-      // httpOnly: JavaScript no puede leerla → un XSS no puede robarla
-      httpOnly: true,
-      // strict: el navegador solo la envía en peticiones desde NUESTRA
-      // página → la protección anti-CSRF nos sale casi gratis
-      sameSite: 'strict',
-      // secure exige HTTPS; en desarrollo (y jugando por LAN) vamos por http
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: OCHO_HORAS_MS,
-      path: '/',
-    });
+    ponerCookieSesion(res, token);
   }
 }

@@ -8,6 +8,7 @@ import { PartidasService } from '../partidas/partidas.service';
 import { Character } from '../characters/entities/character.entity';
 import { Partida } from '../partidas/entities/partida.entity';
 import { PersonajeEnPartida } from '../partidas/entities/personaje-en-partida.entity';
+import { EnviadorCorreo, MensajeCorreo } from '../correo/enviador-correo';
 
 const USER = {
   id: 'user-1',
@@ -19,10 +20,16 @@ const USER = {
 describe('CuentaService', () => {
   let service: CuentaService;
   let users: { findById: jest.Mock; eliminar: jest.Mock };
-  let auth: { verificarPassword: jest.Mock; cambiarPassword: jest.Mock };
+  let auth: {
+    verificarPassword: jest.Mock;
+    cambiarPassword: jest.Mock;
+    renovarSesion: jest.Mock;
+  };
   let partidas: { borrarMapasDeMaster: jest.Mock };
+  let enviados: MensajeCorreo[];
 
   beforeEach(async () => {
+    enviados = [];
     users = {
       findById: jest.fn().mockResolvedValue(USER),
       eliminar: jest.fn().mockResolvedValue(undefined),
@@ -30,6 +37,9 @@ describe('CuentaService', () => {
     auth = {
       verificarPassword: jest.fn().mockResolvedValue(true),
       cambiarPassword: jest.fn().mockResolvedValue(undefined),
+      renovarSesion: jest
+        .fn()
+        .mockResolvedValue({ token: 'token-nuevo', username: USER.username }),
     };
     partidas = { borrarMapasDeMaster: jest.fn().mockResolvedValue(undefined) };
 
@@ -39,6 +49,15 @@ describe('CuentaService', () => {
         { provide: UsersService, useValue: users },
         { provide: AuthService, useValue: auth },
         { provide: PartidasService, useValue: partidas },
+        {
+          provide: EnviadorCorreo,
+          useValue: {
+            enviar: (mensaje: MensajeCorreo) => {
+              enviados.push(mensaje);
+              return Promise.resolve();
+            },
+          },
+        },
         {
           provide: getRepositoryToken(Character),
           useValue: { countBy: jest.fn().mockResolvedValue(3) },
@@ -93,6 +112,33 @@ describe('CuentaService', () => {
       service.cambiarPassword('user-1', 'la-que-no-es', 'la-nueva-larga'),
     ).rejects.toThrow(ForbiddenException);
     expect(auth.cambiarPassword).not.toHaveBeenCalled();
+    // Y desde luego no se avisa de un cambio que no ha ocurrido
+    expect(enviados).toHaveLength(0);
+  });
+
+  /**
+   * El aviso es la única alarma de quien tiene la sesión robada: si alguien
+   * te cambia la contraseña desde dentro, este correo es lo que te lo dice.
+   */
+  it('cambiarPassword: avisa por correo de que la contraseña ha cambiado', async () => {
+    await service.cambiarPassword('user-1', 'la-de-ahora', 'la-nueva-larga');
+
+    expect(enviados).toHaveLength(1);
+    expect(enviados[0].para).toBe(USER.email);
+    expect(enviados[0].asunto).toContain('ha cambiado');
+  });
+
+  /**
+   * Subir el tokenVersion invalida TODAS las sesiones, incluida la del
+   * navegador que está haciendo el cambio. Devolver un token nuevo es lo
+   * que evita que el usuario se expulse a sí mismo a /entrar por haber
+   * hecho justo lo que le pedíamos.
+   */
+  it('cambiarPassword: devuelve un token nuevo para no echar a quien lo cambia', async () => {
+    await expect(
+      service.cambiarPassword('user-1', 'la-de-ahora', 'la-nueva-larga'),
+    ).resolves.toBe('token-nuevo');
+    expect(auth.renovarSesion).toHaveBeenCalledWith('user-1');
   });
 
   it('borrar: limpia los mapas de disco y luego el usuario', async () => {

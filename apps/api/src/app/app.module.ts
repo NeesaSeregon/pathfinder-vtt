@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PartidasModule } from './partidas/partidas.module';
 import { CuentaModule } from './cuenta/cuenta.module';
+import { CorreoModule } from './correo/correo.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CuentaModule } from './cuenta/cuenta.module';
         synchronize: false,
       }),
     }),
+    CorreoModule,
     CharactersModule,
     UsersModule,
     AuthModule,

@@ -160,6 +160,69 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   solo email para que nadie pueda dejar fuera a otro fallando con su correo.
   Está EN MEMORIA: vale para una instancia; con varias haría falta Redis.
   Ajustable con LOGIN_MAX_FALLOS y LOGIN_BLOQUEO_SEGUNDOS.
+- VERSIONADO DEL TOKEN (tokenVersion): el JWT lleva un claim `tv` con
+  users.tokenVersion, y el AuthGuard lo compara con el de la BD en cada
+  petición. Cambiar o restablecer la contraseña incrementa esa columna (en
+  el MISMO UPDATE que el hash, con `"tokenVersion" + 1` en SQL) y todos los
+  tokens emitidos antes dejan de valer al instante, en vez de sobrevivir
+  sus 8h. Cuesta UNA lectura de usuario por petición autenticada, por clave
+  primaria: es el precio de poder echar a alguien de verdad, que es lo que
+  espera quien restablece porque le han entrado. El gateway de Socket.IO
+  hace la MISMA comprobación en su handshake — si no, restablecer echaría
+  al intruso de la API pero le dejaría el socket viendo moverse la mesa.
+  OJO AL EFECTO COLATERAL: subir tokenVersion invalida también la cookie
+  del navegador donde se está cambiando la contraseña. Por eso
+  CuentaService.cambiarPassword DEVUELVE un token nuevo y el controlador
+  repone la cookie (ponerCookieSesion, en auth/auth.cookie.ts, compartido
+  con AuthController para que no haya dos sitios donde olvidar el
+  httpOnly). Sin eso, cambiar la contraseña te expulsaba a /entrar a ti
+  solo por haber hecho lo que te pedíamos.
+- RECUPERAR CONTRASEÑA ("la he olvidado"): POST /api/auth/password/olvidada
+  y POST /api/auth/password/restablecer, los dos @Public(). Sigue la
+  Forgot Password Cheat Sheet de OWASP:
+  · olvidada responde SIEMPRE 204, exista o no la cuenta. Es la regla que
+    manda: si respondiera distinto, el formulario sería un comprobador de
+    qué correos están registrados aquí. El e2e lo comprueba comparando el
+    texto de las dos pantallas.
+  · El token son 32 bytes de crypto.randomBytes en base64url (43 chars) y
+    en la tabla tokens_recuperacion se guarda su SHA-256, nunca el token.
+    SHA-256 y no bcrypt por dos motivos: 256 bits aleatorios no necesitan
+    endurecimiento, y con bcrypt (sal por fila) no se podría BUSCAR la fila
+    por el hash. Caduca a los 30 min y es de UN SOLO USO: se marca usadoEn
+    con un UPDATE condicionado a `usadoEn IS NULL`, así dos peticiones
+    simultáneas con el mismo token no pasan las dos.
+  · Pedir un enlace nuevo invalida los anteriores del mismo usuario.
+  · El enlace se construye desde APP_URL, JAMÁS desde la cabecera Host
+    (host header injection: te mandarían el correo con un enlace al
+    servidor del atacante). Apunta a /restablecer?token=… del front.
+  · Restablecer NO inicia sesión (no pone cookie): manda a /entrar, como
+    pide OWASP. Al terminar sale un correo de aviso del cambio, que es la
+    única alarma que tiene el usuario si le han entrado; el cambio desde
+    /cuenta manda ese mismo aviso.
+  · Freno propio (FrenoRecuperacionService), y NO vale el del login: aquí
+    se cuentan TODAS las peticiones, no solo los fallos, porque cada
+    acierto manda un correo a un TERCERO. Limita por email y por IP a la
+    vez (ventana deslizante en memoria, con purga por tamaño para que
+    probar correos distintos no sea un agujero de memoria). Mismo límite
+    que el freno del login: una sola instancia.
+  NOTA HONESTA: /api/auth/register sigue respondiendo 409 "ya existe una
+  cuenta con ese email", así que la enumeración de usuarios sigue siendo
+  posible por ahí. Se deja a conciencia (decir "ese correo ya está" es
+  buena usabilidad al registrarse); el silencio de la recuperación es
+  gratis y se mantiene igual.
+- CORREO (módulo CorreoModule, @Global): EnviadorCorreo es una CLASE
+  abstracta —no una interfaz, que desaparecería al compilar y Nest no
+  podría inyectar— con dos implementaciones. EnviadorSmtp (nodemailer, JS
+  puro y sin postinstall) va por SMTP y NO por el SDK del proveedor a
+  propósito: cambiar de Resend a Brevo o SES es cambiar variables de
+  entorno. EnviadorConsola escribe los correos en el log y, si hay
+  CORREO_BUZON_DIR, deja cada uno en un .json — es lo que permite probar
+  el flujo entero sin cuenta de correo ni secretos en el CI. El módulo
+  elige solo: hay MAIL_HOST → SMTP; no lo hay → consola (y en producción
+  eso deja un ERROR en el log, porque es el fallo más difícil de
+  diagnosticar: todo responde bien y el correo no llega nunca). Un fallo de
+  envío se registra y se traga, nunca propaga: convertirlo en un 500 sería
+  además una pista sobre qué cuentas existen.
 - Gestión de la propia cuenta en /api/cuenta (módulo CuentaModule): GET
   devuelve datos + contadores (personajes, mesas que diriges, mesas donde
   juegas) y DELETE la borra. Nunca hay :id en la ruta: siempre actúa sobre
@@ -167,9 +230,9 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   PATCH /api/cuenta/password la cambia estando dentro (contraseña actual +
   nueva; la repetición de la nueva se comprueba solo en el front y no
   viaja). El hash lo hace AuthService con las mismas rondas que el registro.
-  OJO: los JWT ya emitidos siguen valiendo hasta caducar (8h) — cambiar la
-  contraseña NO cierra las sesiones abiertas en otros dispositivos; la
-  página lo dice en voz alta. Cerrarlas exigiría versionar el token.
+  Cambiarla CIERRA las sesiones de los demás dispositivos (tokenVersion) y
+  manda un correo de aviso; en este dispositivo se sigue dentro porque el
+  controlador repone la cookie. La página lo dice en voz alta.
   Tanto el cambio como el borrado pasan por CuentaService.reautenticar(),
   que pide LA CONTRASEÑA otra vez (AuthService.verificarPassword);
   si falla responde 403, NO 401 — un 401
@@ -232,19 +295,19 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   daño en el bloque corto (hoy solo lo que el tablero muestra: CA, PG,
   iniciativa y tamaño; lo demás se rellena editando la ficha completa) y
   limpiar de golpe los PNJ muertos al terminar el combate.
-- Recuperar contraseña por email ("la he olvidado"). Descartado de momento
-  a conciencia: exige tabla de tokens de un solo uso con caducidad (+ su
-  migración) y, sobre todo, un SERVICIO DE ENVÍO DE CORREO externo (Resend,
-  Postmark, SMTP) con cuenta, clave y dominio verificado — un tema nuevo
-  entero. Mientras la mesa sean amigos, el cambio desde dentro cubre el caso
-  normal y una contraseña perdida se arregla por BD a mano. Hacerlo el día
-  que la app salga del círculo cercano.
-- Cerrar las demás sesiones al cambiar la contraseña. Hoy no ocurre: el JWT
-  es autocontenido y sigue valiendo sus 8h. Haría falta VERSIONAR el token
-  (columna tokenVersion en users, incluida en el payload y comparada por el
-  AuthGuard en cada petición); al cambiar la contraseña se incrementa y los
-  tokens viejos dejan de validar. Pequeño, pero toca el guard y añade una
-  lectura de usuario por petición: hacerlo junto con lo de arriba.
+- (HECHO el 2026-08-03: recuperar contraseña por correo y cerrar las demás
+  sesiones al cambiarla. Ver la sección Autenticación. Se hicieron juntas
+  porque comparten toda la fontanería y porque un restablecimiento que no
+  echa al intruso no sirve de mucho.)
+- Correo de recuperación cuando el email NO tiene cuenta ("alguien ha
+  pedido restablecer, pero aquí no hay cuenta con este correo"). OWASP lo
+  sugiere para que el usuario no se quede esperando un correo que no va a
+  llegar. No se hizo: convierte el formulario en una forma de mandar correo
+  a direcciones arbitrarias, y con la mesa que somos el texto de la
+  pantalla ("si hay una cuenta con ese correo…") ya lo explica.
+- Freno de recuperación y de login EN REDIS. Los dos viven en memoria y
+  valen para UNA instancia; el día que haya varias detrás de un
+  balanceador, hay que mudarlos a la vez.
 - Catálogo de dotes con autocompletar: importar un JSON de dotes del
   contenido OGL de PF1e (nombre, tipo, prerrequisitos, beneficio; fuentes
   candidatas: compendios del sistema PF1 de Foundry u otros datasets OGL de
@@ -287,7 +350,10 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   (El soporte de e2e espera a que la API responda antes del primer test,
   para evitar carreras de arranque en frío.)
 - Usuarios funcionando: /entrar y /registro con JWT en cookie httpOnly
-  (ver sección Autenticación); los personajes tienen dueño.
+  (ver sección Autenticación); los personajes tienen dueño. Recuperación de
+  contraseña por correo en /recuperar y /restablecer (ambas públicas), con
+  enlace desde /entrar. Añadido el 2026-08-03, cuando la app dejó de ser
+  solo del círculo cercano.
 - La home tiene DOS caras y ya no hay nada "en construcción" en ella:
   · SIN sesión, PORTADA (.home, 64rem): el hero y tres tarjetas
     informativas, con entrar/registrarse. No hace NI UNA petición a la API.

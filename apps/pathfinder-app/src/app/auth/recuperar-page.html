@@ -1,0 +1,52 @@
+<main class="pagina-estrecha">
+  <section class="panel">
+    <h1>Recuperar contraseña</h1>
+
+    @if (enviado()) {
+      <!-- Ni aquí se confirma que la cuenta exista: el mismo texto vale
+           para el que se ha equivocado de correo y para el que no. -->
+      <p>
+        Si hay una cuenta con <strong>{{ email().trim() }}</strong
+        >, acabamos de enviarle un correo con un enlace para elegir una
+        contraseña nueva.
+      </p>
+      <p class="acceso__alternativa">
+        El enlace caduca en 30 minutos y solo se puede usar una vez. Si no
+        aparece, mira en la carpeta de spam.
+      </p>
+      <p class="acceso__alternativa">
+        <a routerLink="/entrar">Volver a iniciar sesión</a>
+      </p>
+    } @else {
+      <p class="acceso__alternativa">
+        Escribe el correo de tu cuenta y te enviaremos un enlace para elegir
+        una contraseña nueva.
+      </p>
+      <form class="acceso__form" (ngSubmit)="pedir()">
+        <label>
+          Correo electrónico
+          <input
+            type="email"
+            name="email"
+            autocomplete="email"
+            required
+            [(ngModel)]="email"
+          />
+        </label>
+        <button
+          type="submit"
+          class="boton-primario"
+          [disabled]="cargando() || !email().trim()"
+        >
+          {{ cargando() ? 'Enviando…' : 'Enviarme el enlace' }}
+        </button>
+      </form>
+      @if (error()) {
+        <p class="acceso__error">{{ error() }}</p>
+      }
+      <p class="acceso__alternativa">
+        ¿Te has acordado? <a routerLink="/entrar">Inicia sesión</a>
+      </p>
+    }
+  </section>
+</main>

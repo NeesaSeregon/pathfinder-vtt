@@ -13,6 +13,7 @@ import { CuentaService } from './cuenta.service';
 import { BorrarCuentaDto, CambiarPasswordDto } from './dto/cuenta.dto';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { COOKIE_SESION } from '../auth/auth.constants';
+import { ponerCookieSesion } from '../auth/auth.cookie';
 
 /**
  * Siempre sobre la cuenta del usuario de la sesión: no hay ninguna ruta
@@ -27,17 +28,27 @@ export class CuentaController {
     return this.cuenta.detalle(user.sub);
   }
 
+  /**
+   * Cambiar la contraseña cierra las sesiones de los DEMÁS dispositivos
+   * (sube el tokenVersion) pero NO esta: aquí se repone la cookie con un
+   * token de la generación nueva. Sin este paso, el usuario se expulsaría
+   * a sí mismo a /entrar justo después de hacer lo que le hemos pedido.
+   */
   @HttpCode(204)
   @Patch('password')
-  cambiarPassword(
+  async cambiarPassword(
     @Body() dto: CambiarPasswordDto,
     @CurrentUser() user: JwtPayload,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<void> {
-    return this.cuenta.cambiarPassword(
+    const token = await this.cuenta.cambiarPassword(
       user.sub,
       dto.passwordActual,
       dto.passwordNueva,
     );
+    if (token) {
+      ponerCookieSesion(res, token);
+    }
   }
 
   @HttpCode(204)

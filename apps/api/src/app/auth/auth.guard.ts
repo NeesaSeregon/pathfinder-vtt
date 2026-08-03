@@ -10,12 +10,14 @@ import { Request } from 'express';
 import { JwtPayload } from '@pathfinder/shared';
 import { ES_PUBLICO } from './public.decorator';
 import { COOKIE_SESION } from './auth.constants';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwt: JwtService,
     private readonly reflector: Reflector,
+    private readonly users: UsersService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -38,14 +40,33 @@ export class AuthGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException('Falta el token de sesión');
     }
+    let payload: JwtPayload;
     try {
       // Verifica la firma y la expiración; si algo falla, lanza.
-      const payload = await this.jwt.verifyAsync<JwtPayload>(token);
-      // El payload queda disponible para los controladores (req.user)
-      request['user'] = payload;
+      payload = await this.jwt.verifyAsync<JwtPayload>(token);
     } catch {
       throw new UnauthorizedException('Token inválido o caducado');
     }
+
+    // Una firma válida ya no basta: el token tiene que ser de la GENERACIÓN
+    // vigente de credenciales. Cambiar o restablecer la contraseña sube
+    // users.tokenVersion, y aquí se caen de golpe todos los tokens
+    // emitidos antes, en vez de sobrevivir sus 8 horas.
+    //
+    // Sí, esto añade UNA LECTURA de usuario por petición autenticada. Es el
+    // precio de poder echar a alguien de verdad, y es una consulta por
+    // clave primaria. La alternativa (una lista de revocados en memoria) no
+    // sobreviviría a un reinicio ni a una segunda instancia.
+    const user = await this.users.findById(payload.sub);
+    if (!user || user.tokenVersion !== payload.tv) {
+      // Mismo 401 que un token caduco, y a propósito: para el front es el
+      // mismo caso (el interceptor limpia y manda a /entrar), y para el
+      // usuario también — su sesión ya no vale.
+      throw new UnauthorizedException('Token inválido o caducado');
+    }
+
+    // El payload queda disponible para los controladores (req.user)
+    request['user'] = payload;
     return true;
   }
 

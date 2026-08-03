@@ -12,6 +12,8 @@ import { PartidasService } from '../partidas/partidas.service';
 import { Character } from '../characters/entities/character.entity';
 import { Partida } from '../partidas/entities/partida.entity';
 import { PersonajeEnPartida } from '../partidas/entities/personaje-en-partida.entity';
+import { EnviadorCorreo } from '../correo/enviador-correo';
+import { correoPasswordCambiada } from '../correo/plantillas';
 
 /**
  * Todo lo que un usuario puede hacer con SU PROPIA cuenta. Vive en su
@@ -25,6 +27,7 @@ export class CuentaService {
     private readonly users: UsersService,
     private readonly auth: AuthService,
     private readonly partidas: PartidasService,
+    private readonly correo: EnviadorCorreo,
     @InjectRepository(Character)
     private readonly characters: Repository<Character>,
     @InjectRepository(Partida)
@@ -58,14 +61,35 @@ export class CuentaService {
     };
   }
 
-  /** Cambio de contraseña estando dentro: hay que saber la actual. */
+  /**
+   * Cambio de contraseña estando dentro: hay que saber la actual.
+   *
+   * DEVUELVE UN TOKEN NUEVO, y no es un capricho: cambiar la contraseña
+   * sube el tokenVersion del usuario, lo que invalida todas sus sesiones
+   * abiertas… incluida la del navegador desde el que se está cambiando. El
+   * controlador repone la cookie con este token para que quien lo hace se
+   * quede dentro y solo se caigan LOS DEMÁS dispositivos.
+   *
+   * Manda además el MISMO aviso por correo que el restablecimiento. No
+   * sobra: si alguien te ha robado la sesión y te cambia la contraseña
+   * desde aquí, este correo es lo único que te lo cuenta.
+   */
   async cambiarPassword(
     userId: string,
     passwordActual: string,
     passwordNueva: string,
-  ): Promise<void> {
+  ): Promise<string | null> {
     await this.reautenticar(userId, passwordActual);
     await this.auth.cambiarPassword(userId, passwordNueva);
+
+    const user = await this.users.findById(userId);
+    if (user) {
+      await this.correo.enviar(
+        correoPasswordCambiada(user.email, user.username),
+      );
+    }
+    const sesion = await this.auth.renovarSesion(userId);
+    return sesion?.token ?? null;
   }
 
   /**

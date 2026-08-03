@@ -61,18 +61,43 @@ export class AuthService {
   }
 
   /**
-   * Cambia la contraseña con la misma política de hash que el registro.
-   * OJO: los tokens ya emitidos siguen siendo válidos hasta que caduquen
-   * (8h) — el JWT es autocontenido y no sabe de este cambio. Cerrar las
-   * demás sesiones exigiría versionar el token (ver Mejoras futuras).
+   * Cambia la contraseña con la misma política de hash que el registro Y
+   * CIERRA LAS DEMÁS SESIONES: actualizarPassword sube el tokenVersion del
+   * usuario, así que todos los JWT emitidos antes dejan de validar en el
+   * AuthGuard aunque les queden horas de vida.
+   *
+   * Vale tanto para el cambio desde /cuenta como para el restablecimiento
+   * por correo. En el segundo es lo esencial: quien restablece porque le
+   * han entrado espera que el intruso se caiga, no que aguante 8h más.
    */
   async cambiarPassword(userId: string, passwordNueva: string): Promise<void> {
     const passwordHash = await hash(passwordNueva, RONDAS_BCRYPT);
     await this.users.actualizarPassword(userId, passwordHash);
   }
 
+  /**
+   * Emite un token nuevo para un usuario que YA está autenticado.
+   *
+   * Existe por un efecto colateral de tokenVersion: al cambiar la
+   * contraseña desde /cuenta, la cifra sube y eso invalida TAMBIÉN la
+   * cookie del propio navegador donde se está haciendo el cambio. Sin esta
+   * renovación, el usuario acabaría expulsado a /entrar por haber hecho
+   * exactamente lo que le pedimos, que es de las peores formas de
+   * "funcionar correctamente" que hay.
+   *
+   * Devuelve null si el usuario ya no existe (borrado a medio camino).
+   */
+  async renovarSesion(userId: string): Promise<SesionConToken | null> {
+    const user = await this.users.findById(userId);
+    return user ? this.emitirSesion(user) : null;
+  }
+
   private async emitirSesion(user: User): Promise<SesionConToken> {
-    const payload: JwtPayload = { sub: user.id, username: user.username };
+    const payload: JwtPayload = {
+      sub: user.id,
+      username: user.username,
+      tv: user.tokenVersion,
+    };
     return {
       token: await this.jwt.signAsync(payload),
       username: user.username,

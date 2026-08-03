@@ -23,6 +23,7 @@ import {
   TiradaResultado,
 } from '@pathfinder/shared';
 import { COOKIE_SESION } from '../auth/auth.constants';
+import { UsersService } from '../users/users.service';
 import { Partida } from './entities/partida.entity';
 import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
 
@@ -50,6 +51,7 @@ export class PartidasGateway implements OnGatewayConnection {
 
   constructor(
     private readonly jwt: JwtService,
+    private readonly users: UsersService,
     @InjectRepository(Partida)
     private readonly partidas: Repository<Partida>,
     @InjectRepository(PersonajeEnPartida)
@@ -61,6 +63,15 @@ export class PartidasGateway implements OnGatewayConnection {
     const token = extraerTokenDeCookie(socket.handshake.headers.cookie);
     try {
       const payload = await this.jwt.verifyAsync<JwtPayload>(token ?? '');
+      // El MISMO control de generación que hace el AuthGuard en HTTP. Sin
+      // esto, restablecer la contraseña echaría al intruso de la API pero
+      // le dejaría el socket abierto viendo moverse los tokens de la mesa,
+      // que es justo el escenario del que uno quiere protegerse.
+      const user = await this.users.findById(payload.sub);
+      if (!user || user.tokenVersion !== payload.tv) {
+        socket.disconnect(true);
+        return;
+      }
       socket.data['user'] = payload;
     } catch {
       socket.disconnect(true);

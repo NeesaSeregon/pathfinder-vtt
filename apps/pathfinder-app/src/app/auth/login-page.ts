@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthApi } from './auth-api';
 import { SesionStore } from './sesion-store';
@@ -20,6 +20,14 @@ export class LoginPage {
   protected readonly password = signal('');
   protected readonly error = signal<string | null>(null);
   protected readonly cargando = signal(false);
+
+  /**
+   * Venimos de restablecer la contraseña (/restablecer manda aquí con
+   * ?restablecida=1). Sin este acuse, quien acaba de cambiarla aterriza en
+   * un formulario de login idéntico al de antes y no sabe si funcionó.
+   */
+  protected readonly recienRestablecida =
+    inject(ActivatedRoute).snapshot.queryParamMap.get('restablecida') === '1';
 
   protected entrar(): void {
     this.error.set(null);

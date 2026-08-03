@@ -9,3 +9,14 @@
   color: #b00020;
   font-size: 0.9rem;
 }
+
+// Buenas noticias (la contraseña se ha restablecido). Este fichero lo
+// comparten /entrar, /recuperar y /restablecer vía styleUrl.
+.acceso__aviso {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  background: rgb(46 125 50 / 15%);
+  color: var(--text);
+  font-size: 0.9rem;
+}

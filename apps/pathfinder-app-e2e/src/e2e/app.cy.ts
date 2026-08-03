@@ -1166,3 +1166,119 @@ describe('pathfinder-app-e2e', () => {
     cy.get('.characters__modal input[name="level"]').should('have.value', '5');
   });
 });
+
+describe('recuperar contraseña', () => {
+  it('desde /entrar se llega al formulario de recuperación', () => {
+    cy.visit('/entrar');
+    cy.contains('a', 'olvidado tu contraseña').click();
+    cy.location('pathname').should('eq', '/recuperar');
+    cy.get('h1').contains('Recuperar contraseña');
+  });
+
+  /**
+   * LA GARANTÍA QUE IMPORTA de esta pantalla: un correo registrado y uno
+   * que no existe tienen que producir EXACTAMENTE la misma respuesta. Si
+   * alguna vez se separan, este formulario pasa a ser un comprobador de
+   * qué correos tienen cuenta aquí.
+   */
+  it('responde lo mismo exista o no la cuenta', () => {
+    const registrado = `recu-${Date.now()}@mesa.es`;
+    cy.login(`recu-${Date.now()}`, registrado, 'contraseña-larga');
+    cy.request('POST', '/api/auth/logout');
+
+    const pedirY = (email: string) => {
+      cy.visit('/recuperar');
+      cy.get('input[name="email"]').type(email);
+      cy.contains('button', 'Enviarme el enlace').click();
+      return cy.get('.panel').invoke('text');
+    };
+
+    pedirY(registrado).then((conCuenta) => {
+      pedirY(`no-existe-${Date.now()}@mesa.es`).then((sinCuenta) => {
+        // Se comparan quitando el propio correo, que sí sale en pantalla
+        const normalizar = (t: string) => t.replace(/\S+@\S+/g, 'CORREO');
+        expect(normalizar(sinCuenta)).to.eq(normalizar(conCuenta));
+      });
+    });
+  });
+
+  it('/restablecer sin token lo dice en vez de dar un formulario que fallará', () => {
+    cy.visit('/restablecer');
+    cy.get('.acceso__error').should('contain', 'incompleto');
+    cy.contains('a', 'Pedir otro enlace');
+  });
+
+  it('un token inventado no restablece nada', () => {
+    cy.visit('/restablecer?token=esto-me-lo-acabo-de-inventar-entero');
+    cy.get('input[name="password"]').type('contraseña-nueva-larga');
+    cy.get('input[name="password2"]').type('contraseña-nueva-larga');
+    cy.contains('button', 'Guardar contraseña').click();
+    cy.get('.acceso__error').should('contain', 'ya no sirve');
+    cy.location('pathname').should('eq', '/restablecer');
+  });
+});
+
+describe('cerrar sesiones al cambiar la contraseña (tokenVersion)', () => {
+  /**
+   * La prueba de que el JWT ha dejado de ser autocontenido, de punta a
+   * punta y contra Postgres de verdad.
+   *
+   * El token viejo se reenvía por la cabecera Authorization (el respaldo
+   * que el AuthGuard admite para scripts), que es la forma de simular "otro
+   * dispositivo" sin abrir un segundo navegador.
+   *
+   * OJO AL ORDEN: el guard mira PRIMERO la cookie y solo cae en el Bearer
+   * si no hay. Como cy.request manda la cookie del navegador —ya renovada
+   * por el cambio de contraseña— hay que borrarla antes de probar el token
+   * viejo, o se estaría midiendo la sesión nueva y saldría 200 siempre.
+   */
+  it('el token viejo muere, pero el dispositivo donde se cambia sigue dentro', () => {
+    const sufijo = Date.now();
+    const email = `tv-${sufijo}@mesa.es`;
+    cy.login(`tv-${sufijo}`, email, 'contraseña-larga');
+
+    cy.getCookie('pf_sesion').should('exist');
+    cy.getCookie('pf_sesion').then((cookie) => {
+      const tokenViejo = cookie?.value ?? '';
+
+      cy.request('PATCH', '/api/cuenta/password', {
+        passwordActual: 'contraseña-larga',
+        passwordNueva: 'contraseña-nueva-larga',
+      });
+
+      // ESTE navegador sigue dentro: la cookie se repuso al cambiarla. Si
+      // no fuera así, cambiar la contraseña te expulsaría a /entrar.
+      cy.visit('/cuenta');
+      cy.location('pathname').should('eq', '/cuenta');
+
+      // Ahora, sin cookie, se prueba el token viejo a pelo: ya no abre
+      // nada, aunque al JWT le quedaran horas de vida por delante.
+      cy.clearCookie('pf_sesion');
+      cy.request({
+        url: '/api/auth/me',
+        headers: { Authorization: `Bearer ${tokenViejo}` },
+        failOnStatusCode: false,
+      })
+        .its('status')
+        .should('eq', 401);
+    });
+  });
+
+  it('un token recién emitido SÍ vale por Bearer (control del test anterior)', () => {
+    // Sin esto, el 401 de arriba podría venir de que el respaldo Bearer no
+    // funcione en absoluto, y el test pasaría sin probar nada.
+    const sufijo = Date.now();
+    cy.login(`tv-ok-${sufijo}`, `tv-ok-${sufijo}@mesa.es`, 'contraseña-larga');
+
+    cy.getCookie('pf_sesion').then((cookie) => {
+      const token = cookie?.value ?? '';
+      cy.clearCookie('pf_sesion');
+      cy.request({
+        url: '/api/auth/me',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .its('status')
+        .should('eq', 200);
+    });
+  });
+});

@@ -77,6 +77,25 @@ services:
       UPLOADS_DIR: /datos/uploads
       LOGIN_MAX_FALLOS: ${LOGIN_MAX_FALLOS:-5}
       LOGIN_BLOQUEO_SEGUNDOS: ${LOGIN_BLOQUEO_SEGUNDOS:-900}
+      # De aquí sale el enlace de los correos de recuperación. OBLIGATORIA a
+      # propósito: si faltara, los enlaces apuntarían a localhost y el correo
+      # llegaría perfectamente… a ninguna parte. Mejor que el despliegue se
+      # pare y lo veas, porque ese fallo no da la cara por ningún otro sitio.
+      APP_URL: ${APP_URL:?define APP_URL, p. ej. https://rolnees.com sin barra final}
+      # SMTP del proveedor (Resend). Si MAIL_HOST se queda vacío, la API NO
+      # envía correos: los escribe en el log y deja un ERROR al arrancar.
+      # Nadie podría recuperar su contraseña, así que rellénalas.
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-465}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # Freno de "he olvidado mi contraseña" (cuenta TODAS las peticiones)
+      RECUPERACION_MAX_POR_EMAIL: ${RECUPERACION_MAX_POR_EMAIL:-3}
+      RECUPERACION_MAX_POR_IP: ${RECUPERACION_MAX_POR_IP:-10}
+      RECUPERACION_VENTANA_SEGUNDOS: ${RECUPERACION_VENTANA_SEGUNDOS:-3600}
+      # CORREO_BUZON_DIR NO se pasa aquí ADREDE: escribe los tokens de
+      # recuperación en claro en disco. Es solo para pruebas.
     # El puerto por el que el Traefik de Coolify entra a hablar con la API.
     # No es un 'ports' (no se publica a internet): Coolify conecta su proxy a
     # este contenedor por su red interna. El dominio se asigna en el panel.
