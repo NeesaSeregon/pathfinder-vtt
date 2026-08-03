@@ -79,3 +79,17 @@ jobs:
 
       - name: E2E (Cypress arranca front y API contra el Postgres del job)
         run: npx nx e2e pathfinder-app-e2e
+
+      # Cuando el e2e falla, el log a secas dice poco y el fallo puede no
+      # reproducirse en local (una carrera que solo aparece en una máquina
+      # lenta, por ejemplo). Cypress guarda una captura del momento exacto
+      # de cada test fallido: aquí se sube como artefacto para poder verla
+      # desde la página del run. Solo se ejecuta si algo ha fallado.
+      - name: Guardar capturas de Cypress si el e2e falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-capturas
+          path: dist/cypress/apps/pathfinder-app-e2e/screenshots
+          if-no-files-found: ignore
+          retention-days: 7

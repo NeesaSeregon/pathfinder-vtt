@@ -1190,6 +1190,15 @@ describe('recuperar contraseña', () => {
       cy.visit('/recuperar');
       cy.get('input[name="email"]').type(email);
       cy.contains('button', 'Enviarme el enlace').click();
+      // ESPERAR A LA CONFIRMACIÓN ANTES DE LEER, y no es una precaución
+      // vacía: .panel envuelve también el formulario, así que existe desde
+      // el primer momento y un invoke('text') suelto se lleva la pantalla
+      // de ANTES de que responda la API. Aquí eso no daba un test lento
+      // sino un test MENTIROSO: con el correo registrado la petición hace
+      // más trabajo (crea la fila del token y manda el correo) que con uno
+      // que no existe, así que en una máquina lenta se capturaban dos
+      // estados distintos y los textos no casaban.
+      cy.contains('acabamos de enviarle un correo').should('be.visible');
       return cy.get('.panel').invoke('text');
     };
 
