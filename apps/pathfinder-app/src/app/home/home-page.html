@@ -14,6 +14,16 @@
       </nav>
     </header>
 
+    @if (aviso(); as texto) {
+      <!-- Por qué has salido de la mesa: sin esto la vuelta sería muda -->
+      <p class="escritorio__aviso" role="status">
+        {{ texto }}
+        <button type="button" (click)="aviso.set(null)" aria-label="Descartar">
+          ×
+        </button>
+      </p>
+    }
+
     <div class="escritorio__columnas">
       <section class="escritorio__bloque">
         <div class="escritorio__bloque-cabecera">

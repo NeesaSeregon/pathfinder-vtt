@@ -46,6 +46,24 @@
     flex-wrap: wrap;
   }
 
+  /* La única acción sin vuelta atrás de la mesa: se ve que lo es */
+  &__peligro {
+    border-color: var(--danger);
+    color: var(--danger);
+
+    &:hover:not(:disabled) {
+      /* --danger es un rosa claro: el texto va oscuro para que se lea */
+      color: var(--bg);
+      background: var(--danger);
+      box-shadow: none;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
   &__mapa {
     display: flex;
     align-items: center;

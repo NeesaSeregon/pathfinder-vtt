@@ -39,6 +39,17 @@
           @if (p.tieneMapa) {
             <button type="button" (click)="quitarMapa()">Quitar mapa</button>
           }
+          <!-- Lo único irreversible de la pantalla: se marca como tal y va
+               el último, lejos de los botones de uso continuo. -->
+          <button
+            type="button"
+            class="mesa__peligro"
+            [disabled]="eliminando()"
+            title="Cierra la mesa para siempre"
+            (click)="eliminarMesa()"
+          >
+            Cerrar mesa
+          </button>
         }
         <button type="button" (click)="cargar()">Actualizar</button>
       </div>

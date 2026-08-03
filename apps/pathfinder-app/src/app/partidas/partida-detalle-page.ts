@@ -7,7 +7,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
   ACTITUD_LABELS,
@@ -28,6 +29,7 @@ import {
 } from '@pathfinder/shared';
 import { PartidasApi } from './partidas-api';
 import { PartidaSocket } from './partida-socket';
+import { AvisoMesaStore } from './aviso-mesa-store';
 import { CharactersApi } from '../characters/characters-api';
 import { FichaVista } from '../characters/ficha-vista';
 import { CharacterForm } from '../characters/character-form';
@@ -50,6 +52,9 @@ const UMBRAL_AGARRE = 5;
 export class PartidaDetallePage {
   private readonly api = inject(PartidasApi);
   private readonly charactersApi = inject(CharactersApi);
+  private readonly router = inject(Router);
+  /** Para decirle al escritorio POR QUÉ se ha vuelto, si toca volver. */
+  private readonly aviso = inject(AvisoMesaStore);
   private readonly partidaId =
     inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
@@ -61,6 +66,8 @@ export class PartidaDetallePage {
 
   protected readonly partida = signal<PartidaDetalle | null>(null);
   protected readonly error = signal<string | null>(null);
+  /** Cerrando la mesa: desactiva el botón para no pedirlo dos veces. */
+  protected readonly eliminando = signal(false);
   /** Id del personaje seleccionado para mover (dos clics: token → casilla). */
   protected readonly seleccionado = signal<string | null>(null);
   /** Id del personaje que se está arrastrando (alternativa a los dos clics). */
@@ -143,6 +150,7 @@ export class PartidaDetallePage {
     socket.conectar(this.partidaId, {
       onEstadoPersonaje: (evento) => this.aplicarEvento(evento),
       onMesaCambiada: () => this.cargar(),
+      onMesaEliminada: () => this.mesaCerrada(),
       onTirada: (tirada) => this.agregarTirada(tirada),
     });
     inject(DestroyRef).onDestroy(() => socket.desconectar());
@@ -153,9 +161,45 @@ export class PartidaDetallePage {
     this.error.set(null);
     this.api.detalle(this.partidaId).subscribe({
       next: (partida) => this.partida.set(partida),
-      error: (err) =>
-        this.error.set(`No se pudo cargar la partida: ${mensajeDeError(err)}`),
+      error: (err) => {
+        // Un 404 aquí NO es un fallo de carga: la mesa es privada, así que
+        // significa que ya no tienes sitio en ella. Pasaba al sacarte el
+        // personaje: llegaba mesa-cambiada, la recarga daba 404 y te
+        // quedabas mirando una sala que para el servidor ya no era tuya.
+        if (err instanceof HttpErrorResponse && err.status === 404) {
+          this.volverAlEscritorio(
+            this.partida()
+              ? 'Ya no tienes ningún personaje en esa mesa, así que has ' +
+                  'vuelto a tu escritorio.'
+              : 'No estás en esa mesa. Para entrar necesitas su código de ' +
+                  'invitación y sentarte con uno de tus personajes.',
+          );
+          return;
+        }
+        this.error.set(`No se pudo cargar la partida: ${mensajeDeError(err)}`);
+      },
     });
+  }
+
+  /**
+   * El máster cerró la mesa mientras estábamos dentro. Si el que la cerró
+   * soy YO, no digo nada aquí: el evento llega antes que la respuesta HTTP,
+   * y es esa la que sabe redactar el aviso en primera persona.
+   */
+  private mesaCerrada(): void {
+    if (this.eliminando()) {
+      return;
+    }
+    this.volverAlEscritorio('El máster ha cerrado esa mesa.');
+  }
+
+  /**
+   * Se acabó la mesa para ti: al escritorio, y diciendo por qué. Volver sin
+   * explicación desconcierta tanto como quedarse en una sala fantasma.
+   */
+  private volverAlEscritorio(motivo: string): void {
+    this.aviso.publicar(motivo);
+    this.router.navigate(['/']);
   }
 
   /**
@@ -248,6 +292,41 @@ export class PartidaDetallePage {
       next: (partida) => this.partida.set(partida),
       error: (err) =>
         this.error.set(`No se pudo cambiar el código: ${mensajeDeError(err)}`),
+    });
+  }
+
+  /**
+   * Cierra la mesa para siempre. Es lo único irreversible de esta pantalla,
+   * así que la confirmación NOMBRA la mesa y dice a cuánta gente afecta —y
+   * qué NO se pierde, que es la duda razonable al leer "borrar".
+   */
+  protected eliminarMesa(): void {
+    const p = this.partida();
+    if (!p || this.eliminando()) {
+      return;
+    }
+    const cuantos = p.personajes.length;
+    if (
+      !window.confirm(
+        `Vas a cerrar «${p.nombre}» para siempre: se pierden el mapa, el ` +
+          `combate y los ${cuantos} ${cuantos === 1 ? 'asiento' : 'asientos'}` +
+          ' de la mesa. Las fichas de los jugadores NO se borran. Quien esté' +
+          ' dentro volverá a su escritorio. ¿Continuar?',
+      )
+    ) {
+      return;
+    }
+    this.error.set(null);
+    this.eliminando.set(true);
+    this.api.eliminar(this.partidaId).subscribe({
+      next: () => {
+        this.aviso.publicar(`Has cerrado la mesa «${p.nombre}».`);
+        this.router.navigate(['/']);
+      },
+      error: (err) => {
+        this.eliminando.set(false);
+        this.error.set(`No se pudo cerrar la mesa: ${mensajeDeError(err)}`);
+      },
     });
   }
 

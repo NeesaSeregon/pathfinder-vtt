@@ -5,6 +5,7 @@ import { SesionStore } from '../auth/sesion-store';
 import { AuthApi } from '../auth/auth-api';
 import { PartidasApi } from '../partidas/partidas-api';
 import { UnirsePanel } from '../partidas/unirse-panel';
+import { AvisoMesaStore } from '../partidas/aviso-mesa-store';
 
 @Component({
   selector: 'app-home-page',
@@ -23,6 +24,13 @@ export class HomePage {
   protected readonly misMesas = signal<MiPartidaResumen[]>([]);
   /** Hasta que responde /mias no sabemos si enseñar mesas o el "aún nada" */
   protected readonly cargandoMesas = signal(true);
+
+  /**
+   * Por qué se ha vuelto de una mesa (te sacaron el personaje, el máster la
+   * cerró...). Se consume al construir: es de una sola lectura, no debe
+   * seguir ahí si vuelves a la home más tarde.
+   */
+  protected readonly aviso = signal(inject(AvisoMesaStore).consumir());
 
   constructor() {
     // La portada no necesita datos: las mesas se piden SOLO cuando hay

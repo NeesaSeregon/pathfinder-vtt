@@ -4,10 +4,11 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { PartidaDetalle } from '@pathfinder/shared';
 import { PartidaDetallePage } from './partida-detalle-page';
 import { EscuchasDeMesa, PartidaSocket } from './partida-socket';
+import { AvisoMesaStore } from './aviso-mesa-store';
 
 const DETALLE: PartidaDetalle = {
   id: 'partida-1',
@@ -16,6 +17,7 @@ const DETALLE: PartidaDetalle = {
   estado: 'preparacion',
   master: 'neesa',
   numPersonajes: 1,
+  soyParticipante: true,
   esMaster: true,
   codigo: 'ABC234',
   enCombate: false,
@@ -52,6 +54,8 @@ describe('PartidaDetallePage', () => {
   let component: PartidaDetallePage;
   let fixture: ComponentFixture<PartidaDetallePage>;
   let httpMock: HttpTestingController;
+  let navegado: ReturnType<typeof vi.spyOn>;
+  let aviso: AvisoMesaStore;
   // Socket falso: capturamos las escuchas para simular eventos a mano
   let escuchas: EscuchasDeMesa | null = null;
   const socketFalso = {
@@ -64,6 +68,7 @@ describe('PartidaDetallePage', () => {
     await TestBed.configureTestingModule({
       imports: [PartidaDetallePage],
       providers: [
+        provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: PartidaSocket, useValue: socketFalso },
@@ -79,6 +84,11 @@ describe('PartidaDetallePage', () => {
     fixture = TestBed.createComponent(PartidaDetallePage);
     component = fixture.componentInstance;
     httpMock = TestBed.inject(HttpTestingController);
+    aviso = TestBed.inject(AvisoMesaStore);
+    // Nadie navega de verdad en un test: solo miramos a dónde se iría
+    navegado = vi
+      .spyOn(TestBed.inject(Router), 'navigate')
+      .mockResolvedValue(true);
     // La página pide el detalle nada más crearse
     httpMock.expectOne('/api/partidas/partida-1').flush(DETALLE);
     await fixture.whenStable();
@@ -127,6 +137,59 @@ describe('PartidaDetallePage', () => {
     expect(
       fixture.nativeElement.querySelector('.tablero .tablero__token'),
     ).toBeTruthy();
+  });
+
+  /**
+   * El defecto que se veía en producción: al máster le desaparecía el token
+   * y a los demás se les actualizaba la mesa, pero el jugador al que habían
+   * sacado seguía viendo la sala. Llegaba mesa-cambiada, la recarga daba un
+   * 404 (la mesa es privada) y ahí se quedaba, con un error que no podía
+   * resolver.
+   */
+  it('si te sacan el personaje, vuelves al escritorio y se te dice por qué', async () => {
+    escuchas?.onMesaCambiada();
+    httpMock
+      .expectOne('/api/partidas/partida-1')
+      .flush({ message: 'Partida no encontrada' }, {
+        status: 404,
+        statusText: 'Not Found',
+      });
+    await fixture.whenStable();
+
+    expect(navegado).toHaveBeenCalledWith(['/']);
+    expect(aviso.consumir()).toContain('Ya no tienes ningún personaje');
+  });
+
+  it('si el máster cierra la mesa, fuera con su propio aviso', async () => {
+    escuchas?.onMesaEliminada();
+    await fixture.whenStable();
+
+    expect(navegado).toHaveBeenCalledWith(['/']);
+    expect(aviso.consumir()).toContain('ha cerrado');
+  });
+
+  it('cerrar la mesa: pide confirmación, hace DELETE y te lleva al escritorio', async () => {
+    const confirmar = vi
+      .spyOn(window, 'confirm')
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+
+    const boton: HTMLButtonElement =
+      fixture.nativeElement.querySelector('.mesa__peligro');
+
+    // Si dices que no, no se toca nada
+    boton.click();
+    httpMock.expectNone('/api/partidas/partida-1');
+
+    boton.click();
+    const peticion = httpMock.expectOne('/api/partidas/partida-1');
+    expect(peticion.request.method).toBe('DELETE');
+    peticion.flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+
+    expect(confirmar).toHaveBeenCalledTimes(2);
+    expect(navegado).toHaveBeenCalledWith(['/']);
+    expect(aviso.consumir()).toContain('La corona carmesí');
   });
 
   it('un evento del socket actualiza la mesa sin petición HTTP', async () => {

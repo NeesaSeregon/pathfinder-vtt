@@ -28,6 +28,13 @@ export interface PartidaResumen {
   estado: EstadoPartida;
   master: string;
   numPersonajes: number;
+  /**
+   * ¿Ya estás dentro (la diriges o tienes un personaje sentado)? El
+   * buscador lo necesita para NO ofrecer "Entrar" en una mesa donde aún no
+   * te has sentado: entrar sin asiento devuelve un 404 y era el camino por
+   * el que los recién llegados se perdían.
+   */
+  soyParticipante: boolean;
   /** Solo presente si TÚ eres el máster: es la invitación a compartir. */
   codigo?: string;
 }

@@ -16,6 +16,8 @@ const PARTIDAS: PartidaResumen[] = [
     estado: 'preparacion',
     master: 'neesa',
     numPersonajes: 0,
+    // La has encontrado por su código, pero aún no te has sentado
+    soyParticipante: false,
   },
 ];
 
@@ -69,11 +71,57 @@ describe('UnirsePanel', () => {
     expect(texto).toContain('Valeros');
   });
 
-  it('sin personaje elegido no se puede pulsar Unirse', () => {
+  // Con una sola ficha no hay nada que elegir, y el desplegable en blanco
+  // era el motivo nº1 de "no me deja unirme y no sé por qué".
+  it('con un solo personaje viene ya elegido', () => {
+    expect(component['personajeElegido']()).toBe('char-1');
+    const boton: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '.partida__resultados button',
+    );
+    expect(boton.disabled).toBe(false);
+  });
+
+  it('sin personaje elegido el botón se apaga, pero DICE por qué', async () => {
+    // Como cuando tienes varias fichas y no has tocado el desplegable
+    component['personajeElegido'].set('');
+    await fixture.whenStable();
+
     const boton: HTMLButtonElement = fixture.nativeElement.querySelector(
       '.partida__resultados button',
     );
     expect(boton.disabled).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain(
+      'Elige con qué personaje te sientas',
+    );
+    expect(boton.title).toContain('Elige');
+  });
+
+  it('sin ninguna ficha, el panel ofrece la salida: crear un personaje', async () => {
+    component['misPersonajes'].set([]);
+    await fixture.whenStable();
+
+    const enlace: HTMLAnchorElement = fixture.nativeElement.querySelector(
+      '.partida__pista--accion a',
+    );
+    expect(enlace.getAttribute('href')).toBe('/personajes');
+  });
+
+  // "Entrar" en una mesa donde no te has sentado responde 404: era el
+  // camino por el que se perdía el recién llegado.
+  it('"Entrar" solo aparece si ya participas en esa mesa', async () => {
+    expect(
+      fixture.nativeElement.querySelector('.partida__entrar'),
+    ).toBeNull();
+
+    component['buscar']();
+    httpMock
+      .expectOne((r) => r.url === '/api/partidas')
+      .flush([{ ...PARTIDAS[0], soyParticipante: true }]);
+    await fixture.whenStable();
+
+    expect(
+      fixture.nativeElement.querySelector('.partida__entrar'),
+    ).toBeTruthy();
   });
 
   it('unirse avisa al padre para que refresque lo suyo', async () => {

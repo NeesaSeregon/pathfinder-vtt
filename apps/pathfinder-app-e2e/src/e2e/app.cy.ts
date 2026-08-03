@@ -204,6 +204,66 @@ describe('partidas', () => {
     );
   });
 
+  it('el máster cierra la mesa y vuelve al escritorio', () => {
+    const sufijo = Date.now();
+    cy.login(`cierra-${sufijo}`, `cierra-${sufijo}@mesa.es`, 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre: `Cerrar-${sufijo}` }).then(
+      (mesa) => {
+        cy.visit(`/partidas/${mesa.body.id}`);
+
+        cy.on('window:confirm', () => true);
+        cy.contains('.mesa__peligro', 'Cerrar mesa').click();
+
+        // Sale al escritorio sabiendo qué ha pasado, y la mesa ya no existe
+        cy.location('pathname').should('eq', '/');
+        cy.get('.escritorio__aviso').should('contain', 'Has cerrado');
+        cy.get('.escritorio__mesas').should('not.contain', `Cerrar-${sufijo}`);
+        cy.request({
+          url: `/api/partidas/${mesa.body.id}`,
+          failOnStatusCode: false,
+        })
+          .its('status')
+          .should('eq', 404);
+      },
+    );
+  });
+
+  /**
+   * El defecto que se vio en producción: al jugador al que sacaban de la
+   * mesa se le seguía enseñando la sala, porque la recarga daba un 404 que
+   * solo se pintaba como error. Ahora se le devuelve al escritorio.
+   */
+  it('al quedarte sin personaje en la mesa, vuelves al escritorio', () => {
+    const sufijo = Date.now();
+    const nombre = `Salida-${sufijo}`;
+
+    cy.login(`amo-${sufijo}`, `amo-${sufijo}@mesa.es`, 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre }).then((mesa) => {
+      // El jugador entra con su personaje usando el código de invitación
+      cy.login(`pj-${sufijo}`, `pj-${sufijo}@mesa.es`, 'contraseña-larga');
+      cy.request('POST', '/api/characters', {
+        name: `Valeros-${sufijo}`,
+        level: 1,
+        sheetData: {},
+      })
+        .its('body.id')
+        .then((characterId) => {
+          cy.request('POST', `/api/partidas/${mesa.body.id}/personajes`, {
+            characterId,
+            codigo: mesa.body.codigo,
+          });
+          cy.visit(`/partidas/${mesa.body.id}`);
+          cy.get('h1').should('contain', nombre);
+
+          // Se levanta de la mesa (el dueño también puede sacar su ficha)
+          cy.contains('.mesa__acciones button', 'Sacar de la mesa').click();
+
+          cy.location('pathname').should('eq', '/');
+          cy.get('.escritorio__aviso').should('contain', 'Ya no tienes');
+        });
+    });
+  });
+
   it('en escritorio la mesa ocupa el monitor: columnas a los extremos', () => {
     cy.viewport(1920, 1080);
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');

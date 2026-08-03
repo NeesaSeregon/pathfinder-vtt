@@ -30,6 +30,7 @@ describe('PartidasService', () => {
   const gateway = {
     emitirEstadoPersonaje: jest.fn(),
     emitirMesaCambiada: jest.fn(),
+    emitirMesaEliminada: jest.fn(),
     emitirTirada: jest.fn(),
   };
   const partidasRepo = {
@@ -104,6 +105,68 @@ describe('PartidasService', () => {
     await expect(
       service.eliminar('partida-1', 'user-2'),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  describe('cerrar la mesa', () => {
+    /** Una mesa con mapa, un PJ, una instancia de PNJ y una plantilla. */
+    const mesaLlena = () => ({
+      id: 'partida-1',
+      masterId: 'master',
+      mapaFichero: 'mapa.png',
+      personajes: [
+        {
+          id: 'pep-pj',
+          character: { id: 'char-pj', ownerId: 'jugador', tipo: 'pj' },
+        },
+        {
+          id: 'pep-goblin',
+          character: {
+            id: 'char-goblin',
+            ownerId: 'master',
+            tipo: 'pnj',
+            plantillaId: 'plantilla-goblin',
+          },
+        },
+        {
+          id: 'pep-plantilla',
+          character: {
+            id: 'char-plantilla',
+            ownerId: 'master',
+            tipo: 'pnj',
+            plantillaId: null,
+          },
+        },
+      ],
+    });
+
+    it('borra las INSTANCIAS de PNJ, pero no los PJ ni las plantillas', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaLlena());
+
+      await service.eliminar('partida-1', 'master');
+
+      expect(partidasRepo.remove).toHaveBeenCalled();
+      expect(characters.borrarPorId).toHaveBeenCalledTimes(1);
+      expect(characters.borrarPorId).toHaveBeenCalledWith('char-goblin');
+    });
+
+    // El CASCADE limpia la BD, pero el mapa vive en disco: sin esto quedaría
+    // un fichero huérfano en uploads/ por cada mesa cerrada.
+    it('borra también el fichero del mapa', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaLlena());
+      const { unlink } = jest.requireMock('node:fs/promises');
+
+      await service.eliminar('partida-1', 'master');
+
+      expect(unlink).toHaveBeenCalledWith(
+        expect.stringContaining('mapa.png'),
+      );
+    });
+
+    it('avisa a la sala para que los de dentro salgan', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaLlena());
+      await service.eliminar('partida-1', 'master');
+      expect(gateway.emitirMesaEliminada).toHaveBeenCalledWith('partida-1');
+    });
   });
 
   it('unir inicializa los PG actuales desde la ficha', async () => {
@@ -641,6 +704,19 @@ describe('PartidasService', () => {
       const encontradas = await service.buscar('abc234', 'neesa');
       expect(encontradas).toHaveLength(1);
       expect(encontradas[0].nombre).toBe('Mesa del admin');
+    });
+
+    // El buscador ofrecía "Entrar" en cualquier resultado, y sin asiento esa
+    // página responde 404: el recién llegado se estrellaba ahí sin saber por
+    // qué. Ahora el resumen dice si ya estás dentro y el enlace se oculta.
+    it('el resumen dice si YA participas en la mesa', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaAjena());
+      const [paraUnExtrano] = await service.buscar('abc234', 'neesa');
+      const [paraElJugador] = await service.buscar('abc234', 'otro-jugador');
+      const [paraElMaster] = await service.buscar('abc234', 'admin');
+      expect(paraUnExtrano.soyParticipante).toBe(false);
+      expect(paraElJugador.soyParticipante).toBe(true);
+      expect(paraElMaster.soyParticipante).toBe(true);
     });
 
     it('el mapa de una mesa ajena no se sirve', async () => {

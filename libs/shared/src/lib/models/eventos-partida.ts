@@ -36,6 +36,14 @@ export interface EstadoPersonajeEvento {
 export const EVENTO_MESA_CAMBIADA = 'mesa-cambiada';
 
 /**
+ * Servidor → sala: el máster ha borrado la mesa. NO vale con mesa-cambiada:
+ * ese evento manda recargar el detalle, y aquí la recarga daría un 404 seco
+ * del que el cliente no puede deducir el motivo. Con un evento propio, a
+ * quien esté dentro se le puede decir por qué se le devuelve al escritorio.
+ */
+export const EVENTO_MESA_ELIMINADA = 'mesa-eliminada';
+
+/**
  * Servidor → sala: alguien tiró los dados. El resultado ya viene resuelto
  * por el servidor (única fuente de azar); los clientes solo lo muestran.
  * Es efímero: no se persiste, quien entre después no lo verá.

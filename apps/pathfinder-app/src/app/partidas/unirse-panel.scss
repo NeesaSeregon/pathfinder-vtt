@@ -42,6 +42,27 @@
   }
 }
 
+/* Por qué no puedes unirte todavía. Va pegado al selector, donde se mira
+   al ver el botón apagado; no es un error, así que no grita en rojo. */
+.partida__pista {
+  margin: -0.5rem 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+
+  /* La variante con salida: no tienes fichas, aquí tienes el camino */
+  &--accion {
+    margin: 1rem 0;
+    padding: 0.75rem 0.9rem;
+    border: 1px dashed var(--border-strong);
+    border-radius: 0.5rem;
+  }
+
+  a {
+    color: var(--accent);
+    font-weight: 600;
+  }
+}
+
 .partida__exito {
   color: #7bd88f;
   margin: 0.75rem 0 0;

@@ -1,4 +1,4 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import {
@@ -38,11 +38,24 @@ export class UnirsePanel {
   protected readonly mensaje = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
 
+  /** Sin ficha no hay asiento: es el caso que más despistaba al recién llegado. */
+  protected readonly sinPersonajes = computed(
+    () => this.misPersonajes().length === 0,
+  );
+
   constructor() {
     // Ya NO se listan partidas al entrar: el buscador dejó de ser un
     // catálogo de mesas ajenas. Solo se cargan tus personajes.
     this.charactersApi.list().subscribe({
-      next: (personajes) => this.misPersonajes.set(personajes),
+      next: (personajes) => {
+        this.misPersonajes.set(personajes);
+        // Con un solo personaje no hay nada que elegir, y dejar el
+        // desplegable en blanco era el motivo número uno de "no me deja
+        // unirme y no sé por qué": el botón salía apagado sin explicación.
+        if (personajes.length === 1) {
+          this.personajeElegido.set(personajes[0].id);
+        }
+      },
       error: () => undefined,
     });
   }

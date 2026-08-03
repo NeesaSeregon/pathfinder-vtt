@@ -16,6 +16,7 @@ import {
   EVENTO_ENTRAR_SALA,
   EVENTO_ESTADO_PERSONAJE,
   EVENTO_MESA_CAMBIADA,
+  EVENTO_MESA_ELIMINADA,
   EVENTO_TIRADA_DADOS,
   JwtPayload,
   PersonajeEnPartidaResumen,
@@ -118,6 +119,11 @@ export class PartidasGateway implements OnGatewayConnection {
   /** Alguien entró o salió de la mesa: que los clientes recarguen. */
   emitirMesaCambiada(partidaId: string): void {
     this.server?.to(sala(partidaId)).emit(EVENTO_MESA_CAMBIADA);
+  }
+
+  /** El máster cerró la mesa: los que estén dentro vuelven al escritorio. */
+  emitirMesaEliminada(partidaId: string): void {
+    this.server?.to(sala(partidaId)).emit(EVENTO_MESA_ELIMINADA);
   }
 
   /** Alguien tiró los dados: el resultado (ya resuelto) va a toda la sala. */

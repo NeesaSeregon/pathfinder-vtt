@@ -12,7 +12,7 @@
   <button type="submit" class="boton-primario">Buscar</button>
 </form>
 
-@if (misPersonajes().length > 0) {
+@if (!sinPersonajes()) {
   <label class="partida__selector">
     Unirse con
     <select name="personaje" [(ngModel)]="personajeElegido">
@@ -22,10 +22,18 @@
       }
     </select>
   </label>
+  @if (!personajeElegido()) {
+    <!-- El botón "Unirse" está apagado hasta que hay personaje. Decir por
+         qué es justo lo que faltaba: un disabled mudo no es una pista. -->
+    <p class="partida__pista">
+      Elige con qué personaje te sientas para poder unirte.
+    </p>
+  }
 } @else {
-  <p class="partida__texto">
-    No tienes personajes todavía: crea uno en Personajes para poder unirte a
-    una mesa.
+  <p class="partida__pista partida__pista--accion">
+    En una mesa te sientas CON un personaje, y todavía no tienes ninguno.
+    <a routerLink="/personajes">Crea tu primer personaje</a> y vuelve con el
+    código.
   </p>
 }
 
@@ -58,16 +66,27 @@
           <small>{{ partida.descripcion }}</small>
         }
       </div>
+      <!-- Sentarse solo tiene sentido si aún no estás: si ya tienes un
+           personaje ahí, lo que quieres es entrar. -->
       <button
         type="button"
         [disabled]="!personajeElegido()"
+        [title]="
+          personajeElegido()
+            ? 'Sienta a tu personaje en esta mesa'
+            : 'Elige antes con qué personaje te sientas'
+        "
         (click)="unirse(partida)"
       >
         Unirse
       </button>
-      <a class="partida__entrar" [routerLink]="['/partidas', partida.id]">
-        Entrar
-      </a>
+      <!-- "Entrar" SOLO si ya estás dentro: la mesa es privada y sin asiento
+           la página responde 404, que es donde acababa el recién llegado. -->
+      @if (partida.soyParticipante) {
+        <a class="partida__entrar" [routerLink]="['/partidas', partida.id]">
+          Entrar
+        </a>
+      }
     </li>
   } @empty {
     <li class="partida__texto">

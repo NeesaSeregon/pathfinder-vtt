@@ -49,6 +49,37 @@
     }
   }
 
+  /* El motivo por el que has vuelto de una mesa. Informativo, no un error:
+     casi siempre es algo esperado (te sacaron el personaje, se cerró). */
+  &__aviso {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 0 1.25rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-strong);
+    border-left: 3px solid var(--accent);
+    border-radius: 0.5rem;
+    background: var(--accent-soft);
+
+    button {
+      flex: none;
+      padding: 0 0.35rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--text);
+      }
+    }
+  }
+
   /* Las mesas mandan: se llevan el doble de ancho que el buscador. En
      pantallas estrechas caen una debajo de otra. */
   &__columnas {

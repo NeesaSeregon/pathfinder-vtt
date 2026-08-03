@@ -370,6 +370,35 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   En el front, la caja de búsqueda hace de campo de código: el texto se
   reenvía como codigo al unirse, pero solo si mide ≤8 (un nombre largo no
   puede ser un código de 6, y mandarlo rompería la validación del DTO).
+- CERRAR UNA MESA (DELETE /api/partidas/:id, solo el máster; botón "Cerrar
+  mesa" en la cabecera de la mesa, la única acción irreversible de esa
+  pantalla). El endpoint existía desde el principio pero no lo llamaba nadie
+  y se dejaba tres cosas sin hacer (arregladas el 2026-08-01, con los
+  primeros usuarios reales): el FICHERO del mapa (vive en disco, el CASCADE
+  no lo ve), las INSTANCIAS de PNJ (fichas desechables de esa mesa; un PJ o
+  una PLANTILLA no se tocan, misma regla que sacar()) y avisar a la sala.
+- PERDER EL SITIO EN UNA MESA. La mesa es privada, así que en cuanto dejas
+  de ser participante detalle() responde 404 — y esa es justo la respuesta
+  que llega cuando te sacan el personaje (mesa-cambiada → recarga → 404).
+  Antes eso solo pintaba un error y el jugador se quedaba viendo una sala
+  fantasma. Ahora un 404 en cargar() NO se trata como fallo de carga: se
+  vuelve al escritorio con el motivo, vía AvisoMesaStore (un aviso de una
+  sola lectura que la home consume al construirse; va en un store y no en el
+  state del Router para que no sobreviva a una recarga ni al botón atrás).
+  Cubre además llegar por URL a una mesa donde no estás, que dejaba la
+  página en blanco. Por eso cerrar la mesa emite EVENTO_MESA_ELIMINADA y no
+  mesa-cambiada: del 404 seco no se puede deducir el motivo, y con evento
+  propio el aviso dice "el máster ha cerrado esa mesa". El máster que la
+  cierra IGNORA su propio evento (llega antes que la respuesta HTTP, que es
+  la que sabe redactarlo en primera persona).
+- PartidaResumen lleva soyParticipante: el buscador ofrecía "Entrar" en
+  cualquier resultado, y sin asiento esa página responde 404 — era el camino
+  por el que se perdía el recién llegado. Ahora el enlace solo sale si ya
+  estás dentro. En el mismo frente: con UN solo personaje el desplegable de
+  "Unirse con" viene ya elegido, y cuando no hay elección se dice por qué el
+  botón está apagado (un disabled mudo era el defecto). Sin ninguna ficha, el
+  panel enlaza a crear una en vez de dejar un párrafo suelto. NO se cambió la
+  mecánica (sentarse con una ficha es la regla del dominio): se hizo evidente.
 - GET /api/partidas/mias: las mesas del usuario (las que dirige + aquellas
   donde tiene algún personaje sentado), sin tope. Devuelve MiPartidaResumen
   (PartidaResumen + soyMaster + misPersonajes). Se declara ANTES de
@@ -450,7 +479,8 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Tiempo real con Socket.IO: PartidasGateway autentica el handshake con la
   cookie httpOnly, una sala por partida (partida:<id>), eventos tipados en
   libs/shared (eventos-partida.ts): estado-personaje (resumen neutro sin
-  esMio, se fusiona en cliente) y mesa-cambiada (recargar detalle por HTTP).
+  esMio, se fusiona en cliente), mesa-cambiada (recargar detalle por HTTP) y
+  mesa-eliminada (ya no hay nada que recargar: al escritorio).
   El servicio emite DESPUÉS de persistir. El AuthGuard global ignora el
   contexto ws (el gateway hace su propia auth). Proxy dev: /socket.io
   con ws:true en proxy.conf.json.

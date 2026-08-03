@@ -46,6 +46,7 @@ describe('CrearPartidaPage', () => {
       estado: 'preparacion',
       master: 'neesa',
       numPersonajes: 0,
+      soyParticipante: true,
       codigo: 'ABC234',
     });
     await fixture.whenStable();

@@ -336,10 +336,35 @@ export class PartidasService {
     return this.detalle(id, userId);
   }
 
+  /**
+   * Cierra la mesa entera. Solo el máster. Los asientos se los lleva el
+   * CASCADE de la BD, pero hay dos cosas que la base de datos no ve y
+   * quedarían de basura para siempre:
+   *  - el FICHERO del mapa, que vive en disco (uploads/) y del que la
+   *    columna solo guarda el nombre;
+   *  - las INSTANCIAS de PNJ, fichas desechables que existían solo para
+   *    esta mesa. Misma regla que en sacar(): un PJ (es del jugador) o una
+   *    PLANTILLA del bestiario NO se borran jamás por cerrar una partida.
+   * Al final se avisa a la sala: si no, los que estuvieran dentro seguirían
+   * mirando una mesa que ya no existe.
+   */
   async eliminar(id: string, userId: string): Promise<void> {
     const partida = await this.buscarEntidad(id);
     this.soloElMaster(partida, userId);
+
+    // Se recogen ANTES del remove: después, partida.personajes ya no sirve
+    const instancias = partida.personajes
+      .map((pep) => pep.character)
+      .filter((ficha) => ficha?.tipo === 'pnj' && ficha.plantillaId);
+    const mapa = partida.mapaFichero;
+
     await this.partidas.remove(partida);
+    for (const instancia of instancias) {
+      await this.characters.borrarPorId(instancia.id);
+    }
+    await this.borrarFichero(mapa);
+
+    this.gateway.emitirMesaEliminada(id);
   }
 
   /** Unirse con UN personaje TUYO; el estado de sesión nace de la ficha. */
@@ -739,7 +764,9 @@ export class PartidasService {
   esParticipante(partida: Partida, userId: string): boolean {
     return (
       partida.masterId === userId ||
-      partida.personajes.some((pep) => pep.character?.ownerId === userId)
+      (partida.personajes ?? []).some(
+        (pep) => pep.character?.ownerId === userId,
+      )
     );
   }
 
@@ -819,6 +846,7 @@ export class PartidasService {
       estado: partida.estado,
       master: partida.master?.username ?? '',
       numPersonajes: partida.personajes?.length ?? 0,
+      soyParticipante: this.esParticipante(partida, userId),
       // El código de invitación solo lo ve su máster
       ...(partida.masterId === userId ? { codigo: partida.codigo } : {}),
     };

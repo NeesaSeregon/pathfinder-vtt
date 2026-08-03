@@ -69,6 +69,11 @@ export class PartidasApi {
     return this.http.get<PartidaDetalle>(`${this.baseUrl}/${id}`);
   }
 
+  /** Cierra la mesa para siempre (solo el máster). No tiene vuelta atrás. */
+  eliminar(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
   /**
    * Se sienta en una mesa. El código es la invitación: hace falta salvo que
    * ya estés dentro (el máster, o un jugador con un segundo personaje).
