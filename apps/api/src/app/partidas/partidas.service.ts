@@ -17,6 +17,7 @@ import {
   CharacterSheetData,
   claseDeArmadura,
   efectoDeCondiciones,
+  estadoVitalDe,
   huellasSeSolapan,
   iniciativa,
   JwtPayload,
@@ -189,9 +190,16 @@ export class PartidasService {
       // solo aquí es lo que hace la emboscada fiable: cualquier camino que
       // lleve datos al cliente pasa por este detalle (la carga inicial y la
       // recarga que dispara mesa-cambiada).
+      //
+      // Y el mismo sitio recorta los PG exactos de los PNJ para quien no es
+      // el máster: es el único punto donde se sabe QUIÉN pregunta, así que
+      // es el único donde se puede decidir.
       personajes: partida.personajes
         .filter((pep) => esMaster || !pep.oculto)
-        .map((pep) => this.aPersonajeResumen(pep, userId)),
+        .map((pep) => {
+          const resumen = this.aPersonajeResumen(pep, userId);
+          return esMaster ? resumen : this.soloLoPublico(resumen);
+        }),
       enCombate: partida.enCombate,
       ronda: partida.ronda,
       turnoPepId: partida.turnoPepId,
@@ -444,7 +452,12 @@ export class PartidasService {
     Object.assign(pep, dto);
     await this.personajes.save(pep);
     const resumen = this.aPersonajeResumen(pep, userId);
-    this.emitirCambioDePep(partidaId, pep, resumen);
+    // Bajarle los PG a un PNJ no se difunde: el número es del máster. Se
+    // avisa a la sala y cada cliente recarga el detalle que le toca.
+    const tocaNumerosPrivados =
+      pep.character?.tipo === 'pnj' &&
+      (dto.pgActuales !== undefined || dto.danoNoLetal !== undefined);
+    this.emitirCambioDePep(partidaId, pep, resumen, tocaNumerosPrivados);
     return resumen;
   }
 
@@ -617,30 +630,65 @@ export class PartidasService {
    * se puede usar el evento de estado —va a todos por igual y delataría la
    * posición o los PG del PNJ—, así que se manda un mesa-cambiada: cada
    * cliente recarga y el filtro de detalle() decide qué merece ver.
+   *
+   * Lo mismo vale cuando el cambio TOCA LOS PG DE UN PNJ: los números
+   * exactos son del máster, y un payload que va a toda la sala no puede
+   * llevarlos. Se avisa y cada uno recarga lo suyo. Ojo con ampliarlo a
+   * "todo PNJ": mover un ogro no tiene nada privado y no merece que los
+   * cinco clientes recarguen la mesa entera.
    */
   private emitirCambioDePep(
     partidaId: string,
     pep: PersonajeEnPartida,
     resumen: PersonajeEnPartidaResumen,
+    tocaNumerosPrivados = false,
   ): void {
-    if (pep.oculto) {
+    if (pep.oculto || tocaNumerosPrivados) {
       this.gateway.emitirMesaCambiada(partidaId);
       return;
     }
     this.gateway.emitirEstadoPersonaje(
       partidaId,
       pep.id,
-      this.aEstadoNeutro(resumen),
+      this.aEstadoPublico(resumen),
     );
   }
 
-  /** Quita esMio (lo único que depende de quién pregunta) para retransmitir. */
-  private aEstadoNeutro(
+  /**
+   * Payload de difusión: UNO para toda la sala, así que no puede llevar
+   * nada que dependa de quién mira. Fuera esMio y fuera los PG exactos de
+   * un PNJ (queda su estadoVital). Es la misma regla que soloLoPublico,
+   * aplicada aquí también para que ningún camino pueda saltársela.
+   */
+  private aEstadoPublico(
     resumen: PersonajeEnPartidaResumen,
   ): Partial<Omit<PersonajeEnPartidaResumen, 'esMio'>> {
-    const neutro = { ...resumen } as Partial<PersonajeEnPartidaResumen>;
-    delete neutro.esMio;
-    return neutro;
+    const publico = this.soloLoPublico(
+      resumen,
+    ) as Partial<PersonajeEnPartidaResumen>;
+    delete publico.esMio;
+    return publico;
+  }
+
+  /**
+   * Recorta de un asiento lo que un jugador no tiene derecho a saber: los
+   * PG exactos de un PNJ. Devuelve SIEMPRE una copia — quien la llama sigue
+   * usando el resumen original para responder por HTTP a quien sí tiene
+   * derecho, y mutarlo le quitaría campos por la espalda.
+   *
+   * Los PJ no se tocan: la partida comparte su propio estado.
+   */
+  private soloLoPublico(
+    resumen: PersonajeEnPartidaResumen,
+  ): PersonajeEnPartidaResumen {
+    const publico = { ...resumen };
+    if (publico.tipo !== 'pnj') {
+      return publico;
+    }
+    delete publico.pgActuales;
+    delete publico.pgTotal;
+    delete publico.danoNoLetal;
+    return publico;
   }
 
   /** El máster arranca el combate: ordena por iniciativa y da el turno 1. */
@@ -874,6 +922,13 @@ export class PartidasService {
       pgTotal: pep.character?.sheetData?.pg?.total,
       pgActuales: pep.pgActuales,
       danoNoLetal: pep.danoNoLetal,
+      // Derivado por el servidor con la misma función pura que usa el
+      // cliente: es lo ÚNICO que sobrevive al recorte de soloLoPublico, así
+      // que tiene que ir siempre, no solo cuando se recorta.
+      estadoVital: estadoVitalDe(
+        pep.pgActuales,
+        pep.character?.sheetData?.pg?.total,
+      ),
       condiciones: pep.condiciones ?? [],
       posX: pep.posX,
       posY: pep.posY,

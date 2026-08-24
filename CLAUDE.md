@@ -318,6 +318,21 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   temporales de combate) NO va en sheetData: pertenecerá al modelo de
   partida cuando exista el tablero compartido. Decidido el 2026-07-15
   para trabajar con vistas a la integración ficha-tablero.
+- LOS PG EXACTOS DE UN PNJ SON DEL MÁSTER (2026-08-24). A un jugador le
+  llega estadoVital —ileso / herido / malherido / caído, derivado con la
+  función pura estadoVitalDe— y NUNCA pgActuales, pgTotal ni danoNoLetal.
+  Los PJ no se tocan: la mesa comparte su propio estado. Está en los dos
+  caminos que llevan datos al cliente, y por la misma razón que los PNJ
+  ocultos:
+  · detalle() lo recorta con soloLoPublico(), que es el único sitio donde
+    se sabe QUIÉN pregunta.
+  · el evento estado-personaje va a toda la sala sin filtrar, así que su
+    payload tampoco los lleva (aEstadoPublico); y si el cambio TOCA esos
+    números, ni se difunde: se manda mesa-cambiada y cada cliente recarga
+    el detalle que le corresponde. Ojo con degradar a mesa-cambiada todo
+    cambio de un PNJ: mover un ogro no tiene nada privado y haría recargar
+    la mesa entera a los cinco clientes.
+  No hay migración: estadoVital es derivado, como la CA o la iniciativa.
 
 ## Mejoras futuras
 - PNJ: pendientes de una segunda vuelta si hacen falta en mesa — ataques y

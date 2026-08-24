@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ordenarIniciativa } from './partida';
+import { estadoVitalDe, ordenarIniciativa } from './partida';
 
 describe('ordenarIniciativa', () => {
   it('ordena por iniciativa descendente', () => {
@@ -34,5 +34,48 @@ describe('ordenarIniciativa', () => {
     ];
     ordenarIniciativa(original);
     expect(original[0].iniciativa).toBe(5);
+  });
+});
+
+describe('estadoVitalDe', () => {
+  it('a tope es ileso', () => {
+    expect(estadoVitalDe(31, 31)).toBe('ileso');
+  });
+
+  it('por encima del total sigue siendo ileso (PG temporales)', () => {
+    expect(estadoVitalDe(35, 31)).toBe('ileso');
+  });
+
+  it('entre el cuarto y el total es herido', () => {
+    expect(estadoVitalDe(24, 31)).toBe('herido');
+  });
+
+  it('en el cuarto justo ya es malherido', () => {
+    expect(estadoVitalDe(8, 32)).toBe('malherido');
+  });
+
+  it('por debajo del cuarto es malherido', () => {
+    expect(estadoVitalDe(6, 29)).toBe('malherido');
+  });
+
+  it('a 0 o menos es caido', () => {
+    expect(estadoVitalDe(0, 29)).toBe('caido');
+    expect(estadoVitalDe(-4, 29)).toBe('caido');
+  });
+
+  // Un PNJ improvisado puede no tener pgTotal: en pie no se puede decir
+  // cuanto le queda, pero a 0 se sabe igual que esta caido.
+  it('sin total, en pie, no se pronuncia', () => {
+    expect(estadoVitalDe(12, undefined)).toBeNull();
+    expect(estadoVitalDe(12, 0)).toBeNull();
+  });
+
+  it('sin total, a 0, sigue siendo caido', () => {
+    expect(estadoVitalDe(0, undefined)).toBe('caido');
+  });
+
+  it('sin PG actuales no se pronuncia', () => {
+    expect(estadoVitalDe(null, 31)).toBeNull();
+    expect(estadoVitalDe(undefined, 31)).toBeNull();
   });
 });

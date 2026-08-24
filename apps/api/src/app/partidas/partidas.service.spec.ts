@@ -14,6 +14,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  PartidaDetalle,
   TABLERO_ANCHO,
   casillasQueOcupa,
   claseDeArmadura,
@@ -1057,6 +1058,145 @@ describe('PartidasService', () => {
       expect(claseDeArmadura(sheet)).toBe(17);
       expect(iniciativa(sheet)).toBe(2);
       expect(casillasQueOcupa(sheet)).toBe(1);
+    });
+  });
+  // Los PG exactos de un PNJ son del máster (decidido el 2026-08-24). El
+  // recorte vive en detalle(), igual que el de los ocultos, porque es el
+  // único sitio donde se sabe quién pregunta.
+  describe('PG privilegiados de los PNJ', () => {
+    /** Un PJ y un ogro VISIBLE y tocado: 24 de 31. */
+    const mesaConOgro = () => ({
+      id: 'partida-1',
+      masterId: 'master',
+      mapaFichero: null,
+      enCombate: false,
+      ronda: 0,
+      turnoPepId: null,
+      master: { username: 'master' },
+      personajes: [
+        {
+          id: 'pep-pj',
+          characterId: 'char-pj',
+          oculto: false,
+          actitud: null,
+          condiciones: [],
+          posX: 1,
+          posY: 1,
+          pgActuales: 19,
+          danoNoLetal: 0,
+          character: {
+            ownerId: 'jugador',
+            name: 'Valeros',
+            tipo: 'pj',
+            sheetData: { pg: { total: 38 } },
+          },
+        },
+        {
+          id: 'pep-ogro',
+          characterId: 'char-ogro',
+          oculto: false,
+          actitud: 'enemigo',
+          condiciones: [],
+          posX: 5,
+          posY: 5,
+          pgActuales: 24,
+          danoNoLetal: 0,
+          character: {
+            ownerId: 'master',
+            name: 'Ogro veterano',
+            tipo: 'pnj',
+            sheetData: { pg: { total: 31 } },
+          },
+        },
+      ],
+    });
+
+    const ogroDe = (detalle: PartidaDetalle) =>
+      detalle.personajes.find((p) => p.id === 'pep-ogro');
+
+    it('el máster recibe los PG exactos del PNJ', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConOgro());
+      const detalle = await service.detalle('partida-1', 'master');
+      const ogro = ogroDe(detalle);
+      expect(ogro?.pgActuales).toBe(24);
+      expect(ogro?.pgTotal).toBe(31);
+      expect(ogro?.estadoVital).toBe('herido');
+    });
+
+    it('al jugador NO le llega ni un número del PNJ, solo el tramo', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConOgro());
+      const detalle = await service.detalle('partida-1', 'jugador');
+      const ogro = ogroDe(detalle);
+      expect(ogro).toBeDefined();
+      expect(ogro).not.toHaveProperty('pgActuales');
+      expect(ogro).not.toHaveProperty('pgTotal');
+      expect(ogro).not.toHaveProperty('danoNoLetal');
+      expect(ogro?.estadoVital).toBe('herido');
+    });
+
+    // La mesa comparte su propio estado: recortar aquí sería otra decisión.
+    it('los PG de un PJ le siguen llegando a todo el mundo', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConOgro());
+      const detalle = await service.detalle('partida-1', 'jugador');
+      const pj = detalle.personajes.find((p) => p.id === 'pep-pj');
+      expect(pj?.pgActuales).toBe(19);
+      expect(pj?.pgTotal).toBe(38);
+    });
+
+    // Un evento de estado va a TODA la sala: no puede llevar el número.
+    it('bajarle los PG a un PNJ no se difunde: emite mesa-cambiada', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConOgro());
+      await service.actualizarPersonaje(
+        'partida-1',
+        'pep-ogro',
+        { pgActuales: 8 },
+        'master',
+      );
+      expect(gateway.emitirEstadoPersonaje).not.toHaveBeenCalled();
+      expect(gateway.emitirMesaCambiada).toHaveBeenCalledWith('partida-1');
+    });
+
+    // Pero MOVER un ogro no tiene nada privado: sigue por el camino ligero.
+    it('mover un PNJ visible sigue emitiendo su estado', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConOgro());
+      await service.actualizarPersonaje(
+        'partida-1',
+        'pep-ogro',
+        { posX: 8, posY: 8 },
+        'master',
+      );
+      expect(gateway.emitirMesaCambiada).not.toHaveBeenCalled();
+      expect(gateway.emitirEstadoPersonaje).toHaveBeenCalled();
+    });
+
+    // Y ese camino ligero tampoco puede llevar los números: el payload es
+    // uno solo para toda la sala.
+    it('el estado difundido de un PNJ va sin PG, con su tramo', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConOgro());
+      await service.actualizarPersonaje(
+        'partida-1',
+        'pep-ogro',
+        { posX: 8, posY: 8 },
+        'master',
+      );
+      const cambios = gateway.emitirEstadoPersonaje.mock.calls[0][2];
+      expect(cambios).not.toHaveProperty('pgActuales');
+      expect(cambios).not.toHaveProperty('pgTotal');
+      expect(cambios).not.toHaveProperty('esMio');
+      expect(cambios.estadoVital).toBe('herido');
+    });
+
+    // El que hace el cambio SÍ tiene derecho: la respuesta HTTP no se toca.
+    it('la respuesta al máster conserva los PG y su esMio', async () => {
+      partidasRepo.findOne.mockResolvedValue(mesaConOgro());
+      const resumen = await service.actualizarPersonaje(
+        'partida-1',
+        'pep-ogro',
+        { posX: 8, posY: 8 },
+        'master',
+      );
+      expect(resumen.pgActuales).toBe(24);
+      expect(resumen.esMio).toBe(true);
     });
   });
 });

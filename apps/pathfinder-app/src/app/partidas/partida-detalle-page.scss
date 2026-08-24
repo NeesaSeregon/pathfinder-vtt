@@ -216,6 +216,40 @@
     }
   }
 
+  /* Lo que ve un jugador en lugar de los PG de un PNJ: el tramo, sin cifras.
+     Los números exactos los recorta el servidor (soloLoPublico), no el CSS. */
+  &__vital {
+    margin: 0;
+  }
+
+  &__vital-marca {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    color: var(--text-muted);
+
+    &--ileso {
+      color: var(--actitud-aliado);
+      border-color: var(--actitud-aliado);
+    }
+
+    &--herido {
+      color: var(--token-2);
+      border-color: var(--token-2);
+    }
+
+    &--malherido,
+    &--caido {
+      color: var(--actitud-enemigo);
+      border-color: var(--actitud-enemigo);
+    }
+  }
+
   // -- Condiciones estructuradas -------------------------------------------
   &__condiciones {
     display: flex;

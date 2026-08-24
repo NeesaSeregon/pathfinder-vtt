@@ -98,6 +98,56 @@ describe('PartidaDetallePage', () => {
     httpMock.verify();
   });
 
+  // El servidor le recorta a un jugador los PG exactos de un PNJ y le manda
+  // solo el tramo. La página tiene que pintar eso, y sin campo editable.
+  it('un PNJ sin PG exactos se pinta con su tramo y sin campo', async () => {
+    const conOgro: PartidaDetalle = {
+      ...DETALLE,
+      esMaster: false,
+      codigo: undefined,
+      personajes: [
+        ...DETALLE.personajes,
+        {
+          id: 'pep-ogro',
+          characterId: 'char-ogro',
+          nombre: 'Ogro veterano',
+          nivel: 5,
+          ca: 17,
+          caBase: 17,
+          modAtaque: 0,
+          modSalvaciones: 0,
+          // Ni pgActuales ni pgTotal: es justo lo que recorta el servidor
+          estadoVital: 'malherido',
+          condiciones: [],
+          posX: null,
+          posY: null,
+          casillas: 2,
+          iniciativa: null,
+          iniciativaMod: 1,
+          esMio: false,
+          tipo: 'pnj',
+          actitud: 'enemigo',
+          oculto: false,
+        },
+      ],
+    };
+    component['cargar']();
+    httpMock.expectOne('/api/partidas/partida-1').flush(conOgro);
+    await fixture.whenStable();
+
+    const tarjetas: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.mesa__personaje'),
+    );
+    const ogro = tarjetas.find((t) => t.textContent?.includes('Ogro veterano'));
+    expect(ogro?.textContent).toContain('Malherido');
+    // Sin número que teclear: no hay campo de PG en esa tarjeta
+    expect(ogro?.querySelector('.mesa__pg input')).toBeNull();
+
+    // Y el PJ, que sí trae números, conserva su campo
+    const pj = tarjetas.find((t) => t.textContent?.includes('Valeros'));
+    expect(pj?.querySelector('.mesa__pg input')).not.toBeNull();
+  });
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });

@@ -132,19 +132,32 @@
                 </small>
               }
             </header>
-            <label class="mesa__pg">
-              PG
-              <input
-                type="number"
-                [value]="pep.pgActuales"
-                [attr.data-pep]="pep.id"
-                [disabled]="!puedeMover(pep)"
-                (change)="guardarPg(pep, $any($event.target).value)"
-              />
-              @if (pep.pgTotal !== undefined) {
-                <span>/ {{ pep.pgTotal }}</span>
-              }
-            </label>
+            <!-- De un PNJ, el jugador no recibe los PG exactos: el servidor
+                 se los queda y manda solo el tramo (ver soloLoPublico). -->
+            @if (pep.pgActuales !== undefined) {
+              <label class="mesa__pg">
+                PG
+                <input
+                  type="number"
+                  [value]="pep.pgActuales"
+                  [attr.data-pep]="pep.id"
+                  [disabled]="!puedeMover(pep)"
+                  (change)="guardarPg(pep, $any($event.target).value)"
+                />
+                @if (pep.pgTotal !== undefined) {
+                  <span>/ {{ pep.pgTotal }}</span>
+                }
+              </label>
+            } @else if (pep.estadoVital) {
+              <p class="mesa__pg mesa__vital">
+                <span
+                  class="mesa__vital-marca"
+                  [class]="'mesa__vital-marca--' + pep.estadoVital"
+                >
+                  {{ estadoVitalLabels[pep.estadoVital] }}
+                </span>
+              </p>
+            }
             <div class="mesa__condiciones">
               <span class="mesa__cond-titulo">Condiciones</span>
               @for (id of pep.condiciones; track id) {

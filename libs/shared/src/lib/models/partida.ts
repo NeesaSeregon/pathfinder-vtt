@@ -114,6 +114,60 @@ export const TABLERO_ANCHO = 24;
 export const TABLERO_ALTO = 30;
 
 /**
+ * Cómo de tocada está una criatura, sin decir cuántos PG le quedan.
+ * Decidido el 2026-08-24: los números exactos de un PNJ son del máster y
+ * los jugadores solo ven este tramo.
+ */
+export const ESTADOS_VITALES = [
+  'ileso',
+  'herido',
+  'malherido',
+  'caido',
+] as const;
+
+export type EstadoVital = (typeof ESTADOS_VITALES)[number];
+
+export const ESTADO_VITAL_LABELS: Record<EstadoVital, string> = {
+  ileso: 'Ileso',
+  herido: 'Herido',
+  malherido: 'Malherido',
+  caido: 'Caído',
+};
+
+/** "Malherido" empieza a un cuarto de los PG totales o menos. */
+export const UMBRAL_MALHERIDO = 0.25;
+
+/**
+ * Deriva el estado vital de unos PG. Pura y compartida, como
+ * ordenarIniciativa: el servidor la usa para no mandar números
+ * privilegiados y el cliente para pintar lo mismo cuando sí los tiene, así
+ * los dos dicen siempre lo mismo.
+ *
+ * Devuelve null cuando no hay con qué decidir: sin PG actuales, o en pie
+ * pero sin un total contra el que comparar (un PNJ improvisado sin pgTotal).
+ */
+export function estadoVitalDe(
+  pgActuales: number | null | undefined,
+  pgTotal: number | null | undefined,
+): EstadoVital | null {
+  if (pgActuales === null || pgActuales === undefined) {
+    return null;
+  }
+  // A 0 o menos está caído aunque no sepamos su total: en PF1e a 0 PG ya no
+  // te tienes en pie. Va ANTES del descarte por falta de total.
+  if (pgActuales <= 0) {
+    return 'caido';
+  }
+  if (!pgTotal || pgTotal <= 0) {
+    return null;
+  }
+  if (pgActuales >= pgTotal) {
+    return 'ileso';
+  }
+  return pgActuales <= pgTotal * UMBRAL_MALHERIDO ? 'malherido' : 'herido';
+}
+
+/**
  * Un personaje sentado a la mesa: referencia a su ficha + el ESTADO DE
  * SESIÓN (lo que cambia jugando y no pertenece a la ficha).
  */
@@ -131,9 +185,21 @@ export interface PersonajeEnPartidaResumen {
   modAtaque: number;
   /** Penalización de salvaciones acumulada por las condiciones activas (≤ 0). */
   modSalvaciones: number;
+  /**
+   * PG exactos y daño no letal. OPCIONALES a propósito: de un PNJ solo los
+   * recibe el máster. A un jugador le llega estadoVital y nada más, porque
+   * saber que al ogro le quedan 3 PG clavados no es información de mesa.
+   * El recorte vive en detalle() (ver soloLoPublico en PartidasService);
+   * los PJ NO se tocan: la partida comparte su propio estado.
+   */
   pgTotal?: number;
-  pgActuales: number | null;
-  danoNoLetal: number;
+  pgActuales?: number | null;
+  danoNoLetal?: number;
+  /**
+   * Cómo de tocado está, SIN números. Va siempre que se pueda derivar, para
+   * todos: es lo que pinta el jugador y le ahorra al máster el cálculo.
+   */
+  estadoVital?: EstadoVital | null;
   /** Condiciones activas como ids del catálogo (ver condiciones.ts). */
   condiciones: string[];
   posX: number | null;

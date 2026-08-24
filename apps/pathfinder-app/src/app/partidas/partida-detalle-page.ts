@@ -19,6 +19,7 @@ import {
   CONDICIONES,
   CrearPnj,
   CONDICION_POR_ID,
+  ESTADO_VITAL_LABELS,
   EstadoPersonajeEvento,
   ordenarIniciativa,
   PartidaDetalle,
@@ -107,6 +108,7 @@ export class PartidaDetallePage {
   });
 
   protected readonly actitudLabels = ACTITUD_LABELS;
+  protected readonly estadoVitalLabels = ESTADO_VITAL_LABELS;
 
   /** Siembra de PNJ (solo el máster): desde el bestiario o creando uno nuevo. */
   protected readonly pnjAbierto = signal(false);
