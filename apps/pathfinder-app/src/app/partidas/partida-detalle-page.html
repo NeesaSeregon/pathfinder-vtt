@@ -1,103 +1,16 @@
 <main class="mesa">
   @if (partida(); as p) {
-    <!-- BARRA DE MESA. Sustituye a la navbar general (ver App.enLaMesa):
-         dentro de una partida, salir es "← Mesas" y lo demás sobra. -->
-    <header class="barra">
-      <a class="barra__volver" routerLink="/" title="Volver a tus mesas">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
-        Mesas
-      </a>
-      <span class="barra__sep"></span>
-      <h1 class="barra__titulo">{{ p.nombre }}</h1>
-      <span class="barra__meta">máster {{ p.master }}</span>
-
-      <!-- La conexión, dicha en voz alta. El botón de recargar aparece solo
-           cuando hace falta de verdad: con el socket caído. -->
-      @if (socket.conectado()) {
-        <span class="vivo"><i></i> En vivo</span>
-      } @else {
-        <button type="button" class="vivo vivo--roto" (click)="cargar()">
-          <i></i> Sin conexión · actualizar
-        </button>
-      }
-
-      <span class="barra__hueco"></span>
-
-      @if (p.esMaster) {
-        @if (p.codigo) {
-          <span class="codigo" title="Código de invitación de la mesa">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="4" y="10" width="16" height="10" rx="2" />
-              <path d="M8 10V7a4 4 0 018 0v3" />
-            </svg>
-            {{ p.codigo }}
-          </span>
-        }
-        <!-- La ÚNICA acción de uso continuo del máster se queda fuera -->
-        <button type="button" class="boton boton-primario" (click)="abrirPnj()">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-          Añadir PNJ
-        </button>
-
-        <!-- ...y todo lo demás, dentro. Lo irreversible al final y marcado. -->
-        <div class="menu">
-          <button
-            type="button"
-            class="boton"
-            [attr.aria-expanded]="menuMaster()"
-            (click)="menuMaster.set(!menuMaster())"
-          >
-            Máster
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-          </button>
-          @if (menuMaster()) {
-            <div
-              class="menu__fondo"
-              role="presentation"
-              (click)="menuMaster.set(false)"
-            ></div>
-            <div class="menu__panel" role="menu">
-              <label class="menu__opcion">
-                <span>{{ p.tieneMapa ? 'Cambiar mapa de fondo' : 'Subir mapa de fondo' }}</span>
-                <input
-                  type="file"
-                  name="mapa"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  (change)="subirMapa($event); menuMaster.set(false)"
-                />
-              </label>
-              @if (p.tieneMapa) {
-                <button
-                  type="button"
-                  class="menu__opcion"
-                  (click)="quitarMapa(); menuMaster.set(false)"
-                >
-                  Quitar el mapa
-                </button>
-              }
-              <button
-                type="button"
-                class="menu__opcion"
-                title="Genera un código nuevo; el anterior deja de servir"
-                (click)="regenerarCodigo(); menuMaster.set(false)"
-              >
-                Cambiar el código de invitación
-              </button>
-              <span class="menu__separador"></span>
-              <button
-                type="button"
-                class="menu__opcion menu__opcion--peligro"
-                [disabled]="eliminando()"
-                title="Cierra la mesa para siempre"
-                (click)="eliminarMesa(); menuMaster.set(false)"
-              >
-                Cerrar la mesa
-              </button>
-            </div>
-          }
-        </div>
-      }
-    </header>
+    <app-mesa-barra
+      [partida]="p"
+      [conectado]="socket.conectado()"
+      [eliminando]="eliminando()"
+      (recargar)="cargar()"
+      (anadirPnj)="abrirPnj()"
+      (subirMapa)="subirMapa($event)"
+      (quitarMapa)="quitarMapa()"
+      (regenerarCodigo)="regenerarCodigo()"
+      (cerrarMesa)="eliminarMesa()"
+    />
   }
 
   @if (error()) {
@@ -110,634 +23,68 @@
            UNA sola lista: quién está y, en combate, en qué orden. Antes
            esto eran dos listas (las fichas aquí, la iniciativa al otro
            lado) con la misma gente repetida. -->
-      <section class="zona zona--personas" aria-label="Personas en la mesa">
-        @if (misPjs().length) {
-          <p class="rotulo">Tu personaje</p>
-        }
-
-        <!-- Tu personaje, SIEMPRE a la vista: un jugador no debería tener
-             que buscarse en la lista. Solo PJ tuyos (ver misPjs). -->
-        @for (mio of misPjs(); track mio.id) {
-          <article class="tarjeta mio" [class.mio--sel]="seleccionado() === mio.id">
-            <button type="button" class="mio__cab" (click)="seleccionar(mio)">
-              <span
-                class="ficha ficha--grande"
-                [style.background]="colorToken(mio)"
-                aria-hidden="true"
-                >{{ iniciales(mio.nombre) }}</span
-              >
-              <span class="mio__quien">
-                <strong>{{ mio.nombre }}</strong>
-                <small>nivel {{ mio.nivel }} · CA {{ mio.ca }}</small>
-              </span>
-            </button>
-
-            @if (mio.pgActuales !== null && mio.pgActuales !== undefined) {
-              <p class="pg">
-                <input
-                  type="number"
-                  class="pg__valor"
-                  aria-label="Tus puntos de golpe"
-                  [value]="mio.pgActuales"
-                  (change)="guardarPg(mio, $any($event.target).value)"
-                />
-                @if (mio.pgTotal) {
-                  <span class="pg__total">/ {{ mio.pgTotal }}</span>
-                }
-                @if (mio.estadoVital) {
-                  <span [class]="'vital vital--' + mio.estadoVital">
-                    {{ estadoVitalLabels[mio.estadoVital] }}
-                  </span>
-                }
-              </p>
-              @if (fraccionPg(mio) !== null) {
-                <span class="pgbar pgbar--ancha">
-                  <i
-                    [class]="'pgbar__relleno pgbar__relleno--' + (mio.estadoVital ?? 'ileso')"
-                    [style.width.%]="(fraccionPg(mio) ?? 0) * 100"
-                  ></i>
-                </span>
-              }
-              <div class="pg__acciones">
-                <input
-                  type="number"
-                  min="1"
-                  class="pg__cantidad"
-                  aria-label="Cantidad de daño o curación"
-                  [value]="cantidadPg()"
-                  (change)="cantidadPg.set(+$any($event.target).value || 1)"
-                />
-                <button type="button" class="boton boton--dano" (click)="ajustarPg(mio, -1)">
-                  Daño
-                </button>
-                <button type="button" class="boton boton--cura" (click)="ajustarPg(mio, 1)">
-                  Curar
-                </button>
-                <button type="button" class="boton" (click)="verFicha(mio)">Ficha</button>
-              </div>
-            } @else {
-              <p class="mesa__meta">
-                Sin PG anotados: ponlos en tu ficha.
-                <button type="button" class="boton" (click)="verFicha(mio)">Ficha</button>
-              </p>
-            }
-          </article>
-        }
-
-        <div class="tarjeta combate">
-          @if (p.enCombate) {
-            <p class="combate__linea">
-              <strong class="combate__ronda">Ronda {{ p.ronda }}</strong>
-              @if (turnoDe(); as pep) {
-                <span class="combate__turno">turno de {{ pep.nombre }}</span>
-              }
-            </p>
-            @if (p.esMaster) {
-              <div class="combate__acciones">
-                <button
-                  type="button"
-                  class="boton boton-primario combate__siguiente"
-                  (click)="siguienteTurno()"
-                >
-                  Siguiente turno
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 12h13M13 6l6 6-6 6" />
-                  </svg>
-                </button>
-                <button type="button" class="boton" (click)="terminarCombate()">
-                  Terminar
-                </button>
-              </div>
-            }
-          } @else {
-            <p class="combate__linea">
-              <span class="mesa__meta">Sin combate activo.</span>
-            </p>
-            @if (p.esMaster) {
-              <div class="combate__acciones">
-                <button
-                  type="button"
-                  class="boton boton-primario combate__siguiente"
-                  (click)="iniciarCombate()"
-                >
-                  Iniciar combate
-                </button>
-              </div>
-            }
-          }
-        </div>
-
-        <p class="rotulo">
-          Personas <span>{{ p.personajes.length }} en la mesa</span>
-        </p>
-
-        <div class="lista">
-          @for (grupo of grupos(); track grupo.titulo) {
-            @if (grupo.titulo) {
-              <p class="lista__separador">{{ grupo.titulo }}</p>
-            }
-            @for (pep of grupo.gente; track pep.id) {
-              <button
-                type="button"
-                class="fila"
-                [class.fila--turno]="esTurno(pep)"
-                [class.fila--sel]="seleccionado() === pep.id"
-                [class.fila--caida]="esCaido(pep)"
-                [class.fila--oculta]="pep.oculto"
-                [attr.aria-pressed]="seleccionado() === pep.id"
-                (click)="seleccionar(pep)"
-              >
-                <span class="fila__ini" [class.fila__ini--sin]="pep.iniciativa === null">
-                  {{ pep.iniciativa ?? '—' }}
-                </span>
-                <span
-                  class="ficha"
-                  [style.background]="colorToken(pep)"
-                  aria-hidden="true"
-                  >{{ iniciales(pep.nombre) }}</span
-                >
-                <span class="fila__centro">
-                  <span class="fila__nombre">
-                    {{ pep.nombre }}
-                    @if (pep.oculto) {
-                      <span class="marca marca--oculto" title="Los jugadores no lo ven">
-                        oculto
-                      </span>
-                    }
-                    <!-- Solo en TU personaje: al máster, esMio le sale true
-                         en todos sus PNJ y la lista se llenaba de "tú". -->
-                    @if (pep.esMio && pep.tipo === 'pj') {
-                      <span class="marca marca--mio">tú</span>
-                    }
-                  </span>
-                  <span class="fila__estado">
-                    @if (fraccionPg(pep) !== null) {
-                      <span class="pgbar">
-                        <i
-                          [class]="'pgbar__relleno pgbar__relleno--' + (pep.estadoVital ?? 'ileso')"
-                          [style.width.%]="(fraccionPg(pep) ?? 0) * 100"
-                        ></i>
-                      </span>
-                      <span class="pgtxt">{{ pep.pgActuales }}/{{ pep.pgTotal }}</span>
-                    } @else if (pep.pgActuales !== null && pep.pgActuales !== undefined) {
-                      <!-- Sin total no hay barra, pero el número se dice -->
-                      <span class="pgtxt">{{ pep.pgActuales }} PG</span>
-                    } @else if (pep.estadoVital) {
-                      <!-- Sin números: al jugador el servidor solo le manda
-                           el tramo de un PNJ (ver soloLoPublico). -->
-                      <span
-                        [class]="'vital vital--' + pep.estadoVital"
-                        >{{ estadoVitalLabels[pep.estadoVital] }}</span
-                      >
-                    } @else {
-                      <span class="pgtxt pgtxt--vacio">sin PG</span>
-                    }
-                    @for (id of pep.condiciones; track id) {
-                      <span class="cond-chip" [title]="descripcionCondicion(id)">
-                        {{ nombreCondicion(id) }}
-                      </span>
-                    }
-                  </span>
-                </span>
-              </button>
-            }
-          } @empty {
-            <p class="mesa__meta">Nadie se ha unido todavía.</p>
-          }
-        </div>
-      </section>
+      <app-mesa-personas
+        class="zona--personas"
+        [personajes]="p.personajes"
+        [enCombate]="p.enCombate"
+        [ronda]="p.ronda"
+        [turnoPepId]="p.turnoPepId"
+        [esMaster]="p.esMaster"
+        [seleccionadoId]="seleccionado()"
+        [(cantidadPg)]="cantidadPg"
+        (seleccionar)="seleccionar($event)"
+        (fijarPg)="guardarPg($event.pep, $event.valor)"
+        (ajustarPg)="ajustarPg($event.pep, $event.signo)"
+        (verFicha)="verFicha($event)"
+        (iniciarCombate)="iniciarCombate()"
+        (siguienteTurno)="siguienteTurno()"
+        (terminarCombate)="terminarCombate()"
+      />
 
       <!-- ================= ZONA 2 · TABLERO =================
            El tablero (24×30) es MÁS ALTO que el hueco disponible: el marco
            lo recorta y se agarra con el ratón para recorrerlo. El ancho sí
            cabe entero: se pierden filas, nunca columnas. -->
-      <section class="zona zona--tablero" aria-label="Tablero">
-        <!-- La barra de herramientas: el contenedor que faltaba. Aquí
-             entrarán plantillas de área, señalar, niebla y dibujo sin
-             tocar nada más de la pantalla. -->
-        <div class="utiles" role="toolbar" aria-label="Herramientas del tablero">
-          <button
-            type="button"
-            class="util"
-            [class.util--activa]="herramienta() === 'seleccionar'"
-            [attr.aria-pressed]="herramienta() === 'seleccionar'"
-            title="Seleccionar y mover"
-            (click)="usarHerramienta('seleccionar')"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5.5 3.5l13 7.2-5.6 1.4-2.2 5.4z" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            class="util"
-            [class.util--activa]="herramienta() === 'medir'"
-            [attr.aria-pressed]="herramienta() === 'medir'"
-            title="Medir distancia (arrastra de casilla a casilla)"
-            (click)="usarHerramienta('medir')"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="2.5" y="8.5" width="19" height="7" rx="1.5" />
-              <path d="M7 8.5v3M12 8.5v4M17 8.5v3" />
-            </svg>
-          </button>
-        </div>
-
-        <div
-          #marcoTablero
-          class="tablero-marco"
-          [class.tablero-marco--agarrando]="agarrando()"
-          [class.tablero-marco--midiendo]="herramienta() === 'medir'"
-          (pointerdown)="empezarAgarre($event)"
-        >
-          <div
-            class="tablero"
-            role="grid"
-            [class.tablero--con-mapa]="fondoTablero()"
-            [style.background-image]="fondoTablero()"
-          >
-            @for (y of filas; track y) {
-              @for (x of columnas; track x) {
-                <button
-                  type="button"
-                  class="tablero__celda"
-                  [attr.data-x]="x"
-                  [attr.data-y]="y"
-                  [class.tablero__celda--destino]="hayDestino() && !ocupanteDe(x, y)"
-                  (click)="clickCelda(x, y)"
-                  (dragover)="permitirSoltar($event)"
-                  (drop)="soltarEn($event, x, y)"
-                >
-                  @if (tokenEn(x, y); as pep) {
-                    <span
-                      class="tablero__token"
-                      [style.background]="colorToken(pep)"
-                      [style.width]="ladoToken(pep)"
-                      [style.height]="ladoToken(pep)"
-                      [attr.data-casillas]="pep.casillas"
-                      [attr.draggable]="puedeMover(pep)"
-                      (dragstart)="iniciarArrastre($event, pep)"
-                      (dragend)="terminarArrastre()"
-                      [class.tablero__token--seleccionado]="seleccionado() === pep.id"
-                      [class.tablero__token--turno]="esTurno(pep)"
-                      [class.tablero__token--arrastrando]="arrastrando() === pep.id"
-                      [class.tablero__token--ajeno]="!puedeMover(pep)"
-                      [class.tablero__token--oculto]="pep.oculto"
-                      [class.tablero__token--caido]="esCaido(pep)"
-                      [title]="pep.nombre"
-                    >
-                      {{ iniciales(pep.nombre) }}
-                    </span>
-                  }
-                </button>
-              }
-            }
-            @if (medicion(); as m) {
-              <!-- viewBox en casillas: la línea se estira con el tablero y
-                   el trazo no engorda (non-scaling-stroke). -->
-              <svg
-                class="regla"
-                [attr.viewBox]="'0 0 ' + columnas.length + ' ' + filas.length"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <line
-                  [attr.x1]="m.x1 + 0.5"
-                  [attr.y1]="m.y1 + 0.5"
-                  [attr.x2]="m.x2 + 0.5"
-                  [attr.y2]="m.y2 + 0.5"
-                  vector-effect="non-scaling-stroke"
-                />
-              </svg>
-              @if (distancia(); as d) {
-                <span
-                  class="regla__etiqueta"
-                  [style.left.%]="((m.x1 + m.x2) / 2 + 0.5) * 100 / columnas.length"
-                  [style.top.%]="((m.y1 + m.y2) / 2 + 0.5) * 100 / filas.length"
-                >
-                  {{ d.pies }} pies · {{ d.casillas }}
-                  {{ d.casillas === 1 ? 'casilla' : 'casillas' }}
-                </span>
-              }
-            }
-          </div>
-        </div>
-
-        <!-- Bandeja de los que aún no están en el tablero. Flota sobre él en
-             vez de ser una franja a lo ancho: así no roba alto permanente. -->
-        @if (banquillo().length > 0) {
-          <div class="banquillo">
-            <span class="banquillo__titulo">Sin colocar</span>
-            @for (pep of banquillo(); track pep.id) {
-              <button
-                type="button"
-                class="banquillo__pieza"
-                [style.background]="colorToken(pep)"
-                [attr.draggable]="puedeMover(pep)"
-                (dragstart)="iniciarArrastre($event, pep)"
-                (dragend)="terminarArrastre()"
-                [class.banquillo__pieza--seleccionada]="seleccionado() === pep.id"
-                [class.banquillo__pieza--ajena]="!puedeMover(pep)"
-                (click)="seleccionarDelBanquillo(pep)"
-              >
-                {{ pep.nombre }}
-              </button>
-            }
-            @if (hayDestino()) {
-              <span class="banquillo__pista">Haz clic en una casilla</span>
-            }
-          </div>
-        }
-      </section>
+      <app-mesa-tablero
+        class="zona--tablero"
+        [personajes]="p.personajes"
+        [esMaster]="p.esMaster"
+        [seleccionadoId]="seleccionado()"
+        [turnoPepId]="p.turnoPepId"
+        [fondo]="fondoTablero()"
+        (seleccionar)="seleccionar($event)"
+        (mover)="mover($event.pepId, $event.x, $event.y)"
+      />
 
       <!-- ================= ZONA 3 · SELECCIÓN + REGISTRO =================
            Todo lo del token elegido, en un sitio fijo. Sin selección no
            queda hueco: el registro se lleva la columna entera. -->
       <section class="zona zona--panel">
         @if (pepSeleccionado(); as sel) {
-          <p class="rotulo">
-            Selección
-            @if (!puedeMover(sel)) {
-              <span>solo consulta</span>
-            }
-          </p>
-
-          <article class="tarjeta insp">
-            <header class="insp__cab">
-              <span
-                class="ficha ficha--grande"
-                [style.background]="colorToken(sel)"
-                aria-hidden="true"
-                >{{ iniciales(sel.nombre) }}</span
-              >
-              <div class="insp__quien">
-                <h2>
-                  {{ sel.nombre }}
-                  @if (sel.tipo === 'pnj' && sel.actitud) {
-                    <span class="actitud" [style.background]="colorToken(sel)">
-                      {{ actitudLabels[sel.actitud] }}
-                    </span>
-                  }
-                  @if (sel.oculto) {
-                    <span class="marca marca--oculto">oculto</span>
-                  }
-                </h2>
-                <p class="insp__meta">
-                  {{ sel.tipo === 'pnj' ? 'PNJ' : 'PJ' }} · nivel {{ sel.nivel }} ·
-                  CA {{ sel.ca }}
-                  @if (sel.ca !== sel.caBase) {
-                    <span class="insp__derivado">(base {{ sel.caBase }})</span>
-                  }
-                  @if (sel.casillas > 1) {
-                    · {{ sel.casillas }}×{{ sel.casillas }} casillas
-                  }
-                  @if (sel.jugador) {
-                    · {{ sel.jugador }}
-                  }
-                </p>
-                @if (sel.modAtaque || sel.modSalvaciones) {
-                  <p class="insp__derivado">
-                    Por condiciones:
-                    @if (sel.modAtaque) {
-                      ataque {{ sel.modAtaque }}
-                    }
-                    @if (sel.modAtaque && sel.modSalvaciones) {
-                      ·
-                    }
-                    @if (sel.modSalvaciones) {
-                      salvaciones {{ sel.modSalvaciones }}
-                    }
-                  </p>
-                }
-              </div>
-              <button
-                type="button"
-                class="insp__cerrar"
-                aria-label="Quitar la selección"
-                (click)="seleccionado.set(null)"
-              >
-                ✕
-              </button>
-            </header>
-
-            <section class="bloque">
-              <p class="bloque__rotulo">Puntos de golpe</p>
-              @if (sel.pgActuales !== undefined) {
-                <p class="pg">
-                  <input
-                    type="number"
-                    class="pg__valor"
-                    aria-label="Puntos de golpe actuales"
-                    [value]="sel.pgActuales"
-                    [attr.data-pep]="sel.id"
-                    [disabled]="!puedeMover(sel)"
-                    (change)="guardarPg(sel, $any($event.target).value)"
-                  />
-                  @if (sel.pgTotal) {
-                    <span class="pg__total">/ {{ sel.pgTotal }}</span>
-                  }
-                  @if (sel.estadoVital) {
-                    <span [class]="'vital vital--' + sel.estadoVital">
-                      {{ estadoVitalLabels[sel.estadoVital] }}
-                    </span>
-                  }
-                </p>
-                @if (fraccionPg(sel) !== null) {
-                  <span class="pgbar pgbar--ancha">
-                    <i
-                      [class]="'pgbar__relleno pgbar__relleno--' + (sel.estadoVital ?? 'ileso')"
-                      [style.width.%]="(fraccionPg(sel) ?? 0) * 100"
-                    ></i>
-                  </span>
-                }
-                @if (puedeMover(sel)) {
-                  <!-- Por CANTIDAD, que es como se canta en la mesa ("ocho
-                       de daño"), en vez de restar de cabeza. -->
-                  <div class="pg__acciones">
-                    <input
-                      type="number"
-                      min="1"
-                      class="pg__cantidad"
-                      aria-label="Cantidad de daño o curación"
-                      [value]="cantidadPg()"
-                      (change)="cantidadPg.set(+$any($event.target).value || 1)"
-                    />
-                    <button
-                      type="button"
-                      class="boton boton--dano"
-                      (click)="ajustarPg(sel, -1)"
-                    >
-                      Daño
-                    </button>
-                    <button
-                      type="button"
-                      class="boton boton--cura"
-                      (click)="ajustarPg(sel, 1)"
-                    >
-                      Curar
-                    </button>
-                  </div>
-                }
-              } @else if (sel.estadoVital) {
-                <p class="pg">
-                  <span [class]="'vital vital--' + sel.estadoVital">
-                    {{ estadoVitalLabels[sel.estadoVital] }}
-                  </span>
-                  <span class="insp__derivado">los PG exactos son del máster</span>
-                </p>
-              } @else {
-                <p class="mesa__meta">Sin PG anotados.</p>
-              }
-            </section>
-
-            <section class="bloque">
-              <p class="bloque__rotulo">Condiciones</p>
-              <div class="chips">
-                @for (id of sel.condiciones; track id) {
-                  <span class="chip">
-                    {{ nombreCondicion(id) }}
-                    @if (puedeMover(sel)) {
-                      <button
-                        type="button"
-                        class="chip__quitar"
-                        [attr.aria-label]="'Quitar ' + nombreCondicion(id)"
-                        (click)="quitarCondicion(sel, id)"
-                      >
-                        ✕
-                      </button>
-                    }
-                  </span>
-                } @empty {
-                  <span class="mesa__meta">Ninguna.</span>
-                }
-              </div>
-              @if (puedeMover(sel)) {
-                <select
-                  class="chips__anadir"
-                  aria-label="Añadir una condición"
-                  (change)="
-                    anadirCondicion(sel, $any($event.target).value);
-                    $any($event.target).value = ''
-                  "
-                >
-                  <option value="">+ añadir condición…</option>
-                  @for (c of condicionesDisponibles(sel); track c.id) {
-                    <option [value]="c.id">{{ c.nombre }}</option>
-                  }
-                </select>
-              }
-              <!-- La descripción vive AQUÍ, de una en una: es material de
-                   consulta y en la lista ocupaba sitio de estado de mesa. -->
-              @for (id of sel.condiciones; track id) {
-                <p class="condicion">
-                  <strong>{{ nombreCondicion(id) }}:</strong>
-                  {{ descripcionCondicion(id) }}
-                </p>
-              }
-            </section>
-
-            <section class="bloque">
-              <p class="bloque__rotulo">Iniciativa</p>
-              <p class="ini">
-                <input
-                  type="number"
-                  class="ini__valor"
-                  aria-label="Iniciativa"
-                  [value]="sel.iniciativa ?? ''"
-                  [disabled]="!puedeMover(sel)"
-                  (change)="guardarIniciativa(sel, $any($event.target).value)"
-                />
-                <span class="insp__derivado">
-                  mod {{ sel.iniciativaMod >= 0 ? '+' : '' }}{{ sel.iniciativaMod }}
-                </span>
-                @if (puedeMover(sel)) {
-                  <button type="button" class="boton" (click)="tirarIniciativa(sel)">
-                    Tirar
-                  </button>
-                }
-              </p>
-            </section>
-
-            <footer class="insp__acciones">
-              <button type="button" class="boton" (click)="verFicha(sel)">
-                Ver ficha
-              </button>
-              @if (puedeMover(sel)) {
-                <!-- Revelar es cosa del máster: es SU emboscada -->
-                @if (p.esMaster && sel.tipo === 'pnj') {
-                  <button type="button" class="boton" (click)="alternarOculto(sel)">
-                    {{ sel.oculto ? 'Revelar' : 'Ocultar' }}
-                  </button>
-                }
-                <button
-                  type="button"
-                  class="boton boton--peligro"
-                  (click)="sacar(sel)"
-                >
-                  Sacar de la mesa
-                </button>
-              }
-            </footer>
-          </article>
+          <app-mesa-seleccion
+            [pep]="sel"
+            [puedeEditar]="puedeMover(sel)"
+            [esMaster]="p.esMaster"
+            [(cantidadPg)]="cantidadPg"
+            (cerrar)="seleccionado.set(null)"
+            (fijarPg)="guardarPg(sel, $event)"
+            (ajustarPg)="ajustarPg(sel, $event)"
+            (anadirCondicion)="anadirCondicion(sel, $event)"
+            (quitarCondicion)="quitarCondicion(sel, $event)"
+            (fijarIniciativa)="guardarIniciativa(sel, $event)"
+            (tirarIniciativa)="tirarIniciativa(sel)"
+            (verFicha)="verFicha(sel)"
+            (alternarOculto)="alternarOculto(sel)"
+            (sacar)="sacar(sel)"
+          />
         }
 
-        <p class="rotulo">
-          Registro
-          @if (!pepSeleccionado()) {
-            <span>nada seleccionado</span>
-          }
-        </p>
-
-        <article class="tarjeta registro">
-          <ol class="tiradas">
-            @for (t of tiradas(); track t.id) {
-              <li class="tirada">
-                <strong>{{ t.autor }}</strong>
-                @if (t.etiqueta) {
-                  <em>{{ t.etiqueta }}</em>
-                }
-                <span class="tirada__notacion">{{ t.notacion }}</span>
-                <strong class="tirada__total">{{ t.total }}</strong>
-                <small>[{{ t.dados.join(', ') }}]</small>
-              </li>
-            } @empty {
-              <li class="mesa__meta">Aún no se ha tirado nada.</li>
-            }
-          </ol>
-
-          @if (esParticipante()) {
-            <div class="lanzador">
-              <div class="lanzador__rapidos">
-                @for (caras of dadosRapidos; track caras) {
-                  <button type="button" class="dado" (click)="lanzar('1d' + caras)">
-                    d{{ caras }}
-                  </button>
-                }
-              </div>
-              <div class="lanzador__libre">
-                <input
-                  #dado
-                  type="text"
-                  placeholder="1d20+5"
-                  maxlength="30"
-                  aria-label="Tirada libre"
-                  (keyup.enter)="lanzar(dado.value); dado.value = ''"
-                />
-                <button
-                  type="button"
-                  class="boton boton-primario"
-                  (click)="lanzar(dado.value); dado.value = ''"
-                >
-                  Tirar
-                </button>
-              </div>
-            </div>
-          } @else {
-            <p class="mesa__meta lanzador">
-              Únete a la mesa con un personaje para poder tirar.
-            </p>
-          }
-        </article>
+        <app-mesa-registro
+          [tiradas]="tiradas()"
+          [puedeTirar]="esParticipante()"
+          [haySeleccion]="!!pepSeleccionado()"
+          (tirar)="lanzar($event)"
+        />
       </section>
     </div>
   } @else if (!error()) {
@@ -745,123 +92,14 @@
   }
 
   @if (pnjAbierto()) {
-    <div
-      class="overlay"
-      (click)="onOverlayPnj($event)"
-      (keyup.escape)="cerrarPnj()"
-      role="presentation"
-    >
-      <div class="modal" role="dialog" aria-modal="true">
-        <header>
-          <h2>Añadir PNJ</h2>
-          <button type="button" aria-label="Cerrar" (click)="cerrarPnj()">
-            ✕
-          </button>
-        </header>
-
-        <!-- Dos caminos: reutilizar del bestiario o crear uno nuevo -->
-        <div class="pestanas" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            class="pestana" [class.pestana--activa]="modoPnj() === 'bestiario'"
-            [attr.aria-selected]="modoPnj() === 'bestiario'"
-            (click)="modoPnj.set('bestiario')"
-          >
-            Del bestiario ({{ bestiario().length }})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="pestana" [class.pestana--activa]="modoPnj() === 'nuevo'"
-            [attr.aria-selected]="modoPnj() === 'nuevo'"
-            (click)="modoPnj.set('nuevo')"
-          >
-            Crear uno nuevo
-          </button>
-        </div>
-
-        @if (modoPnj() === 'bestiario') {
-          @if (bestiario().length === 0) {
-            <p class="mesa__meta">
-              Tu bestiario está vacío. Crea un monstruo en la otra pestaña y
-              se guardará aquí para las próximas sesiones.
-            </p>
-          } @else {
-            <!-- Estas tres opciones valen para el que elijas: se rellenan
-                 antes de pulsar, no hay un segundo paso. -->
-            <div class="mesa__siembra-opciones">
-              <label>
-                Cantidad
-                <input
-                  type="number"
-                  name="cantidadPlantilla"
-                  min="1"
-                  [value]="cantidadPlantilla()"
-                  (change)="
-                    cantidadPlantilla.set(+$any($event.target).value || 1)
-                  "
-                />
-              </label>
-              <label>
-                Actitud
-                <select
-                  name="actitudPlantilla"
-                  (change)="actitudPlantilla.set($any($event.target).value)"
-                >
-                  @for (a of actitudes; track a) {
-                    <option
-                      [value]="a"
-                      [selected]="a === actitudPlantilla()"
-                    >
-                      {{ actitudLabels[a] }}
-                    </option>
-                  }
-                </select>
-              </label>
-              <label class="mesa__siembra-oculto">
-                <input
-                  type="checkbox"
-                  name="ocultoPlantilla"
-                  [checked]="ocultoPlantilla()"
-                  (change)="ocultoPlantilla.set($any($event.target).checked)"
-                />
-                Empezar oculto
-              </label>
-            </div>
-
-            @if (errorPnj(); as mensaje) {
-              <p class="mesa__error" role="alert">{{ mensaje }}</p>
-            }
-
-            <ul class="mesa__bestiario">
-              @for (plantilla of bestiario(); track plantilla.id) {
-                <li>
-                  <div>
-                    <strong>{{ plantilla.name }}</strong>
-                    <small>nivel {{ plantilla.level }}</small>
-                  </div>
-                  <button
-                    type="button"
-                    [disabled]="creandoPnj()"
-                    (click)="sembrarDesdePlantilla(plantilla.id)"
-                  >
-                    Traer al tablero
-                  </button>
-                </li>
-              }
-            </ul>
-          }
-        } @else {
-          <app-pnj-form
-            [guardando]="creandoPnj()"
-            [error]="errorPnj()"
-            (crear)="crearPnjs($event)"
-            (cancelar)="cerrarPnj()"
-          />
-        }
-      </div>
-    </div>
+    <app-pnj-modal
+      [bestiario]="bestiario()"
+      [guardando]="creandoPnj()"
+      [error]="errorPnj()"
+      (sembrar)="sembrarDesdePlantilla($event)"
+      (crear)="crearPnjs($event)"
+      (cerrar)="cerrarPnj()"
+    />
   }
 
   @if (fichaAbierta(); as ficha) {

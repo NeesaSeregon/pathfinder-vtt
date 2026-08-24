@@ -1,0 +1,104 @@
+@use 'mesa-comun';
+
+// El registro es el suelo de la columna derecha: la selección se apoya
+// encima cuando la hay, y cuando no, esto se lo lleva todo.
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.registro {
+  flex: 1 1 auto;
+  min-height: 8rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tiradas {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+.tirada {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+
+  em {
+    font-style: normal;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+
+  &__notacion {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-size: 0.78rem;
+  }
+
+  &__total {
+    color: var(--accent);
+    font-size: 1.05rem;
+  }
+
+  small {
+    color: var(--text-faint);
+    font-size: 0.72rem;
+  }
+}
+
+.lanzador {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(26, 33, 50, 0.4);
+
+  &__rapidos {
+    display: flex;
+    gap: 0.3rem;
+  }
+
+  &__libre {
+    display: flex;
+    gap: 0.4rem;
+
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 0.35rem 0.5rem;
+    }
+  }
+}
+
+.dado {
+  flex: 1;
+  padding: 0.3rem 0;
+  font-size: 0.78rem;
+}
+
+// Sin la columna alta de escritorio el registro no puede crecer sin freno:
+// empujaría el lanzador fuera de la pantalla.
+@media (max-width: 85rem) {
+  :host {
+    overflow: visible;
+  }
+
+  .registro {
+    max-height: 32rem;
+  }
+}

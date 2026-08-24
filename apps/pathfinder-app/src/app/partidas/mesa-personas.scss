@@ -1,0 +1,265 @@
+@use 'mesa-comun';
+
+// La zona hace su propio scroll: la mesa no desplaza la página entera, así
+// que si aquí se junta mucha gente se recorre esto y el tablero se queda
+// donde está.
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+// -- Rastreador de combate (encabeza la lista, no una columna aparte) -------
+.combate {
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex-shrink: 0;
+
+  &__linea {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  &__ronda {
+    font-size: 1.05rem;
+    color: var(--accent);
+  }
+
+  &__turno {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  &__acciones {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  &__siguiente {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+// -- Tu personaje: tarjeta fija arriba del todo -----------------------------
+// Un jugador no debería tener que buscarse en la lista.
+.mio {
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  border-color: var(--border-strong);
+
+  &--sel {
+    border-color: var(--accent);
+  }
+
+  &__cab {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: none;
+    text-align: left;
+    color: var(--text);
+
+    &:hover:not(:disabled) {
+      box-shadow: none;
+    }
+  }
+
+  &__quien {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    strong {
+      font-size: 1rem;
+    }
+
+    small {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+  }
+}
+
+// -- LA lista de personas ---------------------------------------------------
+// Filas compactas de dos líneas: nombre arriba, estado abajo. Todo lo demás
+// (ficha, condiciones, sacar) se ha ido al panel de Selección.
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+
+  &__separador {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.5rem 0.15rem 0.1rem;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+  }
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: none;
+  }
+
+  &--turno {
+    background: var(--accent-soft);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+
+  &--sel {
+    border-color: var(--accent);
+  }
+
+  /* A 0 PG se marca, pero NO sale de la iniciativa: en PF1e sigues ahí */
+  &--caida {
+    opacity: 0.62;
+
+    .fila__nombre {
+      text-decoration: line-through;
+      text-decoration-color: rgba(224, 82, 82, 0.7);
+    }
+  }
+
+  /* Un PNJ oculto solo lo ve el máster: la diagonal se lo recuerda */
+  &--oculta {
+    border-style: dashed;
+    border-color: var(--border-strong);
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(26, 33, 50, 0.35),
+      rgba(26, 33, 50, 0.35) 8px,
+      rgba(18, 23, 36, 0.35) 8px,
+      rgba(18, 23, 36, 0.35) 16px
+    );
+  }
+
+  &__ini {
+    min-width: 1.9rem;
+    text-align: center;
+    padding: 0.1rem 0;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: var(--surface-2);
+    border-radius: 0.3rem;
+    flex-shrink: 0;
+
+    &--sin {
+      background: none;
+      color: var(--text-faint);
+      font-weight: 400;
+      font-size: 0.75rem;
+    }
+  }
+
+  &__centro {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  &__nombre {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__estado {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+}
+
+.pgtxt {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+
+  /* Una fila muda no dice si es que no hay datos o si algo se rompió */
+  &--vacio {
+    color: var(--text-faint);
+    font-style: italic;
+  }
+}
+
+/* Condición en la fila: solo el nombre. La descripción está en el panel. */
+.cond-chip {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  background: var(--surface-2);
+  border-left: 2px solid var(--accent);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+// -- Pantalla mediana: personas baja a lo ancho, debajo del tablero --------
+// Con filas compactas en rejilla esto aguanta bastante más gente que las
+// tarjetas de antes.
+@media (max-width: 85rem) {
+  :host {
+    overflow: visible;
+  }
+
+  .lista {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.3rem;
+    align-content: start;
+
+    &__separador {
+      grid-column: 1 / -1;
+    }
+  }
+}

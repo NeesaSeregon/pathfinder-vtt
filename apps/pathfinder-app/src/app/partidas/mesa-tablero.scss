@@ -1,0 +1,319 @@
+// El tablero manda sobre su hueco: pide el 100% del alto que le deje la
+// rejilla de la mesa, y el marco recorta lo que no cabe. Position relative
+// porque el banquillo flota encima.
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+  position: relative;
+}
+
+// -- Barra de herramientas del tablero -------------------------------------
+// Vertical y pegada al borde: es el sitio de las herramientas que vengan
+// (plantillas de área, señalar, niebla, dibujo).
+.utiles {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.6rem;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  background: rgba(11, 14, 20, 0.92);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.6rem;
+}
+
+.util {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  color: var(--text-muted);
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &--activa {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+// -- Registro ---------------------------------------------------------------
+// Sin selección se lleva la columna entera: nada de cajas vacías.
+// -- Marco del tablero: la ventana por la que se ve la mesa -----------------
+// El tablero es MÁS ALTO que la pantalla (24×30 sobre un monitor apaisado),
+// así que se recorta aquí y se recorre agarrándolo. A lo ANCHO cabe entero:
+// se pierden filas, nunca columnas, para no perder de vista un flanco.
+.tablero-marco {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border-radius: 0.5rem;
+  cursor: grab;
+  // Sin esto, arrastrar por encima selecciona el texto de las casillas
+  user-select: none;
+  // El tablero se recorre AGARRÁNDOLO: la barra de scroll sobraba y además
+  // partía el borde del tablero. Sigue habiendo overflow (el gesto lo usa),
+  // solo que no se pinta.
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  &--agarrando {
+    cursor: grabbing;
+  }
+
+  /* Con la regla en la mano el gesto es medir, no recorrer */
+  &--midiendo,
+  &--midiendo .tablero__celda {
+    cursor: crosshair;
+  }
+}
+
+// -- Tablero: rejilla de casillas cuadradas --------------------------------
+.tablero {
+  position: relative;
+  display: grid;
+  // OJO: estos números son TABLERO_ANCHO y TABLERO_ALTO de libs/shared. El
+  // CSS no puede leerlos, así que si cambian allí hay que cambiarlos aquí.
+  grid-template-columns: repeat(24, 1fr);
+  grid-template-rows: repeat(30, 1fr);
+  aspect-ratio: 24 / 30;
+  // Llena el ancho del marco y se sale por abajo: el alto sale de la
+  // proporción.
+  width: 100%;
+  gap: 2px;
+  padding: 2px;
+  background: var(--border);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  // El mapa de fondo lo pone el componente (fondoTablero)
+  background-size: cover;
+  background-position: center;
+
+  // Con mapa, las casillas se vuelven translúcidas para que se vea debajo
+  &--con-mapa .tablero__celda {
+    background: rgba(11, 14, 20, 0.2);
+
+    &:hover:not(:disabled) {
+      background: rgba(11, 14, 20, 0.38);
+    }
+
+    &.tablero__celda--destino {
+      background: var(--accent-soft);
+    }
+  }
+
+  &__celda {
+    background: var(--surface);
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // Referencia para el token, que desborda sobre las casillas vecinas
+    // cuando la criatura es Grande o mayor (huella 2×2, 3×3...).
+    position: relative;
+
+    &:hover:not(:disabled) {
+      background: var(--surface-2);
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    &--destino {
+      background: var(--accent-soft);
+    }
+
+    &--destino:hover:not(:disabled) {
+      background: rgba(76, 215, 229, 0.22);
+    }
+  }
+
+  // Ficha-avatar: círculo con iniciales y color propio (estilo inline).
+  // El tamaño lo pone el componente (ladoToken) según su huella.
+  &__token {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    z-index: 2;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #0c1018;
+    font-weight: 800;
+    font-size: clamp(0.55rem, 1vw, 0.95rem);
+    border: 2px solid rgba(255, 255, 255, 0.28);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.45),
+      inset 0 1px 2px rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+
+    &--seleccionado {
+      outline: 3px solid #ffffff;
+      outline-offset: 1px;
+    }
+
+    /* De quién es el turno, visible SIN mirar la lista */
+    &--turno::after {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      opacity: 0.85;
+    }
+
+    &--arrastrando {
+      opacity: 0.45;
+    }
+
+    &--ajeno {
+      cursor: default;
+    }
+
+    /* Solo lo ve el máster: el borde punteado le recuerda que ese token
+       está en la sombra. */
+    &--oculto {
+      opacity: 0.6;
+      outline: 2px dashed var(--text-faint);
+      outline-offset: 1px;
+    }
+
+    /* A 0 PG: gris y tachado, pero sigue en el tablero y en la iniciativa */
+    &--caido {
+      background: #444b5c !important;
+      color: #98a1b5;
+      border-color: rgba(255, 255, 255, 0.14);
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 128%;
+        height: 2px;
+        background: var(--actitud-enemigo);
+        border-radius: 2px;
+        transform: translate(-50%, -50%) rotate(-45deg);
+      }
+    }
+  }
+}
+
+// -- La regla ---------------------------------------------------------------
+.regla {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+
+  line {
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-dasharray: 6 5;
+    stroke-linecap: round;
+  }
+
+  &__etiqueta {
+    position: absolute;
+    z-index: 5;
+    transform: translate(-50%, -50%);
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(11, 14, 20, 0.94);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.76rem;
+    font-weight: 700;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+}
+
+// -- Bandeja de los que aún no están en el tablero -------------------------
+// Flota sobre el tablero en vez de ser una franja a lo ancho: antes robaba
+// alto permanente al tablero por un estado que es de paso.
+.banquillo {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.6rem;
+  max-width: calc(100% - 1.2rem);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: rgba(11, 14, 20, 0.92);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.6rem;
+  backdrop-filter: blur(6px);
+
+  &__titulo {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+  }
+
+  &__pieza {
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.28);
+    padding: 0.25rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0c1018;
+
+    &--seleccionada {
+      outline: 2px solid #ffffff;
+      outline-offset: 1px;
+    }
+
+    &--ajena {
+      filter: saturate(0.55) brightness(0.85);
+    }
+  }
+
+  &__pista {
+    font-size: 0.72rem;
+    color: var(--accent);
+  }
+}
+
+// En pantalla mediana la página entera hace scroll: el marco deja de
+// recortar, así que tampoco se agarra.
+@media (max-width: 85rem) {
+  .tablero-marco {
+    overflow: visible;
+    cursor: default;
+  }
+
+  .banquillo {
+    position: static;
+    max-width: none;
+  }
+}

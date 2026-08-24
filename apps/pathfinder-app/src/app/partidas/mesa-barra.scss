@@ -1,0 +1,201 @@
+@use 'mesa-comun';
+
+// La barra es la única chapa fija de la mesa: dentro de una partida no hay
+// navbar (App.enLaMesa), así que esto es lo que sostiene el título y la
+// salida. No se encoge nunca.
+:host {
+  display: contents;
+}
+
+// -- Barra de la mesa -------------------------------------------------------
+.barra {
+  flex-shrink: 0;
+  height: 3.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0 1.25rem;
+  background: rgba(18, 23, 36, 0.85);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  &__volver {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.375rem;
+
+    &:hover {
+      color: var(--text);
+      background: var(--accent-soft);
+    }
+  }
+
+  &__sep {
+    width: 1px;
+    height: 1.35rem;
+    background: var(--border);
+  }
+
+  &__titulo {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__meta {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  &__hueco {
+    flex: 1;
+  }
+}
+
+.vivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(91, 181, 106, 0.08);
+  white-space: nowrap;
+
+  i {
+    display: block;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--actitud-aliado);
+    box-shadow: 0 0 0.5rem rgba(91, 181, 106, 0.8);
+  }
+
+  &--roto {
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    background: rgba(246, 169, 74, 0.1);
+    border-color: var(--token-2);
+    color: var(--token-2);
+
+    i {
+      background: var(--token-2);
+      box-shadow: none;
+    }
+  }
+}
+
+.codigo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+// -- Menú del máster --------------------------------------------------------
+// Todo lo que NO es de uso continuo vive aquí dentro: antes era una fila
+// plana de botones donde "Cerrar mesa" pesaba lo mismo que subir un mapa.
+.menu {
+  position: relative;
+
+  &__fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+  }
+
+  &__panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.4rem);
+    z-index: 26;
+    min-width: 15rem;
+    padding: 0.35rem;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.55);
+  }
+
+  &__opcion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border: none;
+    border-radius: 0.35rem;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--surface-2);
+      box-shadow: none;
+    }
+
+    /* La opción del mapa es un <label> con un input file dentro */
+    input[type='file'] {
+      display: none;
+    }
+
+    &--peligro {
+      color: var(--danger);
+
+      &:hover:not(:disabled) {
+        background: rgba(255, 107, 129, 0.12);
+      }
+    }
+  }
+
+  &__separador {
+    height: 1px;
+    margin: 0.35rem 0.25rem;
+    background: var(--border);
+  }
+}
+
+// En estrecho la barra deja de ser una sola línea antes que recortar el
+// título de la mesa.
+@media (max-width: 60rem) {
+  .barra {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0.5rem 1rem;
+  }
+}

@@ -2,32 +2,21 @@ import {
   Component,
   computed,
   DestroyRef,
-  ElementRef,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  ACTITUD_LABELS,
-  ACTITUDES,
-  ActitudPnj,
   Character,
   CharacterUpsert,
-  CONDICIONES,
   CrearPnj,
-  CONDICION_POR_ID,
-  distanciaEnCasillas,
-  ESTADO_VITAL_LABELS,
   EstadoPersonajeEvento,
-  ordenarIniciativa,
   PartidaDetalle,
   PersonajeEnPartidaResumen,
-  PIES_POR_CASILLA,
-  TABLERO_ALTO,
-  TABLERO_ANCHO,
+  SembrarPnj,
   TiradaResultado,
 } from '@pathfinder/shared';
 import { PartidasApi } from './partidas-api';
@@ -36,19 +25,26 @@ import { AvisoMesaStore } from './aviso-mesa-store';
 import { CharactersApi } from '../characters/characters-api';
 import { FichaVista } from '../characters/ficha-vista';
 import { CharacterForm } from '../characters/character-form';
-import { PnjForm } from './pnj-form';
+import { MesaBarra } from './mesa-barra';
+import { MesaPersonas } from './mesa-personas';
+import { MesaRegistro } from './mesa-registro';
+import { MesaSeleccion } from './mesa-seleccion';
+import { MesaTablero } from './mesa-tablero';
+import { PnjModal } from './pnj-modal';
 import { mensajeDeError } from '../characters/mensaje-de-error';
-
-/**
- * Píxeles que hay que recorrer con el botón pulsado para que el gesto deje
- * de ser un clic (colocar) y pase a ser un desplazamiento del tablero. Un
- * clic normal mueve el ratón uno o dos píxeles sin querer.
- */
-const UMBRAL_AGARRE = 5;
 
 @Component({
   selector: 'app-partida-detalle-page',
-  imports: [RouterLink, FichaVista, CharacterForm, PnjForm],
+  imports: [
+    FichaVista,
+    CharacterForm,
+    MesaBarra,
+    MesaPersonas,
+    MesaRegistro,
+    MesaSeleccion,
+    MesaTablero,
+    PnjModal,
+  ],
   templateUrl: './partida-detalle-page.html',
   styleUrl: './partida-detalle-page.scss',
 })
@@ -61,34 +57,12 @@ export class PartidaDetallePage {
   private readonly partidaId =
     inject(ActivatedRoute).snapshot.paramMap.get('id') ?? '';
 
-  protected readonly columnas = Array.from(
-    { length: TABLERO_ANCHO },
-    (_, i) => i,
-  );
-  protected readonly filas = Array.from({ length: TABLERO_ALTO }, (_, i) => i);
-
   protected readonly partida = signal<PartidaDetalle | null>(null);
   protected readonly error = signal<string | null>(null);
   /** Cerrando la mesa: desactiva el botón para no pedirlo dos veces. */
   protected readonly eliminando = signal(false);
   /** Id del personaje seleccionado para mover (dos clics: token → casilla). */
   protected readonly seleccionado = signal<string | null>(null);
-  /** Id del personaje que se está arrastrando (alternativa a los dos clics). */
-  protected readonly arrastrando = signal<string | null>(null);
-
-  /** El marco que recorta el tablero; se desplaza al agarrar el fondo. */
-  private readonly marcoTablero =
-    viewChild<ElementRef<HTMLElement>>('marcoTablero');
-  /** ¿Se está recorriendo el tablero ahora mismo? (solo para el cursor). */
-  protected readonly agarrando = signal(false);
-
-  /** Personajes aún sin colocar en el tablero. */
-  protected readonly banquillo = computed(() =>
-    (this.partida()?.personajes ?? []).filter((pep) => pep.posX === null),
-  );
-
-  /** Dados de acceso rápido (un clic = una tirada de ese dado). */
-  protected readonly dadosRapidos = [4, 6, 8, 10, 12, 20, 100];
   /** Registro de tiradas recientes (efímero, lo más nuevo primero). */
   protected readonly tiradas = signal<TiradaResultado[]>([]);
 
@@ -109,21 +83,15 @@ export class PartidaDetallePage {
       : null;
   });
 
-  protected readonly actitudLabels = ACTITUD_LABELS;
-  protected readonly estadoVitalLabels = ESTADO_VITAL_LABELS;
-
-  /** Siembra de PNJ (solo el máster): desde el bestiario o creando uno nuevo. */
+  /**
+   * Siembra de PNJ (solo el máster). Aquí solo queda lo que la mesa necesita
+   * saber: si está abierta, qué plantillas hay y en qué anda la petición.
+   * La pestaña y las opciones de la siembra son cosa de PnjModal.
+   */
   protected readonly pnjAbierto = signal(false);
-  protected readonly modoPnj = signal<'bestiario' | 'nuevo'>('bestiario');
   protected readonly bestiario = signal<Character[]>([]);
   protected readonly creandoPnj = signal(false);
   protected readonly errorPnj = signal<string | null>(null);
-
-  /** Opciones de la siembra desde plantilla (las estadísticas ya están). */
-  protected readonly cantidadPlantilla = signal(1);
-  protected readonly actitudPlantilla = signal<ActitudPnj>('enemigo');
-  protected readonly ocultoPlantilla = signal(false);
-  protected readonly actitudes = ACTITUDES;
 
   /** Ficha abierta en la modal de consulta (null = cerrada). */
   protected readonly fichaAbierta = signal<Character | null>(null);
@@ -140,36 +108,6 @@ export class PartidaDetallePage {
   /** Para preguntar antes de descartar cambios sin guardar (form.sucio()). */
   private readonly formularioFicha = viewChild(CharacterForm);
 
-  /**
-   * LA lista de personas de la mesa, en el único orden que hay. Sustituye a
-   * tener las fichas por un lado y el orden de iniciativa por otro: era la
-   * misma gente dos veces y obligaba a cruzar la pantalla con la mirada.
-   *
-   * En combate manda la iniciativa; fuera, dos grupos estables —Jugadores y
-   * luego PNJ, cada uno por orden de llegada—. La regla de oro es que la
-   * lista NO se reordene sola bajo el dedo: el único reordenamiento es el de
-   * iniciar combate, que es explícito y se espera.
-   */
-  protected readonly grupos = computed<
-    { titulo: string | null; gente: PersonajeEnPartidaResumen[] }[]
-  >(() => {
-    const gente = this.partida()?.personajes ?? [];
-    if (this.partida()?.enCombate) {
-      const conIniciativa = ordenarIniciativa(
-        gente.filter((p) => p.iniciativa !== null),
-      );
-      const sinTirar = gente.filter((p) => p.iniciativa === null);
-      return [
-        { titulo: null, gente: conIniciativa },
-        { titulo: 'Sin iniciativa', gente: sinTirar },
-      ].filter((g) => g.gente.length > 0);
-    }
-    return [
-      { titulo: 'Jugadores', gente: gente.filter((p) => p.tipo === 'pj') },
-      { titulo: 'PNJ', gente: gente.filter((p) => p.tipo === 'pnj') },
-    ].filter((g) => g.gente.length > 0);
-  });
-
   /** El asiento seleccionado, que es lo que pinta el panel de la derecha. */
   protected readonly pepSeleccionado = computed(() => {
     const id = this.seleccionado();
@@ -178,66 +116,8 @@ export class PartidaDetallePage {
       : null;
   });
 
-  /** Quién tiene el turno ahora mismo (null fuera de combate). */
-  protected readonly turnoDe = computed(() => {
-    const p = this.partida();
-    return p?.personajes.find((pep) => pep.id === p.turnoPepId) ?? null;
-  });
-
-  /**
-   * ¿Hay una ficha esperando destino? Seleccionar es CONSULTAR, así que las
-   * casillas solo se marcan como destino cuando además puedes mover lo
-   * seleccionado: si no, mirar a un enemigo iluminaría medio tablero.
-   */
-  protected readonly hayDestino = computed(() => {
-    const id = this.arrastrando() ?? this.seleccionado();
-    const pep = this.partida()?.personajes.find((p) => p.id === id);
-    return !!pep && this.puedeMover(pep);
-  });
-
   /** Cantidad del golpe o la cura que se va a aplicar al seleccionado. */
   protected readonly cantidadPg = signal(1);
-
-  /**
-   * TUS personajes en la mesa: la tarjeta fija de arriba a la izquierda. Un
-   * jugador no debería tener que buscarse en la lista, y puede traer más de
-   * uno. Solo PJ: al máster, esMio le sale true en todos SUS PNJ, y una
-   * tarjeta por goblin no es lo que nadie quiere.
-   */
-  protected readonly misPjs = computed(() =>
-    (this.partida()?.personajes ?? []).filter(
-      (pep) => pep.esMio && pep.tipo === 'pj',
-    ),
-  );
-
-  /**
-   * Herramienta activa del tablero. Es el contenedor que faltaba: sin un
-   * modo activo, medir, plantillas o niebla no tienen dónde vivir.
-   */
-  protected readonly herramienta = signal<'seleccionar' | 'medir'>(
-    'seleccionar',
-  );
-
-  /** Medición en curso o recién terminada (se borra al cambiar de tarea). */
-  protected readonly medicion = signal<{
-    x1: number;
-    y1: number;
-    x2: number;
-    y2: number;
-  } | null>(null);
-
-  /** Casillas y pies de la medición, con la regla 5-10-5 de PF1e. */
-  protected readonly distancia = computed(() => {
-    const m = this.medicion();
-    if (!m) {
-      return null;
-    }
-    const casillas = distanciaEnCasillas(m.x1, m.y1, m.x2, m.y2);
-    return { casillas, pies: casillas * PIES_POR_CASILLA };
-  });
-
-  /** Menú de acciones del máster (mapa, código, cerrar la mesa). */
-  protected readonly menuMaster = signal(false);
 
   /** Público: la barra de la mesa pinta si la conexión está viva. */
   protected readonly socket = inject(PartidaSocket);
@@ -301,111 +181,8 @@ export class PartidaDetallePage {
     this.router.navigate(['/']);
   }
 
-  /**
-   * Quién OCUPA la casilla, contando la huella completa: un Grande en (3,3)
-   * ocupa también (4,3), (3,4) y (4,4).
-   */
-  protected ocupanteDe(
-    x: number,
-    y: number,
-  ): PersonajeEnPartidaResumen | undefined {
-    return this.partida()?.personajes.find(
-      (pep) =>
-        pep.posX !== null &&
-        pep.posY !== null &&
-        x >= pep.posX &&
-        x < pep.posX + pep.casillas &&
-        y >= pep.posY &&
-        y < pep.posY + pep.casillas,
-    );
-  }
-
-  /** Solo en su casilla ORIGEN se pinta el token (que luego cubre su huella). */
-  protected tokenEn(
-    x: number,
-    y: number,
-  ): PersonajeEnPartidaResumen | undefined {
-    return this.partida()?.personajes.find(
-      (pep) => pep.posX === x && pep.posY === y,
-    );
-  }
-
-  /** Lado del token para cubrir su huella, contando los huecos de la rejilla. */
-  protected ladoToken(pep: PersonajeEnPartidaResumen): string {
-    return `calc(${pep.casillas * 100}% + ${(pep.casillas - 1) * 2 - 4}px)`;
-  }
-
   protected puedeMover(pep: PersonajeEnPartidaResumen): boolean {
     return (this.partida()?.esMaster ?? false) || pep.esMio;
-  }
-
-  protected clickCelda(x: number, y: number): void {
-    // Con la regla en la mano no se mueve a nadie sin querer
-    if (this.herramienta() === 'medir') {
-      return;
-    }
-    const ocupante = this.ocupanteDe(x, y);
-    if (ocupante) {
-      // Seleccionar es CONSULTAR: cualquiera puede mirar a cualquiera y
-      // verlo en el panel de la derecha. Mover ya es otra cosa, y para eso
-      // sigue mandando puedeMover() más abajo.
-      this.seleccionar(ocupante);
-      return;
-    }
-    const pepId = this.seleccionado();
-    const pep = this.pepSeleccionado();
-    if (pepId && pep && this.puedeMover(pep)) {
-      this.mover(pepId, x, y);
-    }
-  }
-
-  /** Cambia de herramienta; al salir de medir se borra lo medido. */
-  protected usarHerramienta(cual: 'seleccionar' | 'medir'): void {
-    this.herramienta.set(cual);
-    this.medicion.set(null);
-  }
-
-  /** La casilla que hay bajo el puntero, leída del DOM (data-x / data-y). */
-  private casillaEn(evento: PointerEvent): { x: number; y: number } | null {
-    const bajo = document
-      .elementFromPoint(evento.clientX, evento.clientY)
-      ?.closest('.tablero__celda') as HTMLElement | null;
-    const x = bajo?.dataset['x'];
-    const y = bajo?.dataset['y'];
-    if (x === undefined || y === undefined) {
-      return null;
-    }
-    return { x: +x, y: +y };
-  }
-
-  /**
-   * Medir es arrastrar de casilla a casilla. Lo medido SE QUEDA en pantalla
-   * al soltar: en mesa se pregunta "¿llego?" y se mira la respuesta con
-   * calma, no de un vistazo mientras se sujeta el botón.
-   */
-  protected empezarMedicion(evento: PointerEvent): void {
-    const desde = this.casillaEn(evento);
-    if (!desde) {
-      return;
-    }
-    evento.preventDefault();
-    this.medicion.set({ x1: desde.x, y1: desde.y, x2: desde.x, y2: desde.y });
-
-    const mover = (e: PointerEvent) => {
-      const hasta = this.casillaEn(e);
-      const actual = this.medicion();
-      if (hasta && actual) {
-        this.medicion.set({ ...actual, x2: hasta.x, y2: hasta.y });
-      }
-    };
-    const soltar = () => {
-      document.removeEventListener('pointermove', mover);
-      document.removeEventListener('pointerup', soltar);
-      document.removeEventListener('pointercancel', soltar);
-    };
-    document.addEventListener('pointermove', mover);
-    document.addEventListener('pointerup', soltar);
-    document.addEventListener('pointercancel', soltar);
   }
 
   /** Selecciona (o deselecciona) un asiento: es lo que llena el panel. */
@@ -435,37 +212,13 @@ export class PartidaDetallePage {
     this.aplicarCambio(pep.id, { pgActuales });
   }
 
-  /** Fracción de PG que queda (0..1), para la barra. Null si no se sabe. */
-  protected fraccionPg(pep: PersonajeEnPartidaResumen): number | null {
-    if (
-      pep.pgActuales === null ||
-      pep.pgActuales === undefined ||
-      !pep.pgTotal
-    ) {
-      return null;
-    }
-    return Math.max(0, Math.min(1, pep.pgActuales / pep.pgTotal));
-  }
-
-  /** A 0 PG se marca, pero NO sale de la iniciativa: sigue en su sitio. */
-  protected esCaido(pep: PersonajeEnPartidaResumen): boolean {
-    return pep.estadoVital === 'caido';
-  }
-
   /** El máster sube (o reemplaza) el mapa de fondo de la mesa. */
-  protected subirMapa(evento: Event): void {
-    const input = evento.target as HTMLInputElement;
-    const fichero = input.files?.[0];
-    if (!fichero) {
-      return;
-    }
+  protected subirMapa(fichero: File): void {
     this.error.set(null);
     this.api.subirMapa(this.partidaId, fichero).subscribe({
       next: (partida) => {
         this.partida.set(partida);
         this.versionMapa.update((v) => v + 1);
-        // Permite volver a elegir el MISMO fichero si hiciera falta
-        input.value = '';
       },
       error: (err) =>
         this.error.set(`No se pudo subir el mapa: ${mensajeDeError(err)}`),
@@ -538,130 +291,12 @@ export class PartidaDetallePage {
   }
 
   /** Arrastre: empieza en el token (si puedes moverlo). */
-  protected iniciarArrastre(
-    evento: DragEvent,
-    pep: PersonajeEnPartidaResumen,
-  ): void {
-    if (!this.puedeMover(pep)) {
-      evento.preventDefault();
-      return;
-    }
-    this.arrastrando.set(pep.id);
-    // Opcional en algunos navegadores, pero hace el arrastre más fiable
-    evento.dataTransfer?.setData('text/plain', pep.id);
-    if (evento.dataTransfer) {
-      evento.dataTransfer.effectAllowed = 'move';
-    }
-  }
-
-  protected terminarArrastre(): void {
-    this.arrastrando.set(null);
-  }
-
-  /** Sin preventDefault en dragover el navegador no admite el soltar. */
-  protected permitirSoltar(evento: DragEvent): void {
-    evento.preventDefault();
-  }
-
-  protected soltarEn(evento: DragEvent, x: number, y: number): void {
-    evento.preventDefault();
-    const pepId = this.arrastrando();
-    this.arrastrando.set(null);
-    if (pepId) {
-      this.mover(pepId, x, y);
-    }
-  }
-
-  /**
-   * Recorrer el tablero agarrando el fondo. El tablero es más alto que el
-   * hueco disponible, así que hay que poder moverse por él.
-   *
-   * Lo delicado es que el mismo gesto ya significa otra cosa: pulsar una
-   * casilla COLOCA al personaje seleccionado. Se distinguen por la
-   * distancia — hasta UMBRAL_AGARRE píxeles sigue siendo un clic; a partir
-   * de ahí es un desplazamiento y el clic de después se descarta. Sobre un
-   * token no se agarra nada: ahí manda el arrastre nativo, que lo mueve.
-   */
-  protected empezarAgarre(evento: PointerEvent): void {
-    if (evento.button !== 0) return;
-    // Con la regla activa, el gesto es medir, no recorrer el tablero
-    if (this.herramienta() === 'medir') {
-      this.empezarMedicion(evento);
-      return;
-    }
-    const destino = evento.target as HTMLElement | null;
-    if (destino?.closest('.tablero__token')) return;
-
-    const marco = this.marcoTablero()?.nativeElement;
-    if (!marco) return;
-
-    const inicioX = evento.clientX;
-    const inicioY = evento.clientY;
-    const arribaAlEmpezar = marco.scrollTop;
-    const izquierdaAlEmpezar = marco.scrollLeft;
-    let recorrido = false;
-
-    const tragarClic = (e: Event) => {
-      e.stopPropagation();
-      e.preventDefault();
-    };
-
-    const mover = (e: PointerEvent) => {
-      const dx = e.clientX - inicioX;
-      const dy = e.clientY - inicioY;
-      if (!recorrido && Math.hypot(dx, dy) < UMBRAL_AGARRE) return;
-      recorrido = true;
-      this.agarrando.set(true);
-      // Al revés que el puntero: arrastrar hacia arriba enseña lo de abajo,
-      // como cuando empujas un mapa de papel.
-      marco.scrollTop = arribaAlEmpezar - dy;
-      marco.scrollLeft = izquierdaAlEmpezar - dx;
-    };
-
-    const soltar = () => {
-      document.removeEventListener('pointermove', mover);
-      document.removeEventListener('pointerup', soltar);
-      document.removeEventListener('pointercancel', soltar);
-      this.agarrando.set(false);
-      if (!recorrido) return;
-      // El navegador dispara un click al soltar: si acabamos de recorrer el
-      // tablero, ese click NO debe colocar a nadie. Se intercepta en fase de
-      // captura, antes de llegar a la casilla.
-      marco.addEventListener('click', tragarClic, { capture: true });
-      // Y se retira enseguida: el click llega en el mismo ciclo, así que si
-      // no ha llegado (soltaste fuera del marco) no queda nada acechando al
-      // siguiente clic legítimo.
-      setTimeout(() => marco.removeEventListener('click', tragarClic, true));
-    };
-
-    document.addEventListener('pointermove', mover);
-    document.addEventListener('pointerup', soltar);
-    document.addEventListener('pointercancel', soltar);
-  }
-
-  protected seleccionarDelBanquillo(pep: PersonajeEnPartidaResumen): void {
-    this.seleccionar(pep);
-  }
-
   protected guardarPg(pep: PersonajeEnPartidaResumen, valor: string): void {
     const pgActuales = Number(valor);
     if (!Number.isInteger(pgActuales)) {
       return;
     }
     this.aplicarCambio(pep.id, { pgActuales });
-  }
-
-  protected nombreCondicion(id: string): string {
-    return CONDICION_POR_ID[id]?.nombre ?? id;
-  }
-
-  protected descripcionCondicion(id: string): string {
-    return CONDICION_POR_ID[id]?.descripcion ?? '';
-  }
-
-  /** Condiciones del catálogo que este personaje aún NO tiene activas. */
-  protected condicionesDisponibles(pep: PersonajeEnPartidaResumen) {
-    return CONDICIONES.filter((c) => !pep.condiciones.includes(c.id));
   }
 
   protected anadirCondicion(pep: PersonajeEnPartidaResumen, id: string): void {
@@ -696,10 +331,6 @@ export class PartidaDetallePage {
       error: (err) =>
         this.error.set(`No se pudo tirar iniciativa: ${mensajeDeError(err)}`),
     });
-  }
-
-  protected esTurno(pep: PersonajeEnPartidaResumen): boolean {
-    return this.partida()?.turnoPepId === pep.id;
   }
 
   protected iniciarCombate(): void {
@@ -823,59 +454,26 @@ export class PartidaDetallePage {
     }
   }
 
-  protected iniciales(nombre: string): string {
-    return nombre
-      .split(/\s+/)
-      .map((palabra) => palabra[0] ?? '')
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
-  }
-
   /**
-   * Color del token. Los PNJ van por ACTITUD (rojo enemigo, verde aliado,
-   * gris neutral) para leer el tablero de un vistazo; los PJ mantienen su
-   * color estable por nombre, que es lo que distingue a los jugadores.
-   */
-  protected colorToken(pep: PersonajeEnPartidaResumen): string {
-    if (pep.tipo === 'pnj' && pep.actitud) {
-      return `var(--actitud-${pep.actitud})`;
-    }
-    let suma = 0;
-    for (let i = 0; i < pep.nombre.length; i++) {
-      suma += pep.nombre.charCodeAt(i);
-    }
-    return `var(--token-${suma % 6})`;
-  }
-
-  /**
-   * El máster siembra PNJ. Se abre en el BESTIARIO si ya tiene monstruos
-   * guardados (el caso frecuente en cuanto lleva un par de sesiones) y en
-   * el formulario si aún no tiene ninguno.
+   * El máster siembra PNJ: abre la modal y pide el bestiario. La modal se
+   * abre sola por la pestaña que toque según lo que llegue aquí (vacío
+   * mientras se pide, y vacío también si la petición falla: entonces
+   * siempre queda crear uno a mano).
    */
   protected abrirPnj(): void {
     this.pnjAbierto.set(true);
     this.errorPnj.set(null);
     this.charactersApi.bestiario().subscribe({
-      next: (plantillas) => {
-        this.bestiario.set(plantillas);
-        this.modoPnj.set(plantillas.length > 0 ? 'bestiario' : 'nuevo');
-      },
-      // Sin bestiario disponible siempre queda crear uno a mano
-      error: () => this.modoPnj.set('nuevo'),
+      next: (plantillas) => this.bestiario.set(plantillas),
+      error: () => this.bestiario.set([]),
     });
   }
 
-  protected sembrarDesdePlantilla(plantillaId: string): void {
+  protected sembrarDesdePlantilla(datos: SembrarPnj): void {
     this.errorPnj.set(null);
     this.creandoPnj.set(true);
     this.api
-      .sembrarDesdePlantilla(this.partidaId, {
-        plantillaId,
-        cantidad: this.cantidadPlantilla(),
-        actitud: this.actitudPlantilla(),
-        oculto: this.ocultoPlantilla(),
-      })
+      .sembrarDesdePlantilla(this.partidaId, datos)
       .subscribe({
         next: (partida) => {
           this.partida.set(partida);
@@ -891,13 +489,6 @@ export class PartidaDetallePage {
 
   protected cerrarPnj(): void {
     this.pnjAbierto.set(false);
-  }
-
-  /** Cierra la modal de PNJ solo si el clic fue en el fondo. */
-  protected onOverlayPnj(event: MouseEvent): void {
-    if (event.target === event.currentTarget) {
-      this.cerrarPnj();
-    }
   }
 
   protected crearPnjs(datos: CrearPnj): void {
@@ -925,7 +516,8 @@ export class PartidaDetallePage {
     });
   }
 
-  private mover(pepId: string, posX: number, posY: number): void {
+  /** Lo pide el tablero (clic en casilla o soltar un token). */
+  protected mover(pepId: string, posX: number, posY: number): void {
     this.aplicarCambio(pepId, { posX, posY });
     this.seleccionado.set(null);
   }

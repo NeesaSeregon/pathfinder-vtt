@@ -1,0 +1,194 @@
+@if (misPjs().length) {
+  <p class="rotulo">Tu personaje</p>
+}
+
+<!-- Tu personaje, SIEMPRE a la vista: un jugador no debería tener
+     que buscarse en la lista. Solo PJ tuyos (ver misPjs). -->
+@for (mio of misPjs(); track mio.id) {
+  <article class="tarjeta mio" [class.mio--sel]="seleccionadoId() === mio.id">
+    <button type="button" class="mio__cab" (click)="seleccionar.emit(mio)">
+      <span
+        class="ficha ficha--grande"
+        [style.background]="colorToken(mio)"
+        aria-hidden="true"
+        >{{ iniciales(mio.nombre) }}</span
+      >
+      <span class="mio__quien">
+        <strong>{{ mio.nombre }}</strong>
+        <small>nivel {{ mio.nivel }} · CA {{ mio.ca }}</small>
+      </span>
+    </button>
+
+    @if (mio.pgActuales !== null && mio.pgActuales !== undefined) {
+      <p class="pg">
+        <input
+          type="number"
+          class="pg__valor"
+          aria-label="Tus puntos de golpe"
+          [value]="mio.pgActuales"
+          (change)="fijarPg.emit({ pep: mio, valor: $any($event.target).value })"
+        />
+        @if (mio.pgTotal) {
+          <span class="pg__total">/ {{ mio.pgTotal }}</span>
+        }
+        @if (mio.estadoVital) {
+          <span [class]="'vital vital--' + mio.estadoVital">
+            {{ estadoVitalLabels[mio.estadoVital] }}
+          </span>
+        }
+      </p>
+      @if (fraccionPg(mio) !== null) {
+        <span class="pgbar pgbar--ancha">
+          <i
+            [class]="'pgbar__relleno pgbar__relleno--' + (mio.estadoVital ?? 'ileso')"
+            [style.width.%]="(fraccionPg(mio) ?? 0) * 100"
+          ></i>
+        </span>
+      }
+      <div class="pg__acciones">
+        <input
+          type="number"
+          min="1"
+          class="pg__cantidad"
+          aria-label="Cantidad de daño o curación"
+          [value]="cantidadPg()"
+          (change)="cantidadPg.set(+$any($event.target).value || 1)"
+        />
+        <button type="button" class="boton boton--dano" (click)="ajustarPg.emit({ pep: mio, signo: -1 })">
+          Daño
+        </button>
+        <button type="button" class="boton boton--cura" (click)="ajustarPg.emit({ pep: mio, signo: 1 })">
+          Curar
+        </button>
+        <button type="button" class="boton" (click)="verFicha.emit(mio)">Ficha</button>
+      </div>
+    } @else {
+      <p class="meta">
+        Sin PG anotados: ponlos en tu ficha.
+        <button type="button" class="boton" (click)="verFicha.emit(mio)">Ficha</button>
+      </p>
+    }
+  </article>
+}
+
+<div class="tarjeta combate">
+  @if (enCombate()) {
+    <p class="combate__linea">
+      <strong class="combate__ronda">Ronda {{ ronda() }}</strong>
+      @if (turnoDe(); as pep) {
+        <span class="combate__turno">turno de {{ pep.nombre }}</span>
+      }
+    </p>
+    @if (esMaster()) {
+      <div class="combate__acciones">
+        <button
+          type="button"
+          class="boton boton-primario combate__siguiente"
+          (click)="siguienteTurno.emit()"
+        >
+          Siguiente turno
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h13M13 6l6 6-6 6" />
+          </svg>
+        </button>
+        <button type="button" class="boton" (click)="terminarCombate.emit()">
+          Terminar
+        </button>
+      </div>
+    }
+  } @else {
+    <p class="combate__linea">
+      <span class="meta">Sin combate activo.</span>
+    </p>
+    @if (esMaster()) {
+      <div class="combate__acciones">
+        <button
+          type="button"
+          class="boton boton-primario combate__siguiente"
+          (click)="iniciarCombate.emit()"
+        >
+          Iniciar combate
+        </button>
+      </div>
+    }
+  }
+</div>
+
+<p class="rotulo">
+  Personas <span>{{ personajes().length }} en la mesa</span>
+</p>
+
+<div class="lista">
+  @for (grupo of grupos(); track grupo.titulo) {
+    @if (grupo.titulo) {
+      <p class="lista__separador">{{ grupo.titulo }}</p>
+    }
+    @for (pep of grupo.gente; track pep.id) {
+      <button
+        type="button"
+        class="fila"
+        [class.fila--turno]="esTurno(pep)"
+        [class.fila--sel]="seleccionadoId() === pep.id"
+        [class.fila--caida]="esCaido(pep)"
+        [class.fila--oculta]="pep.oculto"
+        [attr.aria-pressed]="seleccionadoId() === pep.id"
+        (click)="seleccionar.emit(pep)"
+      >
+        <span class="fila__ini" [class.fila__ini--sin]="pep.iniciativa === null">
+          {{ pep.iniciativa ?? '—' }}
+        </span>
+        <span
+          class="ficha"
+          [style.background]="colorToken(pep)"
+          aria-hidden="true"
+          >{{ iniciales(pep.nombre) }}</span
+        >
+        <span class="fila__centro">
+          <span class="fila__nombre">
+            {{ pep.nombre }}
+            @if (pep.oculto) {
+              <span class="marca marca--oculto" title="Los jugadores no lo ven">
+                oculto
+              </span>
+            }
+            <!-- Solo en TU personaje: al máster, esMio le sale true
+                 en todos sus PNJ y la lista se llenaba de "tú". -->
+            @if (pep.esMio && pep.tipo === 'pj') {
+              <span class="marca marca--mio">tú</span>
+            }
+          </span>
+          <span class="fila__estado">
+            @if (fraccionPg(pep) !== null) {
+              <span class="pgbar">
+                <i
+                  [class]="'pgbar__relleno pgbar__relleno--' + (pep.estadoVital ?? 'ileso')"
+                  [style.width.%]="(fraccionPg(pep) ?? 0) * 100"
+                ></i>
+              </span>
+              <span class="pgtxt">{{ pep.pgActuales }}/{{ pep.pgTotal }}</span>
+            } @else if (pep.pgActuales !== null && pep.pgActuales !== undefined) {
+              <!-- Sin total no hay barra, pero el número se dice -->
+              <span class="pgtxt">{{ pep.pgActuales }} PG</span>
+            } @else if (pep.estadoVital) {
+              <!-- Sin números: al jugador el servidor solo le manda
+                   el tramo de un PNJ (ver soloLoPublico). -->
+              <span
+                [class]="'vital vital--' + pep.estadoVital"
+                >{{ estadoVitalLabels[pep.estadoVital] }}</span
+              >
+            } @else {
+              <span class="pgtxt pgtxt--vacio">sin PG</span>
+            }
+            @for (id of pep.condiciones; track id) {
+              <span class="cond-chip" [title]="descripcionCondicion(id)">
+                {{ nombreCondicion(id) }}
+              </span>
+            }
+          </span>
+        </span>
+      </button>
+    }
+  } @empty {
+    <p class="meta">Nadie se ha unido todavía.</p>
+  }
+</div>

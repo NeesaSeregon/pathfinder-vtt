@@ -1,0 +1,102 @@
+@let p = partida();
+
+<header class="barra">
+  <a class="barra__volver" routerLink="/" title="Volver a tus mesas">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+    Mesas
+  </a>
+  <span class="barra__sep"></span>
+  <h1 class="barra__titulo">{{ p.nombre }}</h1>
+  <span class="barra__meta">máster {{ p.master }}</span>
+
+  <!-- La conexión, dicha en voz alta. El botón de recargar aparece solo
+       cuando hace falta de verdad: con el socket caído. -->
+  @if (conectado()) {
+    <span class="vivo"><i></i> En vivo</span>
+  } @else {
+    <button type="button" class="vivo vivo--roto" (click)="recargar.emit()">
+      <i></i> Sin conexión · actualizar
+    </button>
+  }
+
+  <span class="barra__hueco"></span>
+
+  @if (p.esMaster) {
+    @if (p.codigo) {
+      <span class="codigo" title="Código de invitación de la mesa">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="4" y="10" width="16" height="10" rx="2" />
+          <path d="M8 10V7a4 4 0 018 0v3" />
+        </svg>
+        {{ p.codigo }}
+      </span>
+    }
+    <!-- La ÚNICA acción de uso continuo del máster se queda fuera -->
+    <button
+      type="button"
+      class="boton boton-primario"
+      (click)="anadirPnj.emit()"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+      Añadir PNJ
+    </button>
+
+    <!-- ...y todo lo demás, dentro. Lo irreversible al final y marcado. -->
+    <div class="menu">
+      <button
+        type="button"
+        class="boton"
+        [attr.aria-expanded]="menuAbierto()"
+        (click)="menuAbierto.set(!menuAbierto())"
+      >
+        Máster
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      @if (menuAbierto()) {
+        <div
+          class="menu__fondo"
+          role="presentation"
+          (click)="menuAbierto.set(false)"
+        ></div>
+        <div class="menu__panel" role="menu">
+          <label class="menu__opcion">
+            <span>{{ p.tieneMapa ? 'Cambiar mapa de fondo' : 'Subir mapa de fondo' }}</span>
+            <input
+              type="file"
+              name="mapa"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              (change)="elegirMapa($event)"
+            />
+          </label>
+          @if (p.tieneMapa) {
+            <button
+              type="button"
+              class="menu__opcion"
+              (click)="desdeElMenu('quitarMapa')"
+            >
+              Quitar el mapa
+            </button>
+          }
+          <button
+            type="button"
+            class="menu__opcion"
+            title="Genera un código nuevo; el anterior deja de servir"
+            (click)="desdeElMenu('regenerarCodigo')"
+          >
+            Cambiar el código de invitación
+          </button>
+          <span class="menu__separador"></span>
+          <button
+            type="button"
+            class="menu__opcion menu__opcion--peligro"
+            [disabled]="eliminando()"
+            title="Cierra la mesa para siempre"
+            (click)="desdeElMenu('cerrarMesa')"
+          >
+            Cerrar la mesa
+          </button>
+        </div>
+      }
+    </div>
+  }
+</header>

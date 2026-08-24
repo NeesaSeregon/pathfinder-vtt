@@ -1,0 +1,57 @@
+<p class="rotulo">
+  Registro
+  @if (!haySeleccion()) {
+    <span>nada seleccionado</span>
+  }
+</p>
+
+<article class="tarjeta registro">
+  <ol class="tiradas">
+    @for (t of tiradas(); track t.id) {
+      <li class="tirada">
+        <strong>{{ t.autor }}</strong>
+        @if (t.etiqueta) {
+          <em>{{ t.etiqueta }}</em>
+        }
+        <span class="tirada__notacion">{{ t.notacion }}</span>
+        <strong class="tirada__total">{{ t.total }}</strong>
+        <small>[{{ t.dados.join(', ') }}]</small>
+      </li>
+    } @empty {
+      <li class="meta">Aún no se ha tirado nada.</li>
+    }
+  </ol>
+
+  @if (puedeTirar()) {
+    <div class="lanzador">
+      <div class="lanzador__rapidos">
+        @for (caras of dadosRapidos; track caras) {
+          <button type="button" class="dado" (click)="pedir('1d' + caras)">
+            d{{ caras }}
+          </button>
+        }
+      </div>
+      <div class="lanzador__libre">
+        <input
+          #dado
+          type="text"
+          placeholder="1d20+5"
+          maxlength="30"
+          aria-label="Tirada libre"
+          (keyup.enter)="pedir(dado.value); dado.value = ''"
+        />
+        <button
+          type="button"
+          class="boton boton-primario"
+          (click)="pedir(dado.value); dado.value = ''"
+        >
+          Tirar
+        </button>
+      </div>
+    </div>
+  } @else {
+    <p class="meta lanzador">
+      Únete a la mesa con un personaje para poder tirar.
+    </p>
+  }
+</article>

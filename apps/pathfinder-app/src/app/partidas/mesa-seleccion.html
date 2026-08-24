@@ -1,0 +1,228 @@
+<!-- El asiento se lee UNA vez: así el @if de la actitud estrecha el tipo,
+     igual que hacía el "as sel" de la mesa antes de partirse esto. -->
+@let sel = pep();
+
+<p class="rotulo">
+  Selección
+  @if (!puedeEditar()) {
+    <span>solo consulta</span>
+  }
+</p>
+
+<article class="tarjeta insp">
+  <header class="insp__cab">
+    <span
+      class="ficha ficha--grande"
+      [style.background]="colorToken(sel)"
+      aria-hidden="true"
+      >{{ iniciales(sel.nombre) }}</span
+    >
+    <div class="insp__quien">
+      <h2>
+        {{ sel.nombre }}
+        @if (sel.tipo === 'pnj' && sel.actitud) {
+          <span class="actitud" [style.background]="colorToken(sel)">
+            {{ actitudLabels[sel.actitud] }}
+          </span>
+        }
+        @if (sel.oculto) {
+          <span class="marca marca--oculto">oculto</span>
+        }
+      </h2>
+      <p class="insp__meta">
+        {{ sel.tipo === 'pnj' ? 'PNJ' : 'PJ' }} · nivel {{ sel.nivel }} ·
+        CA {{ sel.ca }}
+        @if (sel.ca !== sel.caBase) {
+          <span class="insp__derivado">(base {{ sel.caBase }})</span>
+        }
+        @if (sel.casillas > 1) {
+          · {{ sel.casillas }}×{{ sel.casillas }} casillas
+        }
+        @if (sel.jugador) {
+          · {{ sel.jugador }}
+        }
+      </p>
+      @if (sel.modAtaque || sel.modSalvaciones) {
+        <p class="insp__derivado">
+          Por condiciones:
+          @if (sel.modAtaque) {
+            ataque {{ sel.modAtaque }}
+          }
+          @if (sel.modAtaque && sel.modSalvaciones) {
+            ·
+          }
+          @if (sel.modSalvaciones) {
+            salvaciones {{ sel.modSalvaciones }}
+          }
+        </p>
+      }
+    </div>
+    <button
+      type="button"
+      class="insp__cerrar"
+      aria-label="Quitar la selección"
+      (click)="cerrar.emit()"
+    >
+      ✕
+    </button>
+  </header>
+
+  <section class="bloque">
+    <p class="bloque__rotulo">Puntos de golpe</p>
+    @if (sel.pgActuales !== undefined) {
+      <p class="pg">
+        <input
+          type="number"
+          class="pg__valor"
+          aria-label="Puntos de golpe actuales"
+          [value]="sel.pgActuales"
+          [attr.data-pep]="sel.id"
+          [disabled]="!puedeEditar()"
+          (change)="fijarPg.emit($any($event.target).value)"
+        />
+        @if (sel.pgTotal) {
+          <span class="pg__total">/ {{ sel.pgTotal }}</span>
+        }
+        @if (sel.estadoVital) {
+          <span [class]="'vital vital--' + sel.estadoVital">
+            {{ estadoVitalLabels[sel.estadoVital] }}
+          </span>
+        }
+      </p>
+      @if (fraccionPg(sel) !== null) {
+        <span class="pgbar pgbar--ancha">
+          <i
+            [class]="'pgbar__relleno pgbar__relleno--' + (sel.estadoVital ?? 'ileso')"
+            [style.width.%]="(fraccionPg(sel) ?? 0) * 100"
+          ></i>
+        </span>
+      }
+      @if (puedeEditar()) {
+        <!-- Por CANTIDAD, que es como se canta en la mesa ("ocho
+             de daño"), en vez de restar de cabeza. -->
+        <div class="pg__acciones">
+          <input
+            type="number"
+            min="1"
+            class="pg__cantidad"
+            aria-label="Cantidad de daño o curación"
+            [value]="cantidadPg()"
+            (change)="cantidadPg.set(+$any($event.target).value || 1)"
+          />
+          <button
+            type="button"
+            class="boton boton--dano"
+            (click)="ajustarPg.emit(-1)"
+          >
+            Daño
+          </button>
+          <button
+            type="button"
+            class="boton boton--cura"
+            (click)="ajustarPg.emit(1)"
+          >
+            Curar
+          </button>
+        </div>
+      }
+    } @else if (sel.estadoVital) {
+      <p class="pg">
+        <span [class]="'vital vital--' + sel.estadoVital">
+          {{ estadoVitalLabels[sel.estadoVital] }}
+        </span>
+        <span class="insp__derivado">los PG exactos son del máster</span>
+      </p>
+    } @else {
+      <p class="meta">Sin PG anotados.</p>
+    }
+  </section>
+
+  <section class="bloque">
+    <p class="bloque__rotulo">Condiciones</p>
+    <div class="chips">
+      @for (id of sel.condiciones; track id) {
+        <span class="chip">
+          {{ nombreCondicion(id) }}
+          @if (puedeEditar()) {
+            <button
+              type="button"
+              class="chip__quitar"
+              [attr.aria-label]="'Quitar ' + nombreCondicion(id)"
+              (click)="quitarCondicion.emit(id)"
+            >
+              ✕
+            </button>
+          }
+        </span>
+      } @empty {
+        <span class="meta">Ninguna.</span>
+      }
+    </div>
+    @if (puedeEditar()) {
+      <select
+        class="chips__anadir"
+        aria-label="Añadir una condición"
+        (change)="
+          anadirCondicion.emit($any($event.target).value);
+          $any($event.target).value = ''
+        "
+      >
+        <option value="">+ añadir condición…</option>
+        @for (c of condicionesDisponibles(sel); track c.id) {
+          <option [value]="c.id">{{ c.nombre }}</option>
+        }
+      </select>
+    }
+    <!-- La descripción vive AQUÍ, de una en una: es material de
+         consulta y en la lista ocupaba sitio de estado de mesa. -->
+    @for (id of sel.condiciones; track id) {
+      <p class="condicion">
+        <strong>{{ nombreCondicion(id) }}:</strong>
+        {{ descripcionCondicion(id) }}
+      </p>
+    }
+  </section>
+
+  <section class="bloque">
+    <p class="bloque__rotulo">Iniciativa</p>
+    <p class="ini">
+      <input
+        type="number"
+        class="ini__valor"
+        aria-label="Iniciativa"
+        [value]="sel.iniciativa ?? ''"
+        [disabled]="!puedeEditar()"
+        (change)="fijarIniciativa.emit($any($event.target).value)"
+      />
+      <span class="insp__derivado">
+        mod {{ sel.iniciativaMod >= 0 ? '+' : '' }}{{ sel.iniciativaMod }}
+      </span>
+      @if (puedeEditar()) {
+        <button type="button" class="boton" (click)="tirarIniciativa.emit()">
+          Tirar
+        </button>
+      }
+    </p>
+  </section>
+
+  <footer class="insp__acciones">
+    <button type="button" class="boton" (click)="verFicha.emit()">
+      Ver ficha
+    </button>
+    @if (puedeEditar()) {
+      <!-- Revelar es cosa del máster: es SU emboscada -->
+      @if (esMaster() && sel.tipo === 'pnj') {
+        <button type="button" class="boton" (click)="alternarOculto.emit()">
+          {{ sel.oculto ? 'Revelar' : 'Ocultar' }}
+        </button>
+      }
+      <button
+        type="button"
+        class="boton boton--peligro"
+        (click)="sacar.emit()"
+      >
+        Sacar de la mesa
+      </button>
+    }
+  </footer>
+</article>

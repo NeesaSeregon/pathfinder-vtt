@@ -1,0 +1,189 @@
+// Vocabulario visual compartido por las zonas de la mesa. Vive en un parcial
+// y no en styles.scss a propósito: ".tarjeta", ".rotulo" y ".boton" son
+// nombres demasiado genéricos para soltarlos en el ámbito global, pero los
+// usan varias zonas y no deben divergir. Cada zona hace @use de esto y se
+// lleva su copia encapsulada.
+
+// El rotulillo en versales que encabeza cada zona. El <span> es la coletilla
+// explicativa ("solo consulta", "nada seleccionado"), en minúscula y fina.
+.rotulo {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  span {
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-weight: 400;
+  }
+}
+
+.tarjeta {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+
+  svg {
+    width: 0.9rem;
+    height: 0.9rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Lo irreversible se ve que lo es */
+  &--peligro {
+    background: none;
+    border-color: rgba(255, 107, 129, 0.5);
+    color: var(--danger);
+
+    &:hover:not(:disabled) {
+      color: var(--bg);
+      background: var(--danger);
+      border-color: var(--danger);
+      box-shadow: none;
+    }
+  }
+
+  &--dano {
+    border-color: rgba(224, 82, 82, 0.55);
+    color: var(--actitud-enemigo);
+  }
+
+  &--cura {
+    border-color: rgba(91, 181, 106, 0.55);
+    color: var(--actitud-aliado);
+  }
+}
+
+// El texto gris de apoyo: vacíos, avisos y pies de zona.
+.meta {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+// -- El asiento: cómo se ve una persona sentada a la mesa -------------------
+// Lo comparten el token del tablero, la fila de la lista y la cabecera del
+// panel: si divergen, dejan de reconocerse como la misma persona.
+
+/* Avatar circular con iniciales: el mismo lenguaje que el token del tablero */
+.ficha {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0c1018;
+  font-weight: 800;
+  font-size: 0.68rem;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    inset 0 1px 2px rgba(255, 255, 255, 0.35);
+
+  &--grande {
+    width: 2.4rem;
+    height: 2.4rem;
+    font-size: 0.85rem;
+  }
+}
+
+.marca {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  white-space: nowrap;
+
+  &--oculto {
+    border: 1px dashed var(--text-faint);
+    color: var(--text-faint);
+  }
+
+  &--mio {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+  }
+}
+
+// -- Barra de PG y tramo vital ---------------------------------------------
+.pgbar {
+  flex: 1;
+  min-width: 2.5rem;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+
+  &--ancha {
+    display: block;
+    flex: none;
+    width: 100%;
+    height: 6px;
+  }
+
+  &__relleno {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--actitud-aliado);
+
+    &--herido {
+      background: var(--token-2);
+    }
+
+    &--malherido,
+    &--caido {
+      background: var(--actitud-enemigo);
+    }
+  }
+}
+
+.vital {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  white-space: nowrap;
+
+  &--ileso {
+    color: var(--actitud-aliado);
+    border-color: var(--actitud-aliado);
+  }
+
+  &--herido {
+    color: var(--token-2);
+    border-color: var(--token-2);
+  }
+
+  &--malherido,
+  &--caido {
+    color: var(--actitud-enemigo);
+    border-color: var(--actitud-enemigo);
+  }
+}

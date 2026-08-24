@@ -335,30 +335,9 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   No hay migración: estadoVital es derivado, como la CA o la iniciativa.
 
 ## Mejoras futuras
-- PRIORITARIA — PARTIR LA MESA EN COMPONENTES. PartidaDetallePage se ha
-  quedado enorme tras el rediseño del 2026-08-24: ~900 líneas de plantilla y
-  una hoja de estilos de 17,1 kB. El presupuesto anyComponentStyle de
-  apps/pathfinder-app/project.json ha tenido que subir DOS veces (10/16 kB →
-  14/20 kB); NO se sube una tercera, se parte. Antes de subirlo ya se sacó a
-  styles.scss lo que estaba duplicado con otras páginas (.overlay/.modal y
-  .pestanas/.pestana): eso ya está hecho y no vuelve a dar margen.
-  El rediseño dejó las costuras marcadas — cada zona es un componente:
-  · MesaBarra: barra + menú del máster + estado de la conexión.
-  · MesaPersonas: rastreador de combate + tarjeta de tu personaje + lista.
-  · MesaSeleccion: el panel del asiento elegido (PG, condiciones, iniciativa).
-  · MesaRegistro: tiradas + lanzador.
-  · MesaTablero: marco, rejilla, tokens, banquillo, herramientas y regla.
-  · PnjModal: el diálogo de sembrar PNJ, que es el trozo MÁS SUELTO de todos
-    (su estado —modoPnj, cantidad/actitud/oculto de la siembra— es puramente
-    suyo) y por eso el mejor primer paso.
-  Empezar por PnjModal y MesaRegistro (los de menos acoplamiento) y dejar
-  MesaTablero para el final: arrastra el agarre, la medición y el viewChild
-  del marco. El estado de la partida se queda en la página y baja por
-  inputs; lo que cambia sube por outputs — nada de que cada trozo pida la
-  partida por su cuenta.
-  Se pospuso el 2026-08-24 por no meter una refactorización grande en un
-  turno de arreglar defectos visibles, pero bloquea lo siguiente que traiga
-  estilos (plantillas de área, niebla, la vista de tablet).
+- (HECHO el 2026-08-24: PARTIR LA MESA EN COMPONENTES. Ver la sección
+  "La mesa, por dentro" del Estado actual. El presupuesto anyComponentStyle
+  volvió a 10/16 kB, que es donde estaba antes del rediseño.)
 - PNJ: pendientes de una segunda vuelta si hacen falta en mesa — ataques y
   daño en el bloque corto (hoy solo lo que el tablero muestra: CA, PG,
   iniciativa y tamaño; lo demás se rellena editando la ficha completa) y
@@ -465,6 +444,34 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   /cuenta tiene cuatro bloques: Datos, Tu material (cifras), Contraseña
   (cambio plegado, con actual + nueva + repetición) y Sesión, más la zona
   peligrosa del borrado al final.
+- LA MESA, POR DENTRO (partida en /partidas/:id, partido el 2026-08-24).
+  PartidaDetallePage ya NO pinta nada: es el dueño del estado y el único que
+  habla con la API y con el socket. Cada zona del rediseño es un componente
+  y recibe lo que pinta por inputs; lo que cambia sube por outputs. Ningún
+  trozo pide la partida por su cuenta.
+  · MesaBarra: barra + menú del máster + estado de la conexión. Sustituye a
+    la navbar general dentro de una partida (ver App.enLaMesa).
+  · MesaPersonas: tu tarjeta + rastreador de combate + LA lista. Suyo es el
+    ORDEN (computed grupos): en combate manda la iniciativa; fuera, grupos
+    Jugadores y luego PNJ por orden de llegada, nunca alfabético.
+  · MesaTablero: rejilla, tokens, banquillo, herramientas y regla. Suyo es
+    todo el GESTO — herramienta activa, medición, arrastre y el agarre del
+    marco (viewChild marcoTablero) —; de ahí solo salen (seleccionar) y
+    (mover).
+  · MesaSeleccion: el panel del asiento elegido. Solo existe cuando hay
+    selección, así que recibe el pep como input.required, no como null.
+  · MesaRegistro: tiradas + lanzador. Sin selección se lleva la columna.
+  · PnjModal: la siembra de PNJ, con sus dos pestañas.
+  Dos ficheros de apoyo, para que las tres zonas dibujen igual a la misma
+  gente: mesa-visual.ts (funciones puras: colorToken, iniciales, ladoToken,
+  fraccionPg, esCaido, nombres de condición) y el parcial _mesa-comun.scss
+  (.rotulo, .tarjeta, .boton, .ficha, .marca, .pgbar, .vital), que cada zona
+  hace @use — no van a styles.scss porque son nombres demasiado genéricos
+  para el ámbito global.
+  La rejilla de tres columnas y sus puntos de corte se quedan en la página;
+  la caja de cada zona la pone el :host de su componente.
+  Cada zona tiene su spec (124 tests en la app); los de la página siguen
+  siendo de integración y atraviesan los hijos.
 - Partidas: entidad Partida (el creador es el máster; código de invitación
   de 6 caracteres, visible solo para él) y PersonajeEnPartida (tabla
   intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la

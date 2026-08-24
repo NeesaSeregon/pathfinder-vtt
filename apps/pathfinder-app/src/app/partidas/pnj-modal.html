@@ -1,0 +1,112 @@
+<div
+  class="overlay"
+  (click)="onOverlay($event)"
+  (keyup.escape)="cerrar.emit()"
+  role="presentation"
+>
+  <div class="modal" role="dialog" aria-modal="true">
+    <header>
+      <h2>Añadir PNJ</h2>
+      <button type="button" aria-label="Cerrar" (click)="cerrar.emit()">
+        ✕
+      </button>
+    </header>
+
+    <!-- Dos caminos: reutilizar del bestiario o crear uno nuevo -->
+    <div class="pestanas" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        class="pestana" [class.pestana--activa]="modo() === 'bestiario'"
+        [attr.aria-selected]="modo() === 'bestiario'"
+        (click)="modo.set('bestiario')"
+      >
+        Del bestiario ({{ bestiario().length }})
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="pestana" [class.pestana--activa]="modo() === 'nuevo'"
+        [attr.aria-selected]="modo() === 'nuevo'"
+        (click)="modo.set('nuevo')"
+      >
+        Crear uno nuevo
+      </button>
+    </div>
+
+    @if (modo() === 'bestiario') {
+      @if (!hayPlantillas()) {
+        <p class="siembra__meta">
+          Tu bestiario está vacío. Crea un monstruo en la otra pestaña y se
+          guardará aquí para las próximas sesiones.
+        </p>
+      } @else {
+        <!-- Estas tres opciones valen para el que elijas: se rellenan antes
+             de pulsar, no hay un segundo paso. -->
+        <div class="siembra__opciones">
+          <label>
+            Cantidad
+            <input
+              type="number"
+              name="cantidadPlantilla"
+              min="1"
+              [value]="cantidad()"
+              (change)="cantidad.set(+$any($event.target).value || 1)"
+            />
+          </label>
+          <label>
+            Actitud
+            <select
+              name="actitudPlantilla"
+              (change)="actitud.set($any($event.target).value)"
+            >
+              @for (a of actitudes; track a) {
+                <option [value]="a" [selected]="a === actitud()">
+                  {{ actitudLabels[a] }}
+                </option>
+              }
+            </select>
+          </label>
+          <label class="siembra__oculto">
+            <input
+              type="checkbox"
+              name="ocultoPlantilla"
+              [checked]="oculto()"
+              (change)="oculto.set($any($event.target).checked)"
+            />
+            Empezar oculto
+          </label>
+        </div>
+
+        @if (error(); as mensaje) {
+          <p class="siembra__error" role="alert">{{ mensaje }}</p>
+        }
+
+        <ul class="siembra__lista">
+          @for (plantilla of bestiario(); track plantilla.id) {
+            <li>
+              <div>
+                <strong>{{ plantilla.name }}</strong>
+                <small>nivel {{ plantilla.level }}</small>
+              </div>
+              <button
+                type="button"
+                [disabled]="guardando()"
+                (click)="sembrarPlantilla(plantilla.id)"
+              >
+                Traer al tablero
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    } @else {
+      <app-pnj-form
+        [guardando]="guardando()"
+        [error]="error()"
+        (crear)="crear.emit($event)"
+        (cancelar)="cerrar.emit()"
+      />
+    }
+  </div>
+</div>
