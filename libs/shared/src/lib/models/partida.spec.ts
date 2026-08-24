@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { estadoVitalDe, ordenarIniciativa } from './partida';
+import {
+  distanciaEnCasillas,
+  estadoVitalDe,
+  ordenarIniciativa,
+} from './partida';
 
 describe('ordenarIniciativa', () => {
   it('ordena por iniciativa descendente', () => {
@@ -77,5 +81,35 @@ describe('estadoVitalDe', () => {
   it('sin PG actuales no se pronuncia', () => {
     expect(estadoVitalDe(null, 31)).toBeNull();
     expect(estadoVitalDe(undefined, 31)).toBeNull();
+  });
+});
+
+describe('distanciaEnCasillas', () => {
+  it('en linea recta es el numero de casillas', () => {
+    expect(distanciaEnCasillas(3, 3, 3, 8)).toBe(5);
+    expect(distanciaEnCasillas(3, 3, 9, 3)).toBe(6);
+  });
+
+  // La regla 5-10-5 de PF1e: la 1a diagonal cuenta 1 y la 2a cuenta 2.
+  it('la primera diagonal cuenta 1', () => {
+    expect(distanciaEnCasillas(0, 0, 1, 1)).toBe(1);
+  });
+
+  it('dos diagonales cuentan 3', () => {
+    expect(distanciaEnCasillas(0, 0, 2, 2)).toBe(3);
+  });
+
+  it('cuatro diagonales cuentan 6', () => {
+    expect(distanciaEnCasillas(0, 0, 4, 4)).toBe(6);
+  });
+
+  it('mezcla recto y diagonal: el lado largo mas la mitad del corto', () => {
+    // 4 columnas y 2 filas = 2 diagonales (1+2) + 2 rectas = 5 casillas
+    expect(distanciaEnCasillas(0, 0, 4, 2)).toBe(5);
+  });
+
+  it('es simetrica y no negativa', () => {
+    expect(distanciaEnCasillas(9, 7, 2, 4)).toBe(distanciaEnCasillas(2, 4, 9, 7));
+    expect(distanciaEnCasillas(5, 5, 5, 5)).toBe(0);
   });
 });

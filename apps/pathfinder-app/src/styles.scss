@@ -199,6 +199,73 @@ legend {
   }
 }
 
+/* Diálogo sobre fondo oscurecido. Estaba copiado en cada página que abría
+   una modal; vive aquí para que todas se abran igual. El ancho se ajusta
+   con un modificador propio de cada página (.modal--editando y compañía). */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 10, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 30;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  max-width: 42rem;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.6);
+
+  > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+
+    h2 {
+      margin: 0;
+    }
+  }
+}
+
+/* Pestañas. También estaban copiadas en cada página que las usa. */
+.pestanas {
+  display: flex;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.pestana {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0.45rem 0.8rem;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--activa {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+}
+
 /* Nota para secciones aún sin funcionalidad */
 .aviso-construccion {
   margin-top: 1.25rem;

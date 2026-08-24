@@ -1,4 +1,4 @@
-import { Service } from '@angular/core';
+import { Service, signal } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import {
   EstadoPersonajeEvento,
@@ -30,13 +30,23 @@ export interface EscuchasDeMesa {
 export class PartidaSocket {
   private socket: Socket | null = null;
 
+  private readonly enLinea = signal(false);
+  /**
+   * ¿Está viva la conexión ahora mismo? La mesa lo pinta ("En vivo") en vez
+   * de tener un botón Actualizar permanente: el botón solo tiene sentido
+   * cuando esto es false, y entonces sí hace falta de verdad.
+   */
+  readonly conectado = this.enLinea.asReadonly();
+
   conectar(partidaId: string, escuchas: EscuchasDeMesa): void {
     this.desconectar();
     this.socket = io({ path: '/socket.io' });
     // Al (re)conectar, entra a la sala: cubre también cortes de red
     this.socket.on('connect', () => {
+      this.enLinea.set(true);
       this.socket?.emit(EVENTO_ENTRAR_SALA, { partidaId });
     });
+    this.socket.on('disconnect', () => this.enLinea.set(false));
     this.socket.on(EVENTO_ESTADO_PERSONAJE, escuchas.onEstadoPersonaje);
     this.socket.on(EVENTO_MESA_CAMBIADA, escuchas.onMesaCambiada);
     this.socket.on(EVENTO_MESA_ELIMINADA, escuchas.onMesaEliminada);
@@ -46,5 +56,6 @@ export class PartidaSocket {
   desconectar(): void {
     this.socket?.disconnect();
     this.socket = null;
+    this.enLinea.set(false);
   }
 }

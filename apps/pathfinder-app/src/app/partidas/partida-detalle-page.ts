@@ -7,7 +7,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
@@ -19,11 +19,13 @@ import {
   CONDICIONES,
   CrearPnj,
   CONDICION_POR_ID,
+  distanciaEnCasillas,
   ESTADO_VITAL_LABELS,
   EstadoPersonajeEvento,
   ordenarIniciativa,
   PartidaDetalle,
   PersonajeEnPartidaResumen,
+  PIES_POR_CASILLA,
   TABLERO_ALTO,
   TABLERO_ANCHO,
   TiradaResultado,
@@ -46,7 +48,7 @@ const UMBRAL_AGARRE = 5;
 
 @Component({
   selector: 'app-partida-detalle-page',
-  imports: [FichaVista, CharacterForm, PnjForm],
+  imports: [RouterLink, FichaVista, CharacterForm, PnjForm],
   templateUrl: './partida-detalle-page.html',
   styleUrl: './partida-detalle-page.scss',
 })
@@ -138,17 +140,112 @@ export class PartidaDetallePage {
   /** Para preguntar antes de descartar cambios sin guardar (form.sucio()). */
   private readonly formularioFicha = viewChild(CharacterForm);
 
-  /** Combatientes (los que han tirado) en orden de turno, como el servidor. */
-  protected readonly ordenIniciativa = computed(() =>
-    ordenarIniciativa(
-      (this.partida()?.personajes ?? []).filter((p) => p.iniciativa !== null),
+  /**
+   * LA lista de personas de la mesa, en el único orden que hay. Sustituye a
+   * tener las fichas por un lado y el orden de iniciativa por otro: era la
+   * misma gente dos veces y obligaba a cruzar la pantalla con la mirada.
+   *
+   * En combate manda la iniciativa; fuera, dos grupos estables —Jugadores y
+   * luego PNJ, cada uno por orden de llegada—. La regla de oro es que la
+   * lista NO se reordene sola bajo el dedo: el único reordenamiento es el de
+   * iniciar combate, que es explícito y se espera.
+   */
+  protected readonly grupos = computed<
+    { titulo: string | null; gente: PersonajeEnPartidaResumen[] }[]
+  >(() => {
+    const gente = this.partida()?.personajes ?? [];
+    if (this.partida()?.enCombate) {
+      const conIniciativa = ordenarIniciativa(
+        gente.filter((p) => p.iniciativa !== null),
+      );
+      const sinTirar = gente.filter((p) => p.iniciativa === null);
+      return [
+        { titulo: null, gente: conIniciativa },
+        { titulo: 'Sin iniciativa', gente: sinTirar },
+      ].filter((g) => g.gente.length > 0);
+    }
+    return [
+      { titulo: 'Jugadores', gente: gente.filter((p) => p.tipo === 'pj') },
+      { titulo: 'PNJ', gente: gente.filter((p) => p.tipo === 'pnj') },
+    ].filter((g) => g.gente.length > 0);
+  });
+
+  /** El asiento seleccionado, que es lo que pinta el panel de la derecha. */
+  protected readonly pepSeleccionado = computed(() => {
+    const id = this.seleccionado();
+    return id
+      ? (this.partida()?.personajes.find((p) => p.id === id) ?? null)
+      : null;
+  });
+
+  /** Quién tiene el turno ahora mismo (null fuera de combate). */
+  protected readonly turnoDe = computed(() => {
+    const p = this.partida();
+    return p?.personajes.find((pep) => pep.id === p.turnoPepId) ?? null;
+  });
+
+  /**
+   * ¿Hay una ficha esperando destino? Seleccionar es CONSULTAR, así que las
+   * casillas solo se marcan como destino cuando además puedes mover lo
+   * seleccionado: si no, mirar a un enemigo iluminaría medio tablero.
+   */
+  protected readonly hayDestino = computed(() => {
+    const id = this.arrastrando() ?? this.seleccionado();
+    const pep = this.partida()?.personajes.find((p) => p.id === id);
+    return !!pep && this.puedeMover(pep);
+  });
+
+  /** Cantidad del golpe o la cura que se va a aplicar al seleccionado. */
+  protected readonly cantidadPg = signal(1);
+
+  /**
+   * TUS personajes en la mesa: la tarjeta fija de arriba a la izquierda. Un
+   * jugador no debería tener que buscarse en la lista, y puede traer más de
+   * uno. Solo PJ: al máster, esMio le sale true en todos SUS PNJ, y una
+   * tarjeta por goblin no es lo que nadie quiere.
+   */
+  protected readonly misPjs = computed(() =>
+    (this.partida()?.personajes ?? []).filter(
+      (pep) => pep.esMio && pep.tipo === 'pj',
     ),
   );
+
+  /**
+   * Herramienta activa del tablero. Es el contenedor que faltaba: sin un
+   * modo activo, medir, plantillas o niebla no tienen dónde vivir.
+   */
+  protected readonly herramienta = signal<'seleccionar' | 'medir'>(
+    'seleccionar',
+  );
+
+  /** Medición en curso o recién terminada (se borra al cambiar de tarea). */
+  protected readonly medicion = signal<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  } | null>(null);
+
+  /** Casillas y pies de la medición, con la regla 5-10-5 de PF1e. */
+  protected readonly distancia = computed(() => {
+    const m = this.medicion();
+    if (!m) {
+      return null;
+    }
+    const casillas = distanciaEnCasillas(m.x1, m.y1, m.x2, m.y2);
+    return { casillas, pies: casillas * PIES_POR_CASILLA };
+  });
+
+  /** Menú de acciones del máster (mapa, código, cerrar la mesa). */
+  protected readonly menuMaster = signal(false);
+
+  /** Público: la barra de la mesa pinta si la conexión está viva. */
+  protected readonly socket = inject(PartidaSocket);
 
   constructor() {
     this.cargar();
     // Tiempo real: los cambios de otros llegan solos por el socket
-    const socket = inject(PartidaSocket);
+    const socket = this.socket;
     socket.conectar(this.partidaId, {
       onEstadoPersonaje: (evento) => this.aplicarEvento(evento),
       onMesaCambiada: () => this.cargar(),
@@ -243,20 +340,116 @@ export class PartidaDetallePage {
   }
 
   protected clickCelda(x: number, y: number): void {
+    // Con la regla en la mano no se mueve a nadie sin querer
+    if (this.herramienta() === 'medir') {
+      return;
+    }
     const ocupante = this.ocupanteDe(x, y);
     if (ocupante) {
-      // Clic sobre un token: selecciona (o deselecciona) si puedes moverlo
-      if (this.puedeMover(ocupante)) {
-        this.seleccionado.set(
-          this.seleccionado() === ocupante.id ? null : ocupante.id,
-        );
-      }
+      // Seleccionar es CONSULTAR: cualquiera puede mirar a cualquiera y
+      // verlo en el panel de la derecha. Mover ya es otra cosa, y para eso
+      // sigue mandando puedeMover() más abajo.
+      this.seleccionar(ocupante);
       return;
     }
     const pepId = this.seleccionado();
-    if (pepId) {
+    const pep = this.pepSeleccionado();
+    if (pepId && pep && this.puedeMover(pep)) {
       this.mover(pepId, x, y);
     }
+  }
+
+  /** Cambia de herramienta; al salir de medir se borra lo medido. */
+  protected usarHerramienta(cual: 'seleccionar' | 'medir'): void {
+    this.herramienta.set(cual);
+    this.medicion.set(null);
+  }
+
+  /** La casilla que hay bajo el puntero, leída del DOM (data-x / data-y). */
+  private casillaEn(evento: PointerEvent): { x: number; y: number } | null {
+    const bajo = document
+      .elementFromPoint(evento.clientX, evento.clientY)
+      ?.closest('.tablero__celda') as HTMLElement | null;
+    const x = bajo?.dataset['x'];
+    const y = bajo?.dataset['y'];
+    if (x === undefined || y === undefined) {
+      return null;
+    }
+    return { x: +x, y: +y };
+  }
+
+  /**
+   * Medir es arrastrar de casilla a casilla. Lo medido SE QUEDA en pantalla
+   * al soltar: en mesa se pregunta "¿llego?" y se mira la respuesta con
+   * calma, no de un vistazo mientras se sujeta el botón.
+   */
+  protected empezarMedicion(evento: PointerEvent): void {
+    const desde = this.casillaEn(evento);
+    if (!desde) {
+      return;
+    }
+    evento.preventDefault();
+    this.medicion.set({ x1: desde.x, y1: desde.y, x2: desde.x, y2: desde.y });
+
+    const mover = (e: PointerEvent) => {
+      const hasta = this.casillaEn(e);
+      const actual = this.medicion();
+      if (hasta && actual) {
+        this.medicion.set({ ...actual, x2: hasta.x, y2: hasta.y });
+      }
+    };
+    const soltar = () => {
+      document.removeEventListener('pointermove', mover);
+      document.removeEventListener('pointerup', soltar);
+      document.removeEventListener('pointercancel', soltar);
+    };
+    document.addEventListener('pointermove', mover);
+    document.addEventListener('pointerup', soltar);
+    document.addEventListener('pointercancel', soltar);
+  }
+
+  /** Selecciona (o deselecciona) un asiento: es lo que llena el panel. */
+  protected seleccionar(pep: PersonajeEnPartidaResumen): void {
+    this.seleccionado.set(this.seleccionado() === pep.id ? null : pep.id);
+  }
+
+  /**
+   * Golpe o cura por CANTIDAD, que es como se canta en la mesa ("ocho de
+   * daño"), en vez de obligar a restar de cabeza y reescribir el total.
+   * Los PG pueden bajar de cero: en PF1e ahí empieza lo interesante.
+   */
+  protected ajustarPg(pep: PersonajeEnPartidaResumen, signo: 1 | -1): void {
+    const actual = pep.pgActuales;
+    if (actual === null || actual === undefined) {
+      return;
+    }
+    const cantidad = Math.trunc(this.cantidadPg());
+    if (!Number.isFinite(cantidad) || cantidad <= 0) {
+      return;
+    }
+    let pgActuales = actual + signo * cantidad;
+    // Curar no sube por encima del total; el daño no tiene suelo.
+    if (signo === 1 && pep.pgTotal !== undefined) {
+      pgActuales = Math.min(pgActuales, pep.pgTotal);
+    }
+    this.aplicarCambio(pep.id, { pgActuales });
+  }
+
+  /** Fracción de PG que queda (0..1), para la barra. Null si no se sabe. */
+  protected fraccionPg(pep: PersonajeEnPartidaResumen): number | null {
+    if (
+      pep.pgActuales === null ||
+      pep.pgActuales === undefined ||
+      !pep.pgTotal
+    ) {
+      return null;
+    }
+    return Math.max(0, Math.min(1, pep.pgActuales / pep.pgTotal));
+  }
+
+  /** A 0 PG se marca, pero NO sale de la iniciativa: sigue en su sitio. */
+  protected esCaido(pep: PersonajeEnPartidaResumen): boolean {
+    return pep.estadoVital === 'caido';
   }
 
   /** El máster sube (o reemplaza) el mapa de fondo de la mesa. */
@@ -391,6 +584,11 @@ export class PartidaDetallePage {
    */
   protected empezarAgarre(evento: PointerEvent): void {
     if (evento.button !== 0) return;
+    // Con la regla activa, el gesto es medir, no recorrer el tablero
+    if (this.herramienta() === 'medir') {
+      this.empezarMedicion(evento);
+      return;
+    }
     const destino = evento.target as HTMLElement | null;
     if (destino?.closest('.tablero__token')) return;
 
@@ -442,9 +640,7 @@ export class PartidaDetallePage {
   }
 
   protected seleccionarDelBanquillo(pep: PersonajeEnPartidaResumen): void {
-    if (this.puedeMover(pep)) {
-      this.seleccionado.set(this.seleccionado() === pep.id ? null : pep.id);
-    }
+    this.seleccionar(pep);
   }
 
   protected guardarPg(pep: PersonajeEnPartidaResumen, valor: string): void {

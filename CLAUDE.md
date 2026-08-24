@@ -555,10 +555,9 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
 - Vista de partida en /partidas/:id: es la ÚNICA página A SANGRE (sin
   max-width; las demás siguen centradas y acotadas). Es la pantalla de
   trabajo: las columnas se pegan a los extremos del monitor y el tablero
-  queda centrado entre ellas. Los paneles crecen con clamp(21rem, 20vw,
-  27rem) y clamp(23rem, 21vw, 29rem) — con tope, porque pasado un punto un
-  panel más ancho solo aleja el tablero del centro. El padding lateral
-  coincide con el de la navbar (1.25rem) para que todo alinee. Tablero
+  queda centrado entre ellas. Las zonas crecen con clamp(18rem, 19vw, 23rem)
+  y clamp(21rem, 23vw, 27rem) — con tope, porque pasado un punto una zona
+  más ancha solo aleja el tablero del centro. Tablero
   responsive (rejilla de casillas cuadradas por aspect-ratio). Mide 24 de
   ancho × 30 de alto (TABLERO_ANCHO/TABLERO_ALTO en libs/shared), la medida
   de los mapas grandes de PF1e; hasta 2026-07-20 era 20×15. OJO: el .scss
@@ -580,25 +579,57 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
     EXACTAMENTE el alto de la ventana y no hay scroll de página: body tiene
     height:100vh (no min-height: con min-height el body crece con su
     contenido y no hay tope contra el que repartir) + display:flex, y la
-    cadena app-root → :host → .mesa → .mesa__contenido baja con flex:1 y
-    min-height:0. .mesa__contenido declara grid-template-rows: minmax(0,1fr)
+    cadena app-root → :host → .mesa → .mesa__cuerpo baja con flex:1 y
+    min-height:0. .mesa__cuerpo declara grid-template-rows: minmax(0,1fr)
     porque contra una fila automática el tablero no tendría contra qué
     medirse. Los paneles laterales ya no son sticky: sin scroll de página no
     hace falta.
   · A ≤85rem se vuelve al flujo normal (display:block, tablero entero y
     scroll de página): ahí los personajes van debajo y no cabe de una
     pantallada.
-  Y TRES columnas por grid-template-areas
-  ('personajes tablero juego', 21rem | 1fr | 23rem): las fichas de los
-  personajes a la IZQUIERDA y combate + dados a la DERECHA. Antes iba todo
-  apilado en el panel derecho, que quedaba larguísimo y estrechaba el
-  tablero. Ambos paneles tienen scroll propio. Responsive:
-  a ≤85rem los personajes bajan a lo ancho bajo el tablero en rejilla de
-  tarjetas (auto-fill, 18rem) y a ≤60rem va todo en una columna. Tokens = avatares circulares con color propio por
-  personaje (paleta --token-0..5 en styles.scss; colorToken() elige por hash
-  del nombre). Mover en dos clics (banquillo para los no colocados), PG y
-  condiciones editables y CA derivada POR EL SERVIDOR. Permisos: máster toca
-  todo, cada jugador lo suyo (PATCH /api/partidas/:id/personajes/:pepId).
+  REDISEÑO DE LA MESA (2026-08-24). La pantalla tiene CINCO contenedores con
+  un significado claro, y toda función nueva entra por uno de ellos; si no
+  encaja en ninguno, falta una zona y eso es una decisión de diseño, no un
+  botón más en la cabecera. Era justo el fallo de antes: la cabecera era una
+  fila plana donde "Cerrar mesa" pesaba lo mismo que subir un mapa.
+  1. BARRA DE MESA (.barra): sustituye a la navbar general — App.enLaMesa la
+     esconde en /partidas/:id (ojo: /partidas/crear NO es una mesa y sí la
+     lleva). Trae nombre, máster, el estado de la conexión, el código, el
+     único botón de uso continuo ("+ Añadir PNJ") y el menú "Máster" con lo
+     demás (mapa, código, y al final y marcado, cerrar la mesa).
+     El antiguo botón "Actualizar" permanente es ahora un indicador "En
+     vivo" (PartidaSocket.conectado); recargar a mano solo se ofrece cuando
+     el socket está caído, que es cuando sirve de algo.
+  2. PERSONAS (izquierda): UNA sola lista. Antes eran dos —las fichas a la
+     izquierda y el orden de iniciativa a la derecha— con la misma gente
+     repetida y la mirada cruzando la pantalla. En combate manda la
+     iniciativa; fuera, dos grupos estables (Jugadores y luego PNJ, por
+     orden de llegada). Nunca alfabético: con "Ogro veterano 2 y 3" destroza
+     la lectura del encuentro. La lista NO se reordena sola: el único
+     reordenamiento es el de iniciar combate. El rastreador de combate
+     encabeza esta columna, no una aparte. Filas COMPACTAS de dos líneas
+     (nombre / barra de PG + condiciones); todo lo demás se fue al panel.
+  3. TABLERO (centro), con el banquillo como bandeja FLOTANTE sobre él: era
+     una franja a lo ancho que robaba alto permanente por un estado de paso.
+  4. SELECCIÓN (derecha, arriba): todo lo del token elegido en un sitio
+     fijo — PG (con daño y curación POR CANTIDAD, que es como se canta en
+     mesa, en vez de restar de cabeza), condiciones con su descripción,
+     iniciativa, ver ficha, ocultar y sacar. Seleccionar es CONSULTAR:
+     cualquiera puede mirar a cualquiera; mover sigue siendo de puedeMover.
+     Aquí es donde aterrizarán los efectos temporales y los ataques del PNJ.
+  5. REGISTRO (derecha, abajo): las tiradas. SIN selección se lleva la
+     columna entera — nada de cajas vacías.
+  Responsive: a ≤85rem Personas baja a lo ancho bajo el tablero en rejilla
+  (auto-fill, 16rem) y a ≤60rem va todo en una columna.
+  Tokens = avatares circulares con color propio por personaje (paleta
+  --token-0..5 en styles.scss; colorToken() elige por hash del nombre); el
+  del turno lleva anillo y el caído (0 PG) va gris y tachado, pero NO sale
+  de la iniciativa. Mover en dos clics (banquillo para los no colocados) y
+  CA derivada POR EL SERVIDOR. Permisos: máster toca todo, cada jugador lo
+  suyo (PATCH /api/partidas/:id/personajes/:pepId).
+  PENDIENTE del rediseño: la barra de herramientas del tablero (nace con
+  Medir), el zoom, la pestaña de Sucesos, tirar la iniciativa de los PNJ
+  sola al iniciar combate y la vista de tablet con hoja inferior.
 - Mapa de fondo del tablero: lo sube el MÁSTER (POST :id/mapa, multipart,
   campo "mapa"); GET :id/mapa lo sirve y DELETE :id/mapa lo quita. Se guarda
   EN DISCO, no en la BD: la columna partidas.mapaFichero solo lleva el nombre

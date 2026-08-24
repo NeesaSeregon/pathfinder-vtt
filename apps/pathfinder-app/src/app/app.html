@@ -1,40 +1,44 @@
-<header class="navbar">
-  <a class="navbar__marca" routerLink="/">Pathfinder <span>VTT</span></a>
+<!-- Dentro de una mesa NO hay navbar: la mesa trae su propia barra
+     (ver App.enLaMesa). El tablero se queda ese alto. -->
+@if (!enLaMesa()) {
+  <header class="navbar">
+    <a class="navbar__marca" routerLink="/">Pathfinder <span>VTT</span></a>
 
-  <nav class="navbar__enlaces" aria-label="Principal">
-    <a
-      class="navbar__enlace"
-      routerLink="/personajes"
-      routerLinkActive="navbar__enlace--activo"
-      >Personajes</a
-    >
-    <!-- El escritorio de la home (/) ya reúne tus mesas, crear y unirse:
-         este enlace lleva allí en vez de duplicarlo en un desplegable. -->
-    <a
-      class="navbar__enlace"
-      routerLink="/"
-      routerLinkActive="navbar__enlace--activo"
-      [routerLinkActiveOptions]="{ exact: true }"
-      >Mesas</a
-    >
-  </nav>
-
-  <div class="navbar__sesion">
-    @if (sesion.username(); as username) {
-      <span class="navbar__usuario">{{ username }}</span>
-      <button type="button" class="navbar__boton" (click)="salir()">
-        Salir
-      </button>
-    } @else {
+    <nav class="navbar__enlaces" aria-label="Principal">
       <a
         class="navbar__enlace"
-        routerLink="/entrar"
+        routerLink="/personajes"
         routerLinkActive="navbar__enlace--activo"
-        >Iniciar sesión</a
+        >Personajes</a
       >
-      <a class="navbar__boton" routerLink="/registro">Crear cuenta</a>
-    }
-  </div>
-</header>
+      <!-- El escritorio de la home (/) ya reúne tus mesas, crear y unirse:
+           este enlace lleva allí en vez de duplicarlo en un desplegable. -->
+      <a
+        class="navbar__enlace"
+        routerLink="/"
+        routerLinkActive="navbar__enlace--activo"
+        [routerLinkActiveOptions]="{ exact: true }"
+        >Mesas</a
+      >
+    </nav>
+
+    <div class="navbar__sesion">
+      @if (sesion.username(); as username) {
+        <span class="navbar__usuario">{{ username }}</span>
+        <button type="button" class="navbar__boton" (click)="salir()">
+          Salir
+        </button>
+      } @else {
+        <a
+          class="navbar__enlace"
+          routerLink="/entrar"
+          routerLinkActive="navbar__enlace--activo"
+          >Iniciar sesión</a
+        >
+        <a class="navbar__boton" routerLink="/registro">Crear cuenta</a>
+      }
+    </div>
+  </header>
+}
 
 <router-outlet></router-outlet>

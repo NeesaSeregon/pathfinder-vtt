@@ -113,6 +113,28 @@ export const PNJ_MAX_CANTIDAD = 12;
 export const TABLERO_ANCHO = 24;
 export const TABLERO_ALTO = 30;
 
+/** Pies que mide el lado de una casilla en PF1e. */
+export const PIES_POR_CASILLA = 5;
+
+/**
+ * Distancia entre dos casillas EN CASILLAS, con la regla de diagonales de
+ * PF1e: la primera diagonal cuenta 1 y la segunda 2 (el famoso 5-10-5), que
+ * en fórmula cerrada es "el lado largo más la mitad del corto".
+ *
+ * Pura y compartida para que la regla viva en UN sitio: hoy la usa la
+ * herramienta de medir del tablero, y mañana el alcance de movimiento.
+ */
+export function distanciaEnCasillas(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): number {
+  const dx = Math.abs(x2 - x1);
+  const dy = Math.abs(y2 - y1);
+  return Math.max(dx, dy) + Math.floor(Math.min(dx, dy) / 2);
+}
+
 /**
  * Cómo de tocada está una criatura, sin decir cuántos PG le quedan.
  * Decidido el 2026-08-24: los números exactos de un PNJ son del máster y

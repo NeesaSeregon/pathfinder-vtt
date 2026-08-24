@@ -61,6 +61,8 @@ describe('PartidaDetallePage', () => {
   const socketFalso = {
     conectar: (_id: string, e: EscuchasDeMesa) => (escuchas = e),
     desconectar: () => undefined,
+    // La barra de la mesa lo pinta ("En vivo"): en los tests, siempre viva
+    conectado: () => true,
   };
 
   beforeEach(async () => {
@@ -99,8 +101,9 @@ describe('PartidaDetallePage', () => {
   });
 
   // El servidor le recorta a un jugador los PG exactos de un PNJ y le manda
-  // solo el tramo. La página tiene que pintar eso, y sin campo editable.
-  it('un PNJ sin PG exactos se pinta con su tramo y sin campo', async () => {
+  // solo el tramo. La lista lo pinta, y el panel de Selección tampoco deja
+  // teclear un número que no se tiene.
+  it('un PNJ sin PG exactos: tramo en la lista y sin campo en el panel', async () => {
     const conOgro: PartidaDetalle = {
       ...DETALLE,
       esMaster: false,
@@ -135,17 +138,92 @@ describe('PartidaDetallePage', () => {
     httpMock.expectOne('/api/partidas/partida-1').flush(conOgro);
     await fixture.whenStable();
 
-    const tarjetas: HTMLElement[] = Array.from(
-      fixture.nativeElement.querySelectorAll('.mesa__personaje'),
-    );
-    const ogro = tarjetas.find((t) => t.textContent?.includes('Ogro veterano'));
-    expect(ogro?.textContent).toContain('Malherido');
-    // Sin número que teclear: no hay campo de PG en esa tarjeta
-    expect(ogro?.querySelector('.mesa__pg input')).toBeNull();
+    const filas = (): HTMLElement[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('.fila'));
+    const filaDe = (nombre: string) =>
+      filas().find((f) => f.textContent?.includes(nombre));
 
-    // Y el PJ, que sí trae números, conserva su campo
-    const pj = tarjetas.find((t) => t.textContent?.includes('Valeros'));
-    expect(pj?.querySelector('.mesa__pg input')).not.toBeNull();
+    // En la lista, el tramo en lugar de las cifras
+    expect(filaDe('Ogro veterano')?.textContent).toContain('Malherido');
+    expect(filaDe('Valeros')?.textContent).toContain('31/31');
+
+    // Seleccionarlo (que es CONSULTAR) abre el panel, y ahí no hay campo
+    filaDe('Ogro veterano')?.click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.insp').textContent).toContain(
+      'los PG exactos son del máster',
+    );
+    expect(fixture.nativeElement.querySelector('.pg__valor')).toBeNull();
+
+    // El PJ, que sí trae números, conserva su campo (deshabilitado: no es mío)
+    filaDe('Valeros')?.click();
+    fixture.detectChanges();
+    const campo: HTMLInputElement =
+      fixture.nativeElement.querySelector('.pg__valor');
+    expect(campo).not.toBeNull();
+    expect(campo.disabled).toBe(true);
+  });
+
+  // Se vio en pantalla: un PNJ creado sin PG totales (el formulario los deja
+  // en 0) dejaba la fila MUDA — ni barra, ni cifras, ni tramo — y parecía
+  // rota. Y al máster le salía "tú" en cada goblin suyo.
+  it('sin PG totales la fila dice el número, y "tú" solo en tu PJ', async () => {
+    const mesa: PartidaDetalle = {
+      ...DETALLE,
+      personajes: [
+        { ...DETALLE.personajes[0], esMio: true, pgActuales: 7, pgTotal: 10 },
+        {
+          ...DETALLE.personajes[0],
+          id: 'pep-ketne',
+          characterId: 'char-ketne',
+          nombre: 'ketne 3',
+          tipo: 'pnj',
+          actitud: 'enemigo',
+          // Creado sin PG totales: el caso que se veía vacío
+          pgActuales: 6,
+          pgTotal: undefined,
+          estadoVital: null,
+          esMio: true,
+        },
+      ],
+    };
+    component['cargar']();
+    httpMock.expectOne('/api/partidas/partida-1').flush(mesa);
+    await fixture.whenStable();
+
+    const filas: HTMLElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.fila'),
+    );
+    const ketne = filas.find((f) => f.textContent?.includes('ketne 3'));
+    expect(ketne?.textContent).toContain('6 PG');
+    // El PNJ es SUYO, pero "tú" es para tu personaje, no para tus monstruos
+    expect(ketne?.textContent).not.toContain('tú');
+
+    const valeros = filas.find((f) => f.textContent?.includes('Valeros'));
+    expect(valeros?.textContent).toContain('7/10');
+    expect(valeros?.textContent).toContain('tú');
+  });
+
+  // La otra queja de la pantalla: el jugador no se veía por ninguna parte.
+  it('tu personaje tiene tarjeta fija arriba, con sus PG', async () => {
+    const mesa: PartidaDetalle = {
+      ...DETALLE,
+      esMaster: false,
+      codigo: undefined,
+      personajes: [
+        { ...DETALLE.personajes[0], esMio: true, pgActuales: 7, pgTotal: 10 },
+      ],
+    };
+    component['cargar']();
+    httpMock.expectOne('/api/partidas/partida-1').flush(mesa);
+    await fixture.whenStable();
+
+    const tarjeta: HTMLElement = fixture.nativeElement.querySelector('.mio');
+    expect(tarjeta).not.toBeNull();
+    expect(tarjeta.textContent).toContain('Valeros');
+    expect(tarjeta.textContent).toContain('/ 10');
+    // Y se puede curar o hacer daño desde ahí mismo
+    expect(tarjeta.textContent).toContain('Daño');
   });
 
   it('should create', () => {
@@ -157,13 +235,21 @@ describe('PartidaDetallePage', () => {
     expect(texto).toContain('La corona carmesí');
     expect(texto).toContain('ABC234'); // soy el máster: veo el código
     expect(texto).toContain('Valeros'); // en el banquillo (sin posición)
-    expect(texto).toContain('CA 17');
+
+    // La CA ya no va en la fila de la lista, que es compacta a propósito:
+    // vive en el panel de Selección, con el resto de lo suyo.
+    const fila: HTMLElement = fixture.nativeElement.querySelector('.fila');
+    fila.click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.insp').textContent).toContain(
+      'CA 17',
+    );
   });
 
   it('mover: seleccionar del banquillo + clic en casilla → PATCH de posición', async () => {
     // El máster puede mover cualquier token
     const token: HTMLButtonElement = fixture.nativeElement.querySelector(
-      '.tablero__banquillo .tablero__token',
+      '.banquillo__pieza',
     );
     token.click();
     await fixture.whenStable();
@@ -182,7 +268,7 @@ describe('PartidaDetallePage', () => {
 
     // El token ya no está en el banquillo: está en el tablero
     expect(
-      fixture.nativeElement.querySelector('.mesa__banquillo'),
+      fixture.nativeElement.querySelector('.banquillo'),
     ).toBeNull();
     expect(
       fixture.nativeElement.querySelector('.tablero .tablero__token'),
@@ -224,14 +310,24 @@ describe('PartidaDetallePage', () => {
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(true);
 
-    const boton: HTMLButtonElement =
-      fixture.nativeElement.querySelector('.mesa__peligro');
+    // Lo irreversible ya no está suelto en la cabecera: hay que abrir el
+    // menú del máster, que además se cierra solo tras cada opción.
+    const abrirMenu = () => {
+      const menu: HTMLButtonElement =
+        fixture.nativeElement.querySelector('.menu > button');
+      menu.click();
+      fixture.detectChanges();
+      return fixture.nativeElement.querySelector(
+        '.menu__opcion--peligro',
+      ) as HTMLButtonElement;
+    };
 
     // Si dices que no, no se toca nada
-    boton.click();
+    abrirMenu().click();
     httpMock.expectNone('/api/partidas/partida-1');
+    fixture.detectChanges();
 
-    boton.click();
+    abrirMenu().click();
     const peticion = httpMock.expectOne('/api/partidas/partida-1');
     expect(peticion.request.method).toBe('DELETE');
     peticion.flush(null, { status: 204, statusText: 'No Content' });
@@ -250,9 +346,9 @@ describe('PartidaDetallePage', () => {
     });
     await fixture.whenStable();
 
-    const pgInput: HTMLInputElement =
-      fixture.nativeElement.querySelector('.mesa__pg input');
-    expect(pgInput.value).toBe('12');
+    // La fila de la lista se entera sola: 12 de 31
+    const fila: HTMLElement = fixture.nativeElement.querySelector('.fila');
+    expect(fila.textContent).toContain('12/31');
     // Sin ninguna petición HTTP de por medio: fue push puro
     httpMock.expectNone('/api/partidas/partida-1');
   });

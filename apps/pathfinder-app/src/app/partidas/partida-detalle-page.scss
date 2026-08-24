@@ -1,7 +1,8 @@
-// La mesa se queda con TODO el alto que deja la navbar y no hace scroll de
-// página: lo que se desplaza es cada panel y el tablero, por dentro. Así el
-// tablero recibe el hueco que sobre de verdad, que cambia según haya
-// banquillo o no — con un número fijo de rem no habría acertado nunca.
+// La mesa se queda con TODO el alto de la ventana y no hace scroll de
+// página: lo que se desplaza es cada zona por dentro. Así el tablero recibe
+// el hueco que sobra de verdad, que cambia según haya banquillo o no.
+// OJO: dentro de una mesa NO hay navbar (ver App.enLaMesa), así que la barra
+// de aquí arriba es la única chapa fija.
 :host {
   display: flex;
   flex-direction: column;
@@ -10,388 +11,914 @@
 }
 
 .mesa {
-  // A sangre: la mesa es la pantalla de trabajo y ocupa TODO el monitor.
-  // No lleva max-width (el resto de páginas sí) para que las columnas se
-  // peguen a los extremos y el tablero quede centrado entre ellas.
   margin: 0;
-  padding: 1.25rem clamp(0.75rem, 1.2vw, 1.25rem) 1.25rem;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 
-  &__cabecera {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-
-    h1 {
-      margin: 0;
-      font-size: 1.7rem;
-    }
-  }
-
   &__meta {
     color: var(--text-muted);
-    margin: 0.35rem 0 0;
-  }
-
-  &__cabecera-acciones {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  /* La única acción sin vuelta atrás de la mesa: se ve que lo es */
-  &__peligro {
-    border-color: var(--danger);
-    color: var(--danger);
-
-    &:hover:not(:disabled) {
-      /* --danger es un rosa claro: el texto va oscuro para que se lea */
-      color: var(--bg);
-      background: var(--danger);
-      box-shadow: none;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-
-  &__mapa {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-
-    input[type='file'] {
-      max-width: 13rem;
-      padding: 0.25rem;
-      font-size: 0.8rem;
-    }
-  }
-
-  &__codigo {
-    display: inline-flex;
-    align-items: center;
-    margin-left: 0.4rem;
-    padding: 0.15rem 0.55rem;
-    border: 1px solid var(--border-strong);
-    border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-size: 0.8rem;
-    letter-spacing: 0.03em;
-  }
-
-  // -- Banquillo: fichas aún sin colocar -----------------------------------
-  &__banquillo {
-    margin-bottom: 1.25rem;
-    padding: 0.85rem 1rem;
-    border: 1px dashed var(--border-strong);
-    border-radius: 0.6rem;
-    background: var(--surface);
-
-    h2 {
-      margin: 0 0 0.15rem;
-      font-size: 1rem;
-    }
-  }
-
-  // -- Distribución principal: tres columnas -------------------------------
-  // Quién está en la mesa (izquierda) | tablero | qué pasa ahora (derecha).
-  // Las fichas de personaje se fueron a su propia columna: apiladas con
-  // combate y dados dejaban la derecha larguísima y el tablero estrecho.
-  // Las columnas crecen un poco en monitores grandes (condiciones y registro
-  // de tiradas son lo que más agradece el ancho), pero con tope: pasado un
-  // punto, un panel más ancho solo aleja el tablero del centro.
-  &__contenido {
-    display: grid;
-    grid-template-columns:
-      clamp(21rem, 20vw, 27rem)
-      minmax(0, 1fr)
-      clamp(23rem, 21vw, 29rem);
-    grid-template-areas: 'personajes tablero juego';
-    // UNA fila de alto fijo, no "lo que ocupe el contenido". Es lo que hace
-    // que el tablero pueda pedir "el 100% de mi hueco": contra una fila
-    // automática ese 100% no tendría contra qué medirse y crecería sin tope.
-    grid-template-rows: minmax(0, 1fr);
-    gap: clamp(1rem, 1.5vw, 2rem);
-    align-items: start;
-    // Se queda con el alto restante; el min-height evita que un panel largo
-    // estire la mesa en vez de desplazarse por dentro.
-    flex: 1;
-    min-height: 0;
-  }
-
-  // -- Paneles laterales: tarjetas apiladas, con scroll propio -------------
-  // Ya no hacen falta pegajosos: la página no se desplaza, así que basta con
-  // no pasar del alto de la rejilla y desplazarse por dentro.
-  &__panel {
-    max-height: 100%;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding-right: 0.35rem;
-
-    > h2 {
-      margin: 0;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-faint);
-    }
-
-    &--personajes {
-      grid-area: personajes;
-    }
-
-    &--juego {
-      grid-area: juego;
-    }
-  }
-
-  // -- Tarjeta de cada personaje en la mesa --------------------------------
-  &__personaje {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.6rem;
-    padding: 0.85rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-
-    /* Un PNJ oculto solo lo ve el máster: se marca en diagonal para que no
-       se le escape que los jugadores NO están viendo eso. */
-    &--oculto {
-      border-style: dashed;
-      border-color: var(--text-faint);
-      background: repeating-linear-gradient(
-        45deg,
-        var(--surface),
-        var(--surface) 8px,
-        var(--surface-2) 8px,
-        var(--surface-2) 16px
-      );
-    }
-
-    header {
-      display: flex;
-      flex-direction: column;
-      gap: 0.1rem;
-
-      strong {
-        font-size: 1.02rem;
-      }
-
-      small {
-        color: var(--text-muted);
-      }
-    }
-  }
-
-  &__ca-mod,
-  &__efectos {
-    color: var(--accent);
-  }
-
-  &__pg {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-
-    input {
-      width: 4.5rem;
-      padding: 0.3rem 0.4rem;
-    }
-  }
-
-  /* Lo que ve un jugador en lugar de los PG de un PNJ: el tramo, sin cifras.
-     Los números exactos los recorta el servidor (soloLoPublico), no el CSS. */
-  &__vital {
     margin: 0;
   }
 
-  &__vital-marca {
-    display: inline-block;
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    background: var(--surface-2);
-    border: 1px solid var(--border-strong);
-    color: var(--text-muted);
+  &__error {
+    margin: 0.5rem 1.25rem;
+    color: var(--danger);
+    font-size: 0.9rem;
+  }
 
-    &--ileso {
-      color: var(--actitud-aliado);
-      border-color: var(--actitud-aliado);
+  &__cargando {
+    padding: 2rem 1.25rem;
+  }
+
+  // -- Cuerpo: tres zonas ---------------------------------------------------
+  // Quién está (izquierda) | dónde está (centro) | qué hace y qué ha pasado
+  // (derecha). Las columnas crecen en monitores grandes, pero con tope:
+  // pasado un punto, un panel más ancho solo aleja el tablero del centro.
+  &__cuerpo {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns:
+      clamp(18rem, 19vw, 23rem)
+      minmax(0, 1fr)
+      clamp(21rem, 23vw, 27rem);
+    // UNA fila de alto fijo: es lo que permite que el tablero pida "el 100%
+    // de mi hueco". Contra una fila automática ese 100% no tiene contra qué
+    // medirse y crece sin tope.
+    grid-template-rows: minmax(0, 1fr);
+    gap: clamp(0.75rem, 1.2vw, 1.25rem);
+    padding: clamp(0.75rem, 1.2vw, 1.25rem);
+  }
+}
+
+// -- Barra de la mesa -------------------------------------------------------
+.barra {
+  flex-shrink: 0;
+  height: 3.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0 1.25rem;
+  background: rgba(18, 23, 36, 0.85);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  &__volver {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 0.375rem;
+
+    &:hover {
+      color: var(--text);
+      background: var(--accent-soft);
+    }
+  }
+
+  &__sep {
+    width: 1px;
+    height: 1.35rem;
+    background: var(--border);
+  }
+
+  &__titulo {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__meta {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  &__hueco {
+    flex: 1;
+  }
+}
+
+/* La conexión, dicha en voz alta. Sustituye al antiguo botón "Actualizar"
+   permanente: recargar a mano solo tiene sentido si esto está roto. */
+.vivo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(91, 181, 106, 0.08);
+  white-space: nowrap;
+
+  i {
+    display: block;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--actitud-aliado);
+    box-shadow: 0 0 0.5rem rgba(91, 181, 106, 0.8);
+  }
+
+  &--roto {
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    background: rgba(246, 169, 74, 0.1);
+    border-color: var(--token-2);
+    color: var(--token-2);
+
+    i {
+      background: var(--token-2);
+      box-shadow: none;
+    }
+  }
+}
+
+.codigo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+// -- Botones ----------------------------------------------------------------
+// Heredan de styles.scss; aquí solo la talla de la mesa y las variantes.
+.boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+
+  svg {
+    width: 0.9rem;
+    height: 0.9rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Lo irreversible se ve que lo es */
+  &--peligro {
+    background: none;
+    border-color: rgba(255, 107, 129, 0.5);
+    color: var(--danger);
+
+    &:hover:not(:disabled) {
+      color: var(--bg);
+      background: var(--danger);
+      border-color: var(--danger);
+      box-shadow: none;
+    }
+  }
+
+  &--dano {
+    border-color: rgba(224, 82, 82, 0.55);
+    color: var(--actitud-enemigo);
+  }
+
+  &--cura {
+    border-color: rgba(91, 181, 106, 0.55);
+    color: var(--actitud-aliado);
+  }
+}
+
+// -- Menú del máster --------------------------------------------------------
+// Todo lo que NO es de uso continuo vive aquí dentro: antes era una fila
+// plana de botones donde "Cerrar mesa" pesaba lo mismo que subir un mapa.
+.menu {
+  position: relative;
+
+  &__fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+  }
+
+  &__panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.4rem);
+    z-index: 26;
+    min-width: 15rem;
+    padding: 0.35rem;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.55);
+  }
+
+  &__opcion {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border: none;
+    border-radius: 0.35rem;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: var(--surface-2);
+      box-shadow: none;
     }
 
+    /* La opción del mapa es un <label> con un input file dentro */
+    input[type='file'] {
+      display: none;
+    }
+
+    &--peligro {
+      color: var(--danger);
+
+      &:hover:not(:disabled) {
+        background: rgba(255, 107, 129, 0.12);
+      }
+    }
+  }
+
+  &__separador {
+    height: 1px;
+    margin: 0.35rem 0.25rem;
+    background: var(--border);
+  }
+}
+
+// -- Zonas ------------------------------------------------------------------
+.zona {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+
+  &--personas {
+    overflow-y: auto;
+    padding-right: 0.3rem;
+  }
+
+  &--tablero {
+    position: relative;
+  }
+
+  &--panel {
+    overflow: hidden;
+  }
+}
+
+.rotulo {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  span {
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-weight: 400;
+  }
+}
+
+.tarjeta {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+}
+
+// -- Rastreador de combate (encabeza la lista, no una columna aparte) -------
+.combate {
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex-shrink: 0;
+
+  &__linea {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  &__ronda {
+    font-size: 1.05rem;
+    color: var(--accent);
+  }
+
+  &__turno {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  &__acciones {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  &__siguiente {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+// -- Tu personaje: tarjeta fija arriba del todo -----------------------------
+// Un jugador no debería tener que buscarse en la lista.
+.mio {
+  padding: 0.7rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  border-color: var(--border-strong);
+
+  &--sel {
+    border-color: var(--accent);
+  }
+
+  &__cab {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: none;
+    text-align: left;
+    color: var(--text);
+
+    &:hover:not(:disabled) {
+      box-shadow: none;
+    }
+  }
+
+  &__quien {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    strong {
+      font-size: 1rem;
+    }
+
+    small {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+  }
+}
+
+// -- LA lista de personas ---------------------------------------------------
+// Filas compactas de dos líneas: nombre arriba, estado abajo. Todo lo demás
+// (ficha, condiciones, sacar) se ha ido al panel de Selección.
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+
+  &__separador {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.5rem 0.15rem 0.1rem;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+  }
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: none;
+  }
+
+  &--turno {
+    background: var(--accent-soft);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+
+  &--sel {
+    border-color: var(--accent);
+  }
+
+  /* A 0 PG se marca, pero NO sale de la iniciativa: en PF1e sigues ahí */
+  &--caida {
+    opacity: 0.62;
+
+    .fila__nombre {
+      text-decoration: line-through;
+      text-decoration-color: rgba(224, 82, 82, 0.7);
+    }
+  }
+
+  /* Un PNJ oculto solo lo ve el máster: la diagonal se lo recuerda */
+  &--oculta {
+    border-style: dashed;
+    border-color: var(--border-strong);
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(26, 33, 50, 0.35),
+      rgba(26, 33, 50, 0.35) 8px,
+      rgba(18, 23, 36, 0.35) 8px,
+      rgba(18, 23, 36, 0.35) 16px
+    );
+  }
+
+  &__ini {
+    min-width: 1.9rem;
+    text-align: center;
+    padding: 0.1rem 0;
+    font-weight: 700;
+    font-size: 0.85rem;
+    background: var(--surface-2);
+    border-radius: 0.3rem;
+    flex-shrink: 0;
+
+    &--sin {
+      background: none;
+      color: var(--text-faint);
+      font-weight: 400;
+      font-size: 0.75rem;
+    }
+  }
+
+  &__centro {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  &__nombre {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__estado {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+}
+
+/* Avatar circular con iniciales: el mismo lenguaje que el token del tablero */
+.ficha {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0c1018;
+  font-weight: 800;
+  font-size: 0.68rem;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    inset 0 1px 2px rgba(255, 255, 255, 0.35);
+
+  &--grande {
+    width: 2.4rem;
+    height: 2.4rem;
+    font-size: 0.85rem;
+  }
+}
+
+.marca {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  white-space: nowrap;
+
+  &--oculto {
+    border: 1px dashed var(--text-faint);
+    color: var(--text-faint);
+  }
+
+  &--mio {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+  }
+}
+
+// -- Barra de PG y tramo vital ---------------------------------------------
+.pgbar {
+  flex: 1;
+  min-width: 2.5rem;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-2);
+  overflow: hidden;
+
+  &--ancha {
+    display: block;
+    flex: none;
+    width: 100%;
+    height: 6px;
+  }
+
+  &__relleno {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--actitud-aliado);
+
     &--herido {
-      color: var(--token-2);
-      border-color: var(--token-2);
+      background: var(--token-2);
     }
 
     &--malherido,
     &--caido {
-      color: var(--actitud-enemigo);
-      border-color: var(--actitud-enemigo);
+      background: var(--actitud-enemigo);
     }
   }
+}
 
-  // -- Condiciones estructuradas -------------------------------------------
-  &__condiciones {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-  }
+.pgtxt {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 
-  &__cond-titulo {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+  /* Una fila muda no dice si es que no hay datos o si algo se rompió */
+  &--vacio {
     color: var(--text-faint);
+    font-style: italic;
+  }
+}
+
+/* Lo que ve un jugador en lugar de los PG de un PNJ: el tramo, sin cifras.
+   Los números exactos los recorta el servidor (soloLoPublico), no el CSS. */
+.vital {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  white-space: nowrap;
+
+  &--ileso {
+    color: var(--actitud-aliado);
+    border-color: var(--actitud-aliado);
   }
 
-  &__cond {
+  &--herido {
+    color: var(--token-2);
+    border-color: var(--token-2);
+  }
+
+  &--malherido,
+  &--caido {
+    color: var(--actitud-enemigo);
+    border-color: var(--actitud-enemigo);
+  }
+}
+
+/* Condición en la fila: solo el nombre. La descripción está en el panel. */
+.cond-chip {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  background: var(--surface-2);
+  border-left: 2px solid var(--accent);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+// -- Panel de Selección -----------------------------------------------------
+// Todo lo del token elegido, en un sitio fijo. Es donde aterrizarán los
+// efectos temporales, los ataques del PNJ y demás: por eso existe.
+.insp {
+  flex: 0 1 auto;
+  overflow-y: auto;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  border-color: var(--border-strong);
+
+  &__cab {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.35rem 0.5rem;
-    background: var(--surface-2);
-    border-left: 2px solid var(--accent);
-    border-radius: 0.3rem;
+    gap: 0.6rem;
+  }
 
-    strong {
-      color: var(--text);
+  &__quien {
+    flex: 1;
+    min-width: 0;
+
+    h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
     }
-
-    small {
-      display: block;
-      color: var(--text-muted);
-      line-height: 1.25;
-    }
   }
 
-  &__cond-quitar {
-    flex-shrink: 0;
-    padding: 0 0.4rem;
-    line-height: 1.6;
-  }
-
-  &__cond-anadir {
-    align-self: flex-start;
-    padding: 0.3rem 0.4rem;
-  }
-
-  &__iniciativa {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
+  &__meta {
+    margin: 0.15rem 0 0;
+    font-size: 0.78rem;
     color: var(--text-muted);
+  }
 
-    input {
-      width: 4rem;
-      padding: 0.3rem 0.4rem;
+  /* Lo que deriva el servidor (CA con condiciones, mod de iniciativa) */
+  &__derivado {
+    color: var(--accent);
+    font-size: 0.76rem;
+  }
+
+  &__cerrar {
+    flex-shrink: 0;
+    padding: 0 0.35rem;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    line-height: 1.4;
+
+    &:hover:not(:disabled) {
+      color: var(--text);
+      box-shadow: none;
     }
   }
 
   &__acciones {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
     flex-wrap: wrap;
-
-    button {
-      padding: 0.35rem 0.7rem;
-    }
+    border-top: 1px solid var(--border);
+    padding-top: 0.7rem;
   }
+}
 
-  // -- Rastreador de combate -----------------------------------------------
-  &__combate,
-  &__dados {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.6rem;
-    padding: 0.85rem;
+.actitud {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bg);
+}
 
-    h2 {
-      margin: 0 0 0.6rem;
-      font-size: 1rem;
-    }
+.bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+
+  &__rotulo {
+    margin: 0;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
   }
+}
 
-  &__ronda {
+.pg {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+
+  &__valor {
+    width: 4rem;
+    padding: 0.25rem 0.4rem;
+    font-size: 1.15rem;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__total {
+    color: var(--text-muted);
+  }
+
+  &__acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  &__cantidad {
+    width: 3.5rem;
+    padding: 0.25rem 0.4rem;
+  }
+}
+
+.ini {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &__valor {
+    width: 3.5rem;
+    padding: 0.25rem 0.4rem;
+  }
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+
+  &__anadir {
+    align-self: flex-start;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.85rem;
+  }
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.3rem;
+  background: var(--surface-2);
+  border-left: 2px solid var(--accent);
+
+  &__quitar {
+    padding: 0 0.2rem;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    line-height: 1.2;
+
+    &:hover:not(:disabled) {
+      color: var(--danger);
+      box-shadow: none;
+    }
+  }
+}
+
+/* La descripción de la condición vive aquí, no en la lista: es material de
+   consulta y allí ocupaba sitio de estado de mesa. */
+.condicion {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--text-faint);
+
+  strong {
+    color: var(--text-muted);
+  }
+}
+
+// -- Registro ---------------------------------------------------------------
+// Sin selección se lleva la columna entera: nada de cajas vacías.
+.registro {
+  flex: 1 1 auto;
+  min-height: 8rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tiradas {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+.tirada {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+
+  em {
+    font-style: normal;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+
+  &__notacion {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-size: 0.78rem;
+  }
+
+  &__total {
     color: var(--accent);
-    margin: 0 0 0.5rem;
     font-size: 1.05rem;
   }
 
-  &__orden {
-    list-style: none;
-    margin: 0 0 0.75rem;
-    padding: 0;
-
-    li {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.35rem 0.5rem;
-      border-radius: 0.35rem;
-    }
-
-    &--turno {
-      background: var(--accent-soft);
-      box-shadow: inset 2px 0 0 var(--accent);
-
-      strong {
-        color: var(--accent);
-        margin-left: auto;
-      }
-    }
+  small {
+    color: var(--text-faint);
+    font-size: 0.72rem;
   }
+}
 
-  &__orden-ini {
-    display: inline-flex;
-    justify-content: center;
-    min-width: 1.9rem;
-    padding: 0.05rem 0;
-    font-weight: 700;
-    color: var(--text);
-    background: var(--surface-2);
-    border-radius: 0.3rem;
-  }
+.lanzador {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(26, 33, 50, 0.4);
 
-  // -- Dados ---------------------------------------------------------------
-  &__dados-rapidos {
+  &__rapidos {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    margin-bottom: 0.5rem;
-
-    button {
-      padding: 0.3rem 0.55rem;
-    }
+    gap: 0.3rem;
   }
 
-  &__dados-libre {
+  &__libre {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
 
     input {
       flex: 1;
@@ -399,155 +926,323 @@
       padding: 0.35rem 0.5rem;
     }
   }
+}
 
-  &__tiradas {
-    list-style: none;
-    margin: 0.75rem 0 0;
-    padding: 0;
-    max-height: 14rem;
-    overflow-y: auto;
-    font-size: 0.9rem;
+.dado {
+  flex: 1;
+  padding: 0.3rem 0;
+  font-size: 0.78rem;
+}
 
-    li {
-      padding: 0.35rem 0;
-      border-bottom: 1px solid var(--border);
+// -- Marco del tablero: la ventana por la que se ve la mesa -----------------
+// El tablero es MÁS ALTO que la pantalla (24×30 sobre un monitor apaisado),
+// así que se recorta aquí y se recorre agarrándolo. A lo ANCHO cabe entero:
+// se pierden filas, nunca columnas, para no perder de vista un flanco.
+.tablero-marco {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border-radius: 0.5rem;
+  cursor: grab;
+  // Sin esto, arrastrar por encima selecciona el texto de las casillas
+  user-select: none;
+  // El tablero se recorre AGARRÁNDOLO: la barra de scroll sobraba y además
+  // partía el borde del tablero. Sigue habiendo overflow (el gesto lo usa),
+  // solo que no se pinta.
+  scrollbar-width: none;
 
-      strong {
-        margin-right: 0.35rem;
-      }
+  &::-webkit-scrollbar {
+    display: none;
+  }
 
-      em {
-        color: var(--text-muted);
-        margin-right: 0.35rem;
-      }
+  &--agarrando {
+    cursor: grabbing;
+  }
 
-      small {
-        color: var(--text-muted);
-        margin-left: 0.35rem;
-      }
+  /* Con la regla en la mano el gesto es medir, no recorrer */
+  &--midiendo,
+  &--midiendo .tablero__celda {
+    cursor: crosshair;
+  }
+}
+
+// -- Barra de herramientas del tablero -------------------------------------
+// Vertical y pegada al borde: es el sitio de las herramientas que vengan
+// (plantillas de área, señalar, niebla, dibujo).
+.utiles {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.6rem;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  background: rgba(11, 14, 20, 0.92);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.6rem;
+}
+
+.util {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  color: var(--text-muted);
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &--activa {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
+
+// -- La regla ---------------------------------------------------------------
+.regla {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+
+  line {
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-dasharray: 6 5;
+    stroke-linecap: round;
+  }
+
+  &__etiqueta {
+    position: absolute;
+    z-index: 5;
+    transform: translate(-50%, -50%);
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(11, 14, 20, 0.94);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.76rem;
+    font-weight: 700;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+}
+
+// -- Bandeja de los que aún no están en el tablero -------------------------
+// Flota sobre el tablero en vez de ser una franja a lo ancho: antes robaba
+// alto permanente al tablero por un estado que es de paso.
+.banquillo {
+  position: absolute;
+  left: 0.6rem;
+  bottom: 0.6rem;
+  max-width: calc(100% - 1.2rem);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: rgba(11, 14, 20, 0.92);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.6rem;
+  backdrop-filter: blur(6px);
+
+  &__titulo {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+  }
+
+  &__pieza {
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.28);
+    padding: 0.25rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0c1018;
+
+    &--seleccionada {
+      outline: 2px solid #ffffff;
+      outline-offset: 1px;
+    }
+
+    &--ajena {
+      filter: saturate(0.55) brightness(0.85);
     }
   }
 
-  &__tirada-total {
+  &__pista {
+    font-size: 0.72rem;
     color: var(--accent);
-    font-size: 1.05rem;
+  }
+}
+
+// -- Tablero: rejilla de casillas cuadradas --------------------------------
+.tablero {
+  position: relative;
+  display: grid;
+  // OJO: estos números son TABLERO_ANCHO y TABLERO_ALTO de libs/shared. El
+  // CSS no puede leerlos, así que si cambian allí hay que cambiarlos aquí.
+  grid-template-columns: repeat(24, 1fr);
+  grid-template-rows: repeat(30, 1fr);
+  aspect-ratio: 24 / 30;
+  // Llena el ancho del marco y se sale por abajo: el alto sale de la
+  // proporción.
+  width: 100%;
+  gap: 2px;
+  padding: 2px;
+  background: var(--border);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  // El mapa de fondo lo pone el componente (fondoTablero)
+  background-size: cover;
+  background-position: center;
+
+  // Con mapa, las casillas se vuelven translúcidas para que se vea debajo
+  &--con-mapa .tablero__celda {
+    background: rgba(11, 14, 20, 0.2);
+
+    &:hover:not(:disabled) {
+      background: rgba(11, 14, 20, 0.38);
+    }
+
+    &.tablero__celda--destino {
+      background: var(--accent-soft);
+    }
   }
 
-  // -- Modal de ficha ------------------------------------------------------
-  &__overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(4, 6, 10, 0.7);
+  &__celda {
+    background: var(--surface);
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
-    z-index: 10;
-  }
+    // Referencia para el token, que desborda sobre las casillas vecinas
+    // cuando la criatura es Grande o mayor (huella 2×2, 3×3...).
+    position: relative;
 
-  &__modal {
-    background: var(--surface);
-    border: 1px solid var(--border-strong);
-    border-radius: 0.5rem;
-    padding: 1.25rem;
-    max-width: 42rem;
-    width: 100%;
-    max-height: 85vh;
-    overflow-y: auto;
-    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.6);
-
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-
-      h2 {
-        margin: 0;
-      }
+    &:hover:not(:disabled) {
+      background: var(--surface-2);
+      border-color: transparent;
+      box-shadow: none;
     }
 
-    // Editando cabe el formulario entero: la ficha de PF1e es ancha y en
-    // 42rem los bloques de atributos y habilidades se apelotonan.
-    &--editando {
-      max-width: 68rem;
+    &--destino {
+      background: var(--accent-soft);
+    }
+
+    &--destino:hover:not(:disabled) {
+      background: rgba(76, 215, 229, 0.22);
     }
   }
 
-  /* Etiqueta de actitud junto al nombre del PNJ (mismo color que su token) */
-  &__actitud {
-    display: inline-block;
-    margin-left: 0.4rem;
-    padding: 0.05rem 0.4rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--bg);
-    vertical-align: middle;
-  }
-
-  &__oculto-marca {
-    display: inline-block;
-    margin-left: 0.4rem;
-    padding: 0.05rem 0.4rem;
-    border: 1px dashed var(--text-faint);
-    border-radius: 999px;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-faint);
-    vertical-align: middle;
-  }
-
-  // -- Modal de PNJ: pestañas bestiario / crear nuevo -----------------------
-  /* Discreto: se usa muy de vez en cuando, pero debe estar junto al código */
-  &__codigo-cambiar {
-    margin-left: 0.35rem;
-    padding: 0.05rem 0.4rem;
-    background: none;
-    border: 1px solid var(--border-strong);
-    border-radius: 999px;
-    color: var(--text-muted);
-    font: inherit;
-    font-size: 0.75rem;
+  // Ficha-avatar: círculo con iniciales y color propio (estilo inline).
+  // El tamaño lo pone el componente (ladoToken) según su huella.
+  &__token {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    z-index: 2;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #0c1018;
+    font-weight: 800;
+    font-size: clamp(0.55rem, 1vw, 0.95rem);
+    border: 2px solid rgba(255, 255, 255, 0.28);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.45),
+      inset 0 1px 2px rgba(255, 255, 255, 0.35);
     cursor: pointer;
 
-    &:hover {
-      color: var(--accent);
-      border-color: var(--accent);
+    &--seleccionado {
+      outline: 3px solid #ffffff;
+      outline-offset: 1px;
     }
-  }
 
-  &__pestanas {
-    display: flex;
-    gap: 0.35rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 1rem;
+    /* De quién es el turno, visible SIN mirar la lista */
+    &--turno::after {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      opacity: 0.85;
+    }
 
-    button {
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      border-radius: 0;
-      padding: 0.45rem 0.8rem;
-      color: var(--text-muted);
-      font: inherit;
-      font-weight: 600;
-      cursor: pointer;
+    &--arrastrando {
+      opacity: 0.45;
+    }
 
-      &:hover {
-        color: var(--text);
+    &--ajeno {
+      cursor: default;
+    }
+
+    /* Solo lo ve el máster: el borde punteado le recuerda que ese token
+       está en la sombra. */
+    &--oculto {
+      opacity: 0.6;
+      outline: 2px dashed var(--text-faint);
+      outline-offset: 1px;
+    }
+
+    /* A 0 PG: gris y tachado, pero sigue en el tablero y en la iniciativa */
+    &--caido {
+      background: #444b5c !important;
+      color: #98a1b5;
+      border-color: rgba(255, 255, 255, 0.14);
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 128%;
+        height: 2px;
+        background: var(--actitud-enemigo);
+        border-radius: 2px;
+        transform: translate(-50%, -50%) rotate(-45deg);
       }
     }
   }
+}
 
-  &__pestana--activa {
-    color: var(--accent) !important;
-    border-bottom-color: var(--accent) !important;
-  }
+// -- Modales (siembra de PNJ y ficha) --------------------------------------
+// El overlay y la caja son globales (styles.scss); aquí solo lo propio.
 
+/* Editando cabe el formulario entero: la ficha de PF1e es ancha y en 42rem
+   los bloques de atributos y habilidades se apelotonan. */
+.modal--editando {
+  max-width: 68rem;
+}
+
+.modal__acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mesa {
   &__siembra-opciones {
     display: flex;
     flex-wrap: wrap;
@@ -611,216 +1306,82 @@
       }
     }
   }
-
-  &__modal-acciones {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
 }
 
-// -- Marco del tablero: la ventana por la que se ve la mesa ----------------
-// El tablero es MÁS ALTO que la pantalla (24×30 sobre un monitor apaisado),
-// así que en vez de encogerlo hasta que quepa entero —lo que dejaba las
-// casillas en ~25px y un hueco negro a cada lado— se recorta aquí y se
-// recorre agarrándolo. A lo ANCHO sí cabe entero: se pierden filas, nunca
-// columnas, para no perder de vista un flanco en pleno combate.
-.tablero-marco {
-  grid-area: tablero;
-  overflow: auto;
-  // Ocupa EXACTAMENTE la fila (la rejilla alinea al principio por los
-  // paneles; el tablero sí quiere todo el alto)
-  align-self: stretch;
-  min-height: 0;
-  border-radius: 0.5rem;
-  cursor: grab;
-  // Sin esto, arrastrar por encima selecciona el texto de las casillas
-  user-select: none;
-
-  &--agarrando {
-    cursor: grabbing;
-  }
-}
-
-// -- Tablero: rejilla responsive de celdas cuadradas -----------------------
-.tablero {
-  display: grid;
-  // OJO: estos números son TABLERO_ANCHO y TABLERO_ALTO de libs/shared. El
-  // CSS no puede leerlos, así que si cambian allí hay que cambiarlos aquí.
-  grid-template-columns: repeat(24, 1fr);
-  grid-template-rows: repeat(30, 1fr);
-  aspect-ratio: 24 / 30;
-  // Llena el ancho del marco y se sale por abajo: el alto sale solo de la
-  // proporción. Ya NO hay max-width atado a la altura de la ventana — era
-  // justo lo que ahogaba el tablero.
-  width: 100%;
-  gap: 2px;
-  padding: 2px;
-  background: var(--border);
-  border: 1px solid var(--border-strong);
-  border-radius: 0.5rem;
-  // El mapa de fondo lo pone el componente (fondoTablero)
-  background-size: cover;
-  background-position: center;
-
-  // Con mapa, las casillas se vuelven translúcidas para que se vea debajo
-  &--con-mapa &__celda,
-  &--con-mapa .tablero__celda {
-    background: rgba(11, 14, 20, 0.2);
-
-    &:hover:not(:disabled) {
-      background: rgba(11, 14, 20, 0.38);
-    }
-
-    &.tablero__celda--destino {
-      background: var(--accent-soft);
-    }
-  }
-
-  &__celda {
-    background: var(--surface);
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    // Referencia para el token, que puede desbordar sobre las casillas
-    // vecinas cuando la criatura es Grande o mayor (huella 2×2, 3×3...).
-    position: relative;
-
-    &:hover:not(:disabled) {
-      background: var(--surface-2);
-      border-color: transparent;
-      box-shadow: none;
-    }
-
-    &--destino {
-      background: var(--accent-soft);
-    }
-
-    &--destino:hover:not(:disabled) {
-      background: rgba(76, 215, 229, 0.22);
-    }
-  }
-
-  // Ficha-avatar: círculo con iniciales y color propio (estilo inline).
-  // El tamaño lo pone el componente (ladoToken) según su huella.
-  &__token {
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    z-index: 2;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #0c1018;
-    font-weight: 800;
-    font-size: clamp(0.55rem, 1vw, 0.95rem);
-    border: 2px solid rgba(255, 255, 255, 0.28);
-    box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.45),
-      inset 0 1px 2px rgba(255, 255, 255, 0.35);
-    cursor: pointer;
-
-    &--seleccionado {
-      outline: 3px solid #ffffff;
-      outline-offset: 1px;
-      box-shadow: var(--glow);
-    }
-
-    &--arrastrando {
-      opacity: 0.45;
-    }
-
-    &--ajeno {
-      filter: saturate(0.55) brightness(0.85);
-      cursor: default;
-    }
-
-    /* Solo lo ve el máster (a los jugadores no les llega el asiento): el
-       borde punteado le recuerda que ese token está en la sombra. */
-    &--oculto {
-      opacity: 0.6;
-      outline: 2px dashed var(--text-faint);
-      outline-offset: 1px;
-    }
-  }
-}
-
-// Fichas del banquillo: pastillas con el nombre completo (no círculos)
-.mesa__banquillo .tablero__token {
-  position: static;
-  width: auto;
-  height: auto;
-  border-radius: 999px;
-  padding: 0.35rem 0.85rem;
-  margin: 0.35rem 0.4rem 0 0;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-// Pantalla mediana: no caben tres columnas sin ahogar el tablero. Los
-// personajes bajan a lo ancho, debajo del tablero, en rejilla de tarjetas.
+// -- Pantalla mediana: no caben tres zonas sin ahogar el tablero -----------
+// Personas baja a lo ancho, debajo del tablero, en rejilla de tarjetas. Con
+// filas compactas esto aguanta bastante más que con las tarjetas de antes.
 @media (max-width: 85rem) {
-  // Aquí ya no cabe todo de una pantallada: los personajes van DEBAJO del
-  // tablero, así que se vuelve al flujo normal y quien se desplaza es la
-  // página. El tablero deja de estar recortado y se ve entero.
   :host,
   .mesa {
     display: block;
     overflow: visible;
   }
 
-  .mesa__contenido {
-    grid-template-columns: minmax(0, 1fr) 23rem;
+  .mesa__cuerpo {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    grid-template-rows: auto auto;
     grid-template-areas:
-      'tablero juego'
-      'personajes personajes';
+      'tablero panel'
+      'personas personas';
+  }
+
+  .zona--personas {
+    grid-area: personas;
+    overflow: visible;
+  }
+
+  .zona--tablero {
+    grid-area: tablero;
+  }
+
+  .zona--panel {
+    grid-area: panel;
+    overflow: visible;
   }
 
   .tablero-marco {
-    max-height: none;
     overflow: visible;
     cursor: default;
   }
 
-  .mesa__panel {
-    max-height: none;
+  .banquillo {
+    position: static;
+    max-width: none;
   }
 
-  .mesa__panel--personajes {
-    max-height: none;
+  .lista {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.3rem;
     align-content: start;
 
-    // El rótulo "Mesa (n)" ocupa su propia fila, no una celda de la rejilla
-    > h2,
-    > p {
+    &__separador {
       grid-column: 1 / -1;
     }
+  }
+
+  .insp {
+    overflow: visible;
+  }
+
+  .registro {
+    max-height: 32rem;
   }
 }
 
 @media (max-width: 60rem) {
-  .mesa__contenido {
-    grid-template-columns: 1fr;
+  .mesa__cuerpo {
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       'tablero'
-      'personajes'
-      'juego';
+      'panel'
+      'personas';
   }
 
-  .mesa__panel {
-    max-height: none;
+  .barra {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0.5rem 1rem;
   }
-}
-
-.acceso__error {
-  margin: 0.75rem 0;
-  color: var(--danger);
-  font-size: 0.9rem;
 }
