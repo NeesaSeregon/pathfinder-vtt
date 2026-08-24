@@ -335,6 +335,30 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   No hay migración: estadoVital es derivado, como la CA o la iniciativa.
 
 ## Mejoras futuras
+- PRIORITARIA — PARTIR LA MESA EN COMPONENTES. PartidaDetallePage se ha
+  quedado enorme tras el rediseño del 2026-08-24: ~900 líneas de plantilla y
+  una hoja de estilos de 17,1 kB. El presupuesto anyComponentStyle de
+  apps/pathfinder-app/project.json ha tenido que subir DOS veces (10/16 kB →
+  14/20 kB); NO se sube una tercera, se parte. Antes de subirlo ya se sacó a
+  styles.scss lo que estaba duplicado con otras páginas (.overlay/.modal y
+  .pestanas/.pestana): eso ya está hecho y no vuelve a dar margen.
+  El rediseño dejó las costuras marcadas — cada zona es un componente:
+  · MesaBarra: barra + menú del máster + estado de la conexión.
+  · MesaPersonas: rastreador de combate + tarjeta de tu personaje + lista.
+  · MesaSeleccion: el panel del asiento elegido (PG, condiciones, iniciativa).
+  · MesaRegistro: tiradas + lanzador.
+  · MesaTablero: marco, rejilla, tokens, banquillo, herramientas y regla.
+  · PnjModal: el diálogo de sembrar PNJ, que es el trozo MÁS SUELTO de todos
+    (su estado —modoPnj, cantidad/actitud/oculto de la siembra— es puramente
+    suyo) y por eso el mejor primer paso.
+  Empezar por PnjModal y MesaRegistro (los de menos acoplamiento) y dejar
+  MesaTablero para el final: arrastra el agarre, la medición y el viewChild
+  del marco. El estado de la partida se queda en la página y baja por
+  inputs; lo que cambia sube por outputs — nada de que cada trozo pida la
+  partida por su cuenta.
+  Se pospuso el 2026-08-24 por no meter una refactorización grande en un
+  turno de arreglar defectos visibles, pero bloquea lo siguiente que traiga
+  estilos (plantillas de área, niebla, la vista de tablet).
 - PNJ: pendientes de una segunda vuelta si hacen falta en mesa — ataques y
   daño en el bloque corto (hoy solo lo que el tablero muestra: CA, PG,
   iniciativa y tamaño; lo demás se rellena editando la ficha completa) y
