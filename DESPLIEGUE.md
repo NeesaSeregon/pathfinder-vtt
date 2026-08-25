@@ -192,10 +192,16 @@ Comprueba lo esencial, sobre todo la cookie (es lo que más se rompe):
 
 ## 7. Copias de seguridad
 
-Hay que salvar DOS cosas: la base de datos y los mapas subidos (que NO están
-en la base de datos). Como el PostgreSQL vive DENTRO de nuestro docker-compose
-(no es un recurso "Database" propio de Coolify), no usamos el backup de
-Coolify: un único script las salva las dos y lo programamos con cron.
+Lo que hay que salvar es la BASE DE DATOS. Como el PostgreSQL vive DENTRO de
+nuestro docker-compose (no es un recurso "Database" propio de Coolify), no
+usamos el backup de Coolify: un script lo salva y lo programamos con cron.
+
+> El script archiva además el volumen `uploads`. Desde el 2026-08-25 ese
+> volumen está VACÍO: el tablero dejó de admitir mapas de fondo (las salas y
+> pasillos se dibujan y viven en la base de datos, ver CLAUDE.md → ZONAS DEL
+> TABLERO). Se deja montado y en la copia porque compartir imágenes como
+> ilustración sigue en la lista; mientras tanto no cuesta nada y evita
+> tocar el despliegue dos veces.
 
 El script está en el repo: [scripts/backup.sh](scripts/backup.sh). Localiza el
 contenedor de postgres por sus etiquetas de compose, hace `pg_dump` + archiva

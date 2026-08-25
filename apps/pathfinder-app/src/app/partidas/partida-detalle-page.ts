@@ -18,6 +18,7 @@ import {
   PersonajeEnPartidaResumen,
   SembrarPnj,
   TiradaResultado,
+  ZonaTablero,
 } from '@pathfinder/shared';
 import { PartidasApi } from './partidas-api';
 import { PartidaSocket } from './partida-socket';
@@ -29,8 +30,9 @@ import { MesaBarra } from './mesa-barra';
 import { MesaPersonas } from './mesa-personas';
 import { MesaRegistro } from './mesa-registro';
 import { MesaSeleccion } from './mesa-seleccion';
-import { MesaTablero } from './mesa-tablero';
+import { MesaTablero, RectanguloDibujado } from './mesa-tablero';
 import { PnjModal } from './pnj-modal';
+import { ZonasModal } from './zonas-modal';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
 @Component({
@@ -44,6 +46,7 @@ import { mensajeDeError } from '../characters/mensaje-de-error';
     MesaSeleccion,
     MesaTablero,
     PnjModal,
+    ZonasModal,
   ],
   templateUrl: './partida-detalle-page.html',
   styleUrl: './partida-detalle-page.scss',
@@ -72,16 +75,14 @@ export class PartidaDetallePage {
     return !!p && (p.esMaster || p.personajes.some((pep) => pep.esMio));
   });
 
-  /** Sube al cambiar el mapa: rompe la caché del navegador para la imagen. */
-  private readonly versionMapa = signal(0);
-
-  /** URL de fondo del tablero, o null si la mesa no tiene mapa. */
-  protected readonly fondoTablero = computed(() => {
-    const p = this.partida();
-    return p?.tieneMapa
-      ? `url(/api/partidas/${this.partidaId}/mapa?v=${this.versionMapa()})`
-      : null;
-  });
+  /**
+   * Zonas del tablero (solo el máster las edita). La lista que llega en el
+   * detalle ya viene filtrada por el servidor: un jugador no recibe las que
+   * no ha de ver, así que aquí no hay nada que ocultar.
+   */
+  protected readonly zonasAbiertas = signal(false);
+  protected readonly guardandoZonas = signal(false);
+  protected readonly errorZonas = signal<string | null>(null);
 
   /**
    * Siembra de PNJ (solo el máster). Aquí solo queda lo que la mesa necesita
@@ -212,16 +213,48 @@ export class PartidaDetallePage {
     this.aplicarCambio(pep.id, { pgActuales });
   }
 
-  /** El máster sube (o reemplaza) el mapa de fondo de la mesa. */
-  protected subirMapa(fichero: File): void {
-    this.error.set(null);
-    this.api.subirMapa(this.partidaId, fichero).subscribe({
+  /**
+   * El máster ha arrastrado un rectángulo sobre el tablero: nace una zona
+   * sin nombre y sin terreno, YA VISIBLE, y se guarda en el acto. Ponerle
+   * nombre es después y en la lista — dibujar y escribir son dos gestos
+   * distintos y no deben pedirse a la vez.
+   */
+  protected dibujarZona(rectangulo: RectanguloDibujado): void {
+    const p = this.partida();
+    if (!p?.esMaster) {
+      return;
+    }
+    const zona: ZonaTablero = {
+      id: crypto.randomUUID(),
+      nombre: '',
+      terreno: 'ninguno',
+      visible: true,
+      ...rectangulo,
+    };
+    this.guardarZonas([...p.zonas, zona]);
+  }
+
+  /** Guarda la lista ENTERA de zonas; el servidor se queda con esto y ya. */
+  protected guardarZonas(zonas: ZonaTablero[]): void {
+    this.errorZonas.set(null);
+    this.guardandoZonas.set(true);
+    this.api.guardarZonas(this.partidaId, zonas).subscribe({
       next: (partida) => {
         this.partida.set(partida);
-        this.versionMapa.update((v) => v + 1);
+        this.guardandoZonas.set(false);
+        this.zonasAbiertas.set(false);
       },
-      error: (err) =>
-        this.error.set(`No se pudo subir el mapa: ${mensajeDeError(err)}`),
+      error: (err) => {
+        this.guardandoZonas.set(false);
+        this.errorZonas.set(
+          `No se pudieron guardar las zonas: ${mensajeDeError(err)}`,
+        );
+        // Dibujar no abre la lista, así que si falla ahí el error no se
+        // vería: se dice también arriba, donde se ven los de la mesa.
+        if (!this.zonasAbiertas()) {
+          this.error.set(this.errorZonas());
+        }
+      },
     });
   }
 
@@ -256,7 +289,7 @@ export class PartidaDetallePage {
     const cuantos = p.personajes.length;
     if (
       !window.confirm(
-        `Vas a cerrar «${p.nombre}» para siempre: se pierden el mapa, el ` +
+        `Vas a cerrar «${p.nombre}» para siempre: se pierden las zonas, el ` +
           `combate y los ${cuantos} ${cuantos === 1 ? 'asiento' : 'asientos'}` +
           ' de la mesa. Las fichas de los jugadores NO se borran. Quien esté' +
           ' dentro volverá a su escritorio. ¿Continuar?',
@@ -275,18 +308,6 @@ export class PartidaDetallePage {
         this.eliminando.set(false);
         this.error.set(`No se pudo cerrar la mesa: ${mensajeDeError(err)}`);
       },
-    });
-  }
-
-  protected quitarMapa(): void {
-    this.error.set(null);
-    this.api.quitarMapa(this.partidaId).subscribe({
-      next: (partida) => {
-        this.partida.set(partida);
-        this.versionMapa.update((v) => v + 1);
-      },
-      error: (err) =>
-        this.error.set(`No se pudo quitar el mapa: ${mensajeDeError(err)}`),
     });
   }
 

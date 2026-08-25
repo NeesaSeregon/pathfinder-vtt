@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -11,6 +12,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import {
   ACTITUDES,
@@ -28,6 +30,11 @@ import {
   Tamano,
   TAMANOS,
   TirarDados,
+  TERRENOS,
+  Terreno,
+  ZONA_NOMBRE_MAX,
+  ZonaTablero,
+  ZONAS_MAX,
 } from '@pathfinder/shared';
 
 export class CreatePartidaDto implements CrearPartida {
@@ -222,4 +229,51 @@ export class SembrarPnjDto implements SembrarPnj {
 
   @IsBoolean()
   oculto: boolean;
+}
+
+export class ZonaTableroDto implements ZonaTablero {
+  @IsUUID()
+  id: string;
+
+  /** Puede ir vacío: un rectángulo de relleno no necesita nombre. */
+  @IsString()
+  @MaxLength(ZONA_NOMBRE_MAX)
+  nombre: string;
+
+  @IsIn(TERRENOS)
+  terreno: Terreno;
+
+  @IsBoolean()
+  visible: boolean;
+
+  // El rectángulo se valida por partes aquí (que cada número esté dentro
+  // del tablero) y ENTERO en el servicio con zonaCabeEnTablero(), que es la
+  // que sabe que x + ancho tampoco puede salirse.
+  @IsInt()
+  @Min(0)
+  @Max(TABLERO_ANCHO - 1)
+  x: number;
+
+  @IsInt()
+  @Min(0)
+  @Max(TABLERO_ALTO - 1)
+  y: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(TABLERO_ANCHO)
+  ancho: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(TABLERO_ALTO)
+  alto: number;
+}
+
+export class GuardarZonasDto {
+  @IsArray()
+  @ArrayMaxSize(ZONAS_MAX)
+  @ValidateNested({ each: true })
+  @Type(() => ZonaTableroDto)
+  zonas: ZonaTableroDto[];
 }

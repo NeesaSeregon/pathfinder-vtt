@@ -1,0 +1,113 @@
+<!-- Cierra al pulsar FUERA de la ventana, no dentro: mismo trato que las
+     demás modales de la mesa (ver PnjModal.onOverlay). -->
+<div
+  class="overlay"
+  role="presentation"
+  (click)="alPulsarElVelo($event)"
+  (keyup.escape)="cerrar.emit()"
+>
+  <div
+    class="modal modal--zonas"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Zonas del tablero"
+  >
+    <header>
+      <h2>Zonas del tablero</h2>
+      <button type="button" aria-label="Cerrar" (click)="cerrar.emit()">
+        ✕
+      </button>
+    </header>
+
+    <p class="zonas__ayuda">
+      Para dibujar una zona nueva, cierra esto y arrastra sobre el tablero
+      con la herramienta del rectángulo. El terreno es un
+      <strong>recordatorio</strong>: no cambia el movimiento de nadie.
+    </p>
+
+    @if (borrador().length === 0) {
+      <p class="meta">
+        Todavía no hay ninguna zona. Una sala, un pasillo o un charco son
+        rectángulos: para una habitación en L, dibuja dos.
+      </p>
+    } @else {
+      <ul class="zonas">
+        @for (zona of borrador(); track zona.id) {
+          <li class="zonas__fila">
+            <span
+              [class]="'zonas__muestra ' + claseTerreno(zona.terreno)"
+              aria-hidden="true"
+            ></span>
+
+            <label class="zonas__campo zonas__campo--nombre">
+              <span>Nombre</span>
+              <input
+                type="text"
+                [maxlength]="nombreMax"
+                placeholder="Pasillo norte"
+                [ngModel]="zona.nombre"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="cambiarNombre(zona.id, $event)"
+              />
+            </label>
+
+            <label class="zonas__campo">
+              <span>Terreno</span>
+              <select
+                [ngModel]="zona.terreno"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="cambiarTerreno(zona.id, $event)"
+              >
+                @for (t of terrenos; track t) {
+                  <option [value]="t">{{ etiquetas[t] }}</option>
+                }
+              </select>
+            </label>
+
+            <span class="zonas__medidas">
+              {{ zona.ancho }} × {{ zona.alto }} casillas
+            </span>
+
+            <!-- Sin niebla de guerra: una zona no revelada sencillamente no
+                 se le manda al jugador (el filtro está en el servidor). -->
+            <label class="zonas__ver">
+              <input
+                type="checkbox"
+                [ngModel]="zona.visible"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="alternarVisible(zona.id, $event)"
+              />
+              <span>La ven los jugadores</span>
+            </label>
+
+            <button
+              type="button"
+              class="boton boton--peligro"
+              (click)="borrar(zona.id)"
+            >
+              Borrar
+            </button>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (error(); as mensaje) {
+      <p class="zonas__error" role="alert">{{ mensaje }}</p>
+    }
+
+    <div class="zonas__acciones">
+      <button
+        type="button"
+        class="boton-primario"
+        [disabled]="guardando() || !hayCambios()"
+        (click)="aceptar()"
+      >
+        {{ guardando() ? 'Guardando…' : 'Guardar zonas' }}
+      </button>
+      <button type="button" class="boton" (click)="cerrar.emit()">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>

@@ -16,7 +16,5 @@ import { PartidasGatewayModule } from './partidas-gateway.module';
   ],
   controllers: [PartidasController],
   providers: [PartidasService],
-  // Exportado para que CuentaModule limpie los mapas al borrar la cuenta
-  exports: [PartidasService],
 })
 export class PartidasModule {}

@@ -1,10 +1,3 @@
-// El guardado del mapa toca disco: lo simulamos para que el test sea puro
-jest.mock('node:fs/promises', () => ({
-  mkdir: jest.fn().mockResolvedValue(undefined),
-  writeFile: jest.fn().mockResolvedValue(undefined),
-  unlink: jest.fn().mockResolvedValue(undefined),
-}));
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
@@ -16,6 +9,8 @@ import {
 import {
   PartidaDetalle,
   TABLERO_ANCHO,
+  ZONAS_MAX,
+  ZonaTablero,
   casillasQueOcupa,
   claseDeArmadura,
   iniciativa,
@@ -98,6 +93,7 @@ describe('PartidasService', () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',
       masterId: 'user-1',
+      zonas: [],
       personajes: [],
     });
     await expect(
@@ -109,11 +105,11 @@ describe('PartidasService', () => {
   });
 
   describe('cerrar la mesa', () => {
-    /** Una mesa con mapa, un PJ, una instancia de PNJ y una plantilla. */
+    /** Una mesa con un PJ, una instancia de PNJ y una plantilla. */
     const mesaLlena = () => ({
       id: 'partida-1',
       masterId: 'master',
-      mapaFichero: 'mapa.png',
+      zonas: [],
       personajes: [
         {
           id: 'pep-pj',
@@ -150,19 +146,6 @@ describe('PartidasService', () => {
       expect(characters.borrarPorId).toHaveBeenCalledWith('char-goblin');
     });
 
-    // El CASCADE limpia la BD, pero el mapa vive en disco: sin esto quedaría
-    // un fichero huérfano en uploads/ por cada mesa cerrada.
-    it('borra también el fichero del mapa', async () => {
-      partidasRepo.findOne.mockResolvedValue(mesaLlena());
-      const { unlink } = jest.requireMock('node:fs/promises');
-
-      await service.eliminar('partida-1', 'master');
-
-      expect(unlink).toHaveBeenCalledWith(
-        expect.stringContaining('mapa.png'),
-      );
-    });
-
     it('avisa a la sala para que los de dentro salgan', async () => {
       partidasRepo.findOne.mockResolvedValue(mesaLlena());
       await service.eliminar('partida-1', 'master');
@@ -175,6 +158,7 @@ describe('PartidasService', () => {
       id: 'partida-1',
       masterId: 'master',
       codigo: 'ABC234',
+      zonas: [],
       personajes: [],
     });
     pepsRepo.findOneBy.mockResolvedValue(null);
@@ -196,6 +180,7 @@ describe('PartidasService', () => {
       id: 'partida-1',
       masterId: 'master',
       codigo: 'ABC234',
+      zonas: [],
       personajes: [],
     });
     characters.findOne.mockResolvedValue({ id: 'char-1', sheetData: {} });
@@ -210,6 +195,7 @@ describe('PartidasService', () => {
     const partida = {
       id: 'partida-1',
       masterId: 'master',
+      zonas: [],
       personajes: [{ id: 'pep-1', character: { ownerId: 'dueno' } }],
     };
     partidasRepo.findOne.mockResolvedValue(partida);
@@ -233,6 +219,7 @@ describe('PartidasService', () => {
       codigo: 'ABC234',
       masterId: 'user-1',
       master: { username: 'neesa' },
+      zonas: [],
       personajes: [],
     });
     const propias = await service.buscar('ABC234', 'user-1');
@@ -255,6 +242,7 @@ describe('PartidasService', () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',
       masterId: 'master',
+      zonas: [],
       personajes: [pep],
     });
 
@@ -302,6 +290,7 @@ describe('PartidasService', () => {
     const partida = {
       id: 'partida-1',
       masterId: 'master',
+      zonas: [],
       personajes: [{ id: 'pep-1', character: { ownerId: 'jugador' } }],
     };
     partidasRepo.findOne.mockResolvedValue(partida);
@@ -337,6 +326,7 @@ describe('PartidasService', () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',
       masterId: 'master',
+      zonas: [],
       personajes: [],
     });
     await expect(
@@ -359,6 +349,7 @@ describe('PartidasService', () => {
     enCombate: false,
     ronda: 0,
     turnoPepId: null as string | null,
+    zonas: [],
     personajes: [
       { id: 'pep-a', iniciativa: 12, character: { ownerId: 'j1', sheetData: {} } },
       { id: 'pep-b', iniciativa: 20, character: { ownerId: 'j2', sheetData: {} } },
@@ -453,6 +444,7 @@ describe('PartidasService', () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',
       masterId: 'master',
+      zonas: [],
       personajes: [grande],
     });
 
@@ -498,6 +490,7 @@ describe('PartidasService', () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',
       masterId: 'master',
+      zonas: [],
       personajes: [grande, mediano],
     });
 
@@ -521,13 +514,7 @@ describe('PartidasService', () => {
     expect(ok.posX).toBe(5);
   });
 
-  describe('mapa de fondo', () => {
-    const imagen = {
-      originalname: 'mazmorra.png',
-      mimetype: 'image/png',
-      size: 1024,
-      buffer: Buffer.from('fake-png'),
-    };
+  describe('zonas del tablero', () => {
     const mesa = () => ({
       id: 'partida-1',
       nombre: 'Mesa',
@@ -537,58 +524,89 @@ describe('PartidasService', () => {
       masterId: 'master',
       master: { username: 'neesa' },
       personajes: [],
-      mapaFichero: null as string | null,
+      zonas: [] as ZonaTablero[],
+    });
+    const sala = (extra: Partial<ZonaTablero> = {}): ZonaTablero => ({
+      id: '11111111-1111-4111-8111-111111111111',
+      nombre: 'Sala del trono',
+      terreno: 'ninguno',
+      visible: true,
+      x: 2,
+      y: 3,
+      ancho: 6,
+      alto: 5,
+      ...extra,
     });
 
-    it('solo el máster puede subirlo', async () => {
+    it('solo el máster las dibuja', async () => {
       partidasRepo.findOne.mockResolvedValue(mesa());
       await expect(
-        service.guardarMapa('partida-1', imagen, 'jugador'),
+        service.guardarZonas('partida-1', [sala()], 'jugador'),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    it('rechaza formatos que no sean imagen admitida', async () => {
+    it('reemplaza la lista entera y avisa a la mesa', async () => {
+      const partida = mesa();
+      partida.zonas = [sala({ nombre: 'La de antes' })];
+      partidasRepo.findOne.mockResolvedValue(partida);
+
+      const detalle = await service.guardarZonas(
+        'partida-1',
+        [sala({ nombre: 'Pasillo norte' })],
+        'master',
+      );
+
+      expect(partida.zonas).toHaveLength(1);
+      expect(detalle.zonas[0].nombre).toBe('Pasillo norte');
+      expect(gateway.emitirMesaCambiada).toHaveBeenCalledWith('partida-1');
+    });
+
+    // El DTO valida cada número por separado; esto es lo que se le escapa:
+    // una zona que EMPIEZA dentro del tablero y termina fuera.
+    it('rechaza la zona que se sale por abajo', async () => {
       partidasRepo.findOne.mockResolvedValue(mesa());
       await expect(
-        service.guardarMapa(
+        service.guardarZonas(
           'partida-1',
-          { ...imagen, mimetype: 'application/pdf' },
+          [sala({ x: 20, y: 28, ancho: 8, alto: 8 })],
           'master',
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('rechaza una subida vacía', async () => {
+    it('rechaza pasarse del tope de zonas', async () => {
       partidasRepo.findOne.mockResolvedValue(mesa());
+      const muchas = Array.from({ length: ZONAS_MAX + 1 }, () => sala());
       await expect(
-        service.guardarMapa('partida-1', undefined, 'master'),
+        service.guardarZonas('partida-1', muchas, 'master'),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('guarda con nombre generado (nunca el del cliente) y marca tieneMapa', async () => {
+    // La misma regla que los PNJ ocultos: lo que el jugador no debe ver no
+    // se le manda, porque ocultarlo en el cliente es enseñarlo en la API.
+    it('al jugador no le llegan las zonas invisibles; al máster sí', async () => {
       const partida = mesa();
+      partida.zonas = [
+        sala({ nombre: 'Vestíbulo' }),
+        sala({
+          id: '22222222-2222-4222-8222-222222222222',
+          nombre: 'Cripta secreta',
+          visible: false,
+        }),
+      ];
+      partida.personajes = [
+        { id: 'pep-1', character: { ownerId: 'jugador', tipo: 'pj' } },
+      ] as never;
       partidasRepo.findOne.mockResolvedValue(partida);
 
-      const detalle = await service.guardarMapa('partida-1', imagen, 'master');
+      const delMaster = await service.detalle('partida-1', 'master');
+      expect(delMaster.zonas.map((z) => z.nombre)).toEqual([
+        'Vestíbulo',
+        'Cripta secreta',
+      ]);
 
-      expect(detalle.tieneMapa).toBe(true);
-      // Nombre uuid + extensión por MIME; nada de "mazmorra.png"
-      expect(partida.mapaFichero).toMatch(/^[0-9a-f-]{36}\.png$/);
-      expect(gateway.emitirMesaCambiada).toHaveBeenCalledWith('partida-1');
-    });
-
-    it('quitar el mapa lo deja sin fondo (solo el máster)', async () => {
-      const partida = mesa();
-      partida.mapaFichero = 'algo.png';
-      partidasRepo.findOne.mockResolvedValue(partida);
-
-      await expect(
-        service.quitarMapa('partida-1', 'jugador'),
-      ).rejects.toBeInstanceOf(ForbiddenException);
-
-      const detalle = await service.quitarMapa('partida-1', 'master');
-      expect(detalle.tieneMapa).toBe(false);
-      expect(partida.mapaFichero).toBeNull();
+      const delJugador = await service.detalle('partida-1', 'jugador');
+      expect(delJugador.zonas.map((z) => z.nombre)).toEqual(['Vestíbulo']);
     });
   });
 
@@ -596,6 +614,7 @@ describe('PartidasService', () => {
     partidasRepo.findOne.mockResolvedValue({
       id: 'partida-1',
       masterId: 'master',
+      zonas: [],
       personajes: [],
     });
     await expect(
@@ -617,10 +636,10 @@ describe('PartidasService', () => {
       codigo: 'ABC234',
       masterId: 'admin',
       master: { username: 'admin' },
-      mapaFichero: 'mapa.png',
       enCombate: false,
       ronda: 0,
       turnoPepId: null,
+      zonas: [],
       personajes: [
         {
           id: 'pep-1',
@@ -721,16 +740,6 @@ describe('PartidasService', () => {
       expect(paraElMaster.soyParticipante).toBe(true);
     });
 
-    it('el mapa de una mesa ajena no se sirve', async () => {
-      partidasRepo.findOne.mockResolvedValue(mesaAjena());
-      await expect(
-        service.mapaDe('partida-1', 'neesa'),
-      ).rejects.toBeInstanceOf(NotFoundException);
-      await expect(service.mapaDe('partida-1', 'admin')).resolves.toBe(
-        'mapa.png',
-      );
-    });
-
     it('regenerar el código lo cambia y es cosa del máster', async () => {
       const mesa = mesaAjena();
       partidasRepo.findOne.mockResolvedValue(mesa);
@@ -750,11 +759,11 @@ describe('PartidasService', () => {
     const mesaConEmboscada = () => ({
       id: 'partida-1',
       masterId: 'master',
-      mapaFichero: null,
       enCombate: false,
       ronda: 0,
       turnoPepId: null,
       master: { username: 'master' },
+      zonas: [],
       personajes: [
         {
           id: 'pep-pj',
@@ -914,6 +923,7 @@ describe('PartidasService', () => {
       partidasRepo.findOne.mockResolvedValue({
         id: 'partida-1',
         masterId: 'master',
+        zonas: [],
         personajes: [
           {
             id: 'pep-goblin',
@@ -935,6 +945,7 @@ describe('PartidasService', () => {
       partidasRepo.findOne.mockResolvedValue({
         id: 'partida-1',
         masterId: 'master',
+        zonas: [],
         personajes: [
           {
             id: 'pep-pj',
@@ -956,6 +967,7 @@ describe('PartidasService', () => {
       partidasRepo.findOne.mockResolvedValue({
         id: 'partida-1',
         masterId: 'master',
+        zonas: [],
         personajes: [
           {
             id: 'pep-plantilla',
@@ -1068,11 +1080,11 @@ describe('PartidasService', () => {
     const mesaConOgro = () => ({
       id: 'partida-1',
       masterId: 'master',
-      mapaFichero: null,
       enCombate: false,
       ronda: 0,
       turnoPepId: null,
       master: { username: 'master' },
+      zonas: [],
       personajes: [
         {
           id: 'pep-pj',

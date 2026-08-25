@@ -40,6 +40,15 @@
   --actitud-enemigo: #e05252;
   --actitud-aliado: #5bb56a;
   --actitud-neutral: #8b93a7;
+  /* Terreno de las zonas del tablero. Familia aparte de las actitudes a
+     propósito: una zona es SUELO, no una criatura, y confundir "esto pica"
+     con "este es enemigo" es lo que hay que evitar de un vistazo. El
+     terreno es un recordatorio y no cambia ninguna regla de movimiento.
+     La oscuridad no tiene token: no se pinta con un color, se pinta
+     quitándolo (un velo de --bg). */
+  --terreno-dificil: #c9902f;
+  --terreno-agua: #4f8fd0;
+  --terreno-peligro: #d0553f;
 }
 
 * {

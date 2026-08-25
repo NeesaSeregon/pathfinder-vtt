@@ -221,6 +221,13 @@ lo ancho cabe entero, las columnas tapadas no se destapan desplazando. Ya
 pasó con la barra de herramientas; lo cazó el e2e, y hoy `MesaTablero` tiene
 un test de que la barra es **hermana** del marco y no hija.
 
+Las **zonas** (salas, pasillos, terreno) son el segundo inquilino de esa
+regla, y la respetan por construcción: no son una capa encima sino **celdas
+de la misma rejilla**, colocadas con `grid-area`. Así encajan solas con el
+`gap` de 2px sin traducir casillas a píxeles, van al fondo (`z-index: 0`; el
+token está en el 2) y llevan `pointer-events: none`, de modo que el clic
+sigue llegando a la casilla. Hay un test que comprueba justo eso.
+
 ### Los cortes
 
 - **≤ 85rem** — no caben tres zonas sin ahogar el tablero: Personas baja a

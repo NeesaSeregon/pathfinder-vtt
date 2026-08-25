@@ -8,7 +8,6 @@ import { Repository } from 'typeorm';
 import { CuentaDetalle } from '@pathfinder/shared';
 import { UsersService } from '../users/users.service';
 import { AuthService } from '../auth/auth.service';
-import { PartidasService } from '../partidas/partidas.service';
 import { Character } from '../characters/entities/character.entity';
 import { Partida } from '../partidas/entities/partida.entity';
 import { PersonajeEnPartida } from '../partidas/entities/personaje-en-partida.entity';
@@ -17,16 +16,15 @@ import { correoPasswordCambiada } from '../correo/plantillas';
 
 /**
  * Todo lo que un usuario puede hacer con SU PROPIA cuenta. Vive en su
- * módulo (y no en users/) porque para borrar necesita coordinar a tres:
- * las credenciales (auth), los ficheros de los mapas (partidas) y la fila
- * del usuario (users).
+ * módulo (y no en users/) porque para borrar necesita coordinar las
+ * credenciales (auth) con la fila del usuario (users), y de paso contar lo
+ * que se va a perder.
  */
 @Injectable()
 export class CuentaService {
   constructor(
     private readonly users: UsersService,
     private readonly auth: AuthService,
-    private readonly partidas: PartidasService,
     private readonly correo: EnviadorCorreo,
     @InjectRepository(Character)
     private readonly characters: Repository<Character>,
@@ -98,9 +96,9 @@ export class CuentaService {
    */
   async borrar(userId: string, password: string): Promise<void> {
     await this.reautenticar(userId, password);
-    // Primero los ficheros: si fallara el borrado en BD, mejor un mapa de
-    // menos que un fichero huérfano que ya nadie sabe de quién era.
-    await this.partidas.borrarMapasDeMaster(userId);
+    // Ya no queda nada fuera de la base de datos que limpiar: desde que el
+    // tablero no admite mapas subidos, todo lo de una partida (zonas
+    // incluidas) vive en su fila y se lo lleva el CASCADE.
     await this.users.eliminar(userId);
   }
 

@@ -10,7 +10,7 @@ function mesa(extra: Partial<PartidaDetalle> = {}): PartidaDetalle {
     master: 'Luis',
     esMaster: true,
     codigo: 'ABC123',
-    tieneMapa: false,
+    zonas: [],
     enCombate: false,
     ronda: 0,
     turnoPepId: null,
@@ -82,16 +82,19 @@ describe('MesaBarra', () => {
     expect(component['menuAbierto']()).toBe(false);
   });
 
-  it('sin mapa no ofrece quitarlo', async () => {
+  it('las zonas del tablero se abren desde el menú, no desde la barra', async () => {
     await montar();
-    abrirMenu();
-    expect(fixture.nativeElement.textContent).toContain('Subir mapa de fondo');
-    expect(fixture.nativeElement.textContent).not.toContain('Quitar el mapa');
+    let abiertas = 0;
+    component.verZonas.subscribe(() => abiertas++);
 
-    await montar(mesa({ tieneMapa: true }));
     abrirMenu();
-    expect(fixture.nativeElement.textContent).toContain('Cambiar mapa de fondo');
-    expect(fixture.nativeElement.textContent).toContain('Quitar el mapa');
+    const opcion = [
+      ...fixture.nativeElement.querySelectorAll('.menu__opcion'),
+    ].find((b: HTMLElement) => b.textContent?.includes('Zonas del tablero'));
+    opcion.click();
+
+    expect(abiertas).toBe(1);
+    expect(component['menuAbierto']()).toBe(false);
   });
 
   it('cada opción del menú lo cierra al usarla', async () => {

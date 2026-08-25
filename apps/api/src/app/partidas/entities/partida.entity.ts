@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import type { EstadoPartida } from '@pathfinder/shared';
+import type { EstadoPartida, ZonaTablero } from '@pathfinder/shared';
 import { User } from '../../users/entities/user.entity';
 import { PersonajeEnPartida } from './personaje-en-partida.entity';
 
@@ -41,9 +41,14 @@ export class Partida {
   @OneToMany(() => PersonajeEnPartida, (pep) => pep.partida)
   personajes: PersonajeEnPartida[];
 
-  /** Nombre del fichero del mapa en disco (no la ruta); null = sin mapa. */
-  @Column({ type: 'varchar', length: 200, nullable: true })
-  mapaFichero: string | null;
+  /**
+   * Las zonas dibujadas sobre el tablero (salas, pasillos, terreno). Van en
+   * jsonb y no en una tabla propia porque se leen SIEMPRE juntas, con la
+   * partida, y las escribe una sola persona: no hay nada que fusionar ni
+   * que consultar por separado.
+   */
+  @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
+  zonas: ZonaTablero[];
 
   /** Rastreador de combate (estado de sesión de la mesa). */
   @Column({ type: 'boolean', default: false })

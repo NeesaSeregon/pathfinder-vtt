@@ -1,28 +1,24 @@
-import { createReadStream } from 'node:fs';
 import {
   Body,
   Controller,
   Delete,
   Get,
-  Header,
   HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
-  StreamableFile,
-  UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { JwtPayload, MAPA_MAX_BYTES, MAPA_TIPOS } from '@pathfinder/shared';
-import { FicheroSubido, PartidasService } from './partidas.service';
+import { JwtPayload } from '@pathfinder/shared';
+import { PartidasService } from './partidas.service';
 import {
   ActualizarPersonajeEnPartidaDto,
   CreatePartidaDto,
   CrearPnjDto,
+  GuardarZonasDto,
   RevelarPnjDto,
   SembrarPnjDto,
   TirarDadosDto,
@@ -140,43 +136,18 @@ export class PartidasController {
     return this.partidas.actualizarPersonaje(id, pepId, dto, user.sub);
   }
 
-  /** Mapa de fondo: lo sube el máster (multipart, campo "mapa"). */
-  @Post(':id/mapa')
-  @UseInterceptors(
-    FileInterceptor('mapa', { limits: { fileSize: MAPA_MAX_BYTES } }),
-  )
-  subirMapa(
+  /**
+   * Las zonas del tablero, de una vez. Es un PUT y no un POST porque
+   * reemplaza la lista entera: el máster manda cómo queda el tablero, no
+   * qué operación hacer sobre él.
+   */
+  @Put(':id/zonas')
+  guardarZonas(
     @Param('id', ParseUUIDPipe) id: string,
-    @UploadedFile() mapa: FicheroSubido | undefined,
+    @Body() dto: GuardarZonasDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.partidas.guardarMapa(id, mapa, user.sub);
-  }
-
-  /** Sirve la imagen del mapa (cualquier usuario con sesión puede verla). */
-  @Get(':id/mapa')
-  @Header('Cache-Control', 'private, max-age=60')
-  async verMapa(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<StreamableFile> {
-    const fichero = await this.partidas.mapaDe(id, user.sub);
-    const extension = fichero.slice(fichero.lastIndexOf('.'));
-    const tipo =
-      Object.keys(MAPA_TIPOS).find((mime) => MAPA_TIPOS[mime] === extension) ??
-      'application/octet-stream';
-    return new StreamableFile(
-      createReadStream(this.partidas.rutaDelMapa(fichero)),
-      { type: tipo },
-    );
-  }
-
-  @Delete(':id/mapa')
-  quitarMapa(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.partidas.quitarMapa(id, user.sub);
+    return this.partidas.guardarZonas(id, dto.zonas, user.sub);
   }
 
   @Post(':id/personajes/:pepId/iniciativa')

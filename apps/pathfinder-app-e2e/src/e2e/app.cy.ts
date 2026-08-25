@@ -8,6 +8,9 @@ describe('autenticación', () => {
   it('registro por la interfaz: crea cuenta, entra y puede salir', () => {
     const sufijo = Date.now();
     cy.visit('/registro');
+    // Esta cuenta nace por la interfaz, no por cy.login: hay que apuntarla
+    // para que el barrido del final se la lleve.
+    cy.apuntarCuenta(`tester-${sufijo}@mesa.es`, 'contraseña-larga');
     cy.get('input[name="usuario"]').type(`tester-${sufijo}`);
     cy.get('input[name="email"]').type(`tester-${sufijo}@mesa.es`);
     cy.get('input[name="password"]').type('contraseña-larga');
@@ -42,7 +45,7 @@ describe('partidas', () => {
    * · Todo lo que se HACE con alguien —PG, condiciones, ficha, revelar,
    *   sacar— vive en el panel de Selección (.insp), que solo aparece al
    *   elegir a alguien. Por eso casi todo empieza con un clic en su fila.
-   * · Lo que no es de uso continuo (mapa, código, cerrar la mesa) está
+   * · Lo que no es de uso continuo (zonas, código, cerrar la mesa) está
    *   dentro del menú del máster, que hay que abrir.
    */
   const elegir = (nombre: string) => cy.contains('.fila', nombre).click();
@@ -241,7 +244,7 @@ describe('partidas', () => {
 
         cy.on('window:confirm', () => true);
         // Lo irreversible está guardado en el menú y marcado, no suelto en
-        // la barra pesando lo mismo que subir un mapa.
+        // la barra pesando lo mismo que cualquier otra cosa.
         abrirMenuMaster();
         cy.contains('.menu__opcion--peligro', 'Cerrar la mesa').click();
 
@@ -742,30 +745,55 @@ describe('partidas', () => {
       });
   });
 
-  it('el máster sube un mapa de fondo al tablero y puede quitarlo', () => {
+  it('el máster dibuja una zona, le pone nombre y la esconde del jugador', () => {
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
-    cy.request('POST', '/api/partidas', { nombre: `Mapa-${Date.now()}` })
+    cy.request('POST', '/api/partidas', { nombre: `Zonas-${Date.now()}` })
       .its('body.id')
       .then((partidaId) => {
         cy.visit(`/partidas/${partidaId}`);
-        // El mapa no es de uso continuo: vive dentro del menú del máster
-        abrirMenuMaster();
-        cy.fixture('mapa.png', 'base64').then((base64) => {
-          cy.get('input[name="mapa"]').selectFile(
-            {
-              contents: Cypress.Buffer.from(base64, 'base64'),
-              fileName: 'mapa.png',
-              mimeType: 'image/png',
-            },
-            { force: true },
-          );
-        });
-        cy.get('.tablero').should('have.class', 'tablero--con-mapa');
 
-        // Elegir el fichero cierra el menú, así que hay que volver a abrirlo
+        // Dibujar es arrastrar de esquina a esquina con la herramienta en
+        // la mano, igual que medir.
+        cy.get('[title^="Dibujar una zona"]').click();
+        cy.get('.tablero__celda[data-x="3"][data-y="4"]').trigger(
+          'pointerdown',
+          { button: 0, force: true },
+        );
+        cy.get('.tablero__celda[data-x="8"][data-y="9"]').then(($celda) => {
+          const r = $celda[0].getBoundingClientRect();
+          cy.document().trigger('pointermove', {
+            clientX: r.left + r.width / 2,
+            clientY: r.top + r.height / 2,
+          });
+          cy.document().trigger('pointerup');
+        });
+
+        // La zona nace ya pintada en el tablero, sin nombre todavía
+        cy.get('.tablero .zona').should('have.length', 1);
+
+        // Y el nombre se pone en la lista, no sobre el tablero
         abrirMenuMaster();
-        cy.contains('.menu__opcion', 'Quitar el mapa').click();
-        cy.get('.tablero').should('not.have.class', 'tablero--con-mapa');
+        cy.contains('.menu__opcion', 'Zonas del tablero').click();
+        cy.get('.zonas__fila').should('have.length', 1);
+        cy.get('.zonas__fila input[type="text"]').type('Sala del trono');
+        cy.get('.zonas__fila select').select('Terreno difícil');
+        cy.contains('button', 'Guardar zonas').click();
+
+        cy.get('.zonas__fila').should('not.exist');
+        cy.get('.tablero .zona').should('have.class', 'zona--dificil');
+        cy.get('.tablero .zona__rotulo').should('contain', 'Sala del trono');
+
+        // Lo que el jugador no debe ver NO se le manda: se comprueba en la
+        // respuesta de la API, que es donde se filtra de verdad.
+        abrirMenuMaster();
+        cy.contains('.menu__opcion', 'Zonas del tablero').click();
+        cy.get('.zonas__ver input').uncheck();
+        cy.contains('button', 'Guardar zonas').click();
+        cy.get('.tablero .zona').should('have.class', 'zona--invisible');
+
+        cy.request(`/api/partidas/${partidaId}`)
+          .its('body.zonas')
+          .should('have.length', 1);
       });
   });
 
@@ -931,6 +959,9 @@ describe('home y navegación', () => {
     cy.get('input[name="passwordRepetida"]').type('contraseña-nueva-2');
     cy.contains('button', 'Guardar').click();
     cy.contains('Contraseña cambiada');
+    // El barrido del final entra con la contraseña apuntada: si no se
+    // actualiza aquí, esta cuenta se queda tirada en la base de datos.
+    cy.apuntarCuenta(email, 'contraseña-nueva-2');
 
     // La vieja ya no vale...
     cy.request({
@@ -1341,6 +1372,7 @@ describe('cerrar sesiones al cambiar la contraseña (tokenVersion)', () => {
         passwordActual: 'contraseña-larga',
         passwordNueva: 'contraseña-nueva-larga',
       });
+      cy.apuntarCuenta(email, 'contraseña-nueva-larga');
 
       // ESTE navegador sigue dentro: la cookie se repuso al cambiarla. Si
       // no fuera así, cambiar la contraseña te expulsaría a /entrar.

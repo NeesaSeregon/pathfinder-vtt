@@ -1,6 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import {
   BadRequestException,
   ConflictException,
@@ -22,8 +20,6 @@ import {
   iniciativa,
   JwtPayload,
   lanzarDados,
-  MAPA_MAX_BYTES,
-  MAPA_TIPOS,
   MiPartidaResumen,
   ordenarIniciativa,
   PartidaDetalle,
@@ -32,6 +28,9 @@ import {
   TABLERO_ALTO,
   TABLERO_ANCHO,
   TiradaResultado,
+  zonaCabeEnTablero,
+  ZonaTablero,
+  ZONAS_MAX,
 } from '@pathfinder/shared';
 import { Partida } from './entities/partida.entity';
 import { PersonajeEnPartida } from './entities/personaje-en-partida.entity';
@@ -46,17 +45,6 @@ import {
 import { Character } from '../characters/entities/character.entity';
 import { CharactersService } from '../characters/characters.service';
 import { PartidasGateway } from './partidas.gateway';
-
-/**
- * Lo que multer nos entrega de un fichero subido (solo lo que usamos). Se
- * declara aquí para no depender de @types/multer por cuatro campos.
- */
-export interface FicheroSubido {
-  originalname: string;
-  mimetype: string;
-  size: number;
-  buffer: Buffer;
-}
 
 /** Sin caracteres ambiguos (0/O, 1/I/L) para dictarlo en voz alta en mesa. */
 const ALFABETO_CODIGO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -203,92 +191,50 @@ export class PartidasService {
       enCombate: partida.enCombate,
       ronda: partida.ronda,
       turnoPepId: partida.turnoPepId,
-      tieneMapa: partida.mapaFichero !== null,
+      // Mismo criterio que los PNJ ocultos: lo que el jugador no debe ver
+      // no se le manda. Ocultar en el cliente sería enseñarlo en la
+      // respuesta de la API a quien mire.
+      zonas: partida.zonas.filter((zona) => esMaster || zona.visible),
     };
   }
 
   /**
-   * Carpeta donde viven los mapas subidos. Configurable con UPLOADS_DIR
-   * (en despliegue debe ser un volumen montado, no el sistema de ficheros
-   * efímero del contenedor). Por defecto, ./uploads/mapas del proyecto.
+   * Reemplaza LA LISTA ENTERA de zonas. Solo el máster.
+   *
+   * Se guarda entera a propósito: la edita una sola persona, así que no hay
+   * dos versiones que fusionar, y un reemplazo no deja estados a medias
+   * como sí haría un alta/baja por zona.
    */
-  private carpetaMapas(): string {
-    return process.env.UPLOADS_DIR
-      ? join(process.env.UPLOADS_DIR, 'mapas')
-      : join(process.cwd(), 'uploads', 'mapas');
-  }
-
-  /** Ruta absoluta del mapa de una partida (para servirlo o borrarlo). */
-  rutaDelMapa(fichero: string): string {
-    return join(this.carpetaMapas(), fichero);
-  }
-
-  /** Sube (o reemplaza) el mapa de fondo. Solo el máster. */
-  async guardarMapa(
+  async guardarZonas(
     partidaId: string,
-    fichero: FicheroSubido | undefined,
+    zonas: ZonaTablero[],
     userId: string,
   ): Promise<PartidaDetalle> {
     const partida = await this.buscarEntidad(partidaId);
     this.soloElMaster(partida, userId);
 
-    if (!fichero?.buffer?.length) {
-      throw new BadRequestException('No llegó ninguna imagen');
-    }
-    const extension = MAPA_TIPOS[fichero.mimetype];
-    if (!extension) {
+    if (zonas.length > ZONAS_MAX) {
       throw new BadRequestException(
-        `Formato no admitido (${fichero.mimetype}); usa PNG, JPG, WEBP o GIF`,
+        `Demasiadas zonas (máximo ${ZONAS_MAX}); junta las que se toquen`,
       );
     }
-    if (fichero.size > MAPA_MAX_BYTES) {
-      throw new BadRequestException('La imagen supera los 8 MB');
+    // El DTO comprueba cada número por su cuenta; esto comprueba el
+    // rectángulo entero, que es donde está el error de verdad: una zona que
+    // empieza dentro del tablero y termina fuera.
+    const fuera = zonas.find((zona) => !zonaCabeEnTablero(zona));
+    if (fuera) {
+      throw new BadRequestException(
+        `La zona «${fuera.nombre || 'sin nombre'}» se sale del tablero`,
+      );
     }
-
-    // Nombre generado: NUNCA usamos el nombre que manda el cliente
-    const nombre = `${randomUUID()}${extension}`;
-    await mkdir(this.carpetaMapas(), { recursive: true });
-    await writeFile(this.rutaDelMapa(nombre), fichero.buffer);
-
-    const anterior = partida.mapaFichero;
-    partida.mapaFichero = nombre;
+    partida.zonas = zonas;
     await this.partidas.save(partida);
-    await this.borrarFichero(anterior);
 
+    // Una zona se dibuja preparando la mesa, no en mitad de un turno: el
+    // aviso barato (recarga filtrada) basta, y además es el ÚNICO correcto
+    // aquí, porque cada jugador ve una lista distinta según lo visible.
     this.gateway.emitirMesaCambiada(partidaId);
     return this.detalle(partidaId, userId);
-  }
-
-  /** Quita el mapa de fondo (y su fichero). Solo el máster. */
-  async quitarMapa(
-    partidaId: string,
-    userId: string,
-  ): Promise<PartidaDetalle> {
-    const partida = await this.buscarEntidad(partidaId);
-    this.soloElMaster(partida, userId);
-
-    const anterior = partida.mapaFichero;
-    partida.mapaFichero = null;
-    await this.partidas.save(partida);
-    await this.borrarFichero(anterior);
-
-    this.gateway.emitirMesaCambiada(partidaId);
-    return this.detalle(partidaId, userId);
-  }
-
-  /**
-   * El fichero del mapa para servirlo. Solo participantes: el mapa es parte
-   * de la mesa y antes lo veía cualquiera con sesión y el id.
-   */
-  async mapaDe(partidaId: string, userId: string): Promise<string> {
-    const partida = await this.buscarEntidad(partidaId);
-    if (!this.esParticipante(partida, userId)) {
-      throw new NotFoundException(`Partida ${partidaId} no encontrada`);
-    }
-    if (!partida.mapaFichero) {
-      throw new NotFoundException('Esta partida no tiene mapa');
-    }
-    return partida.mapaFichero;
   }
 
   /**
@@ -308,30 +254,6 @@ export class PartidasService {
     return this.detalle(partidaId, userId);
   }
 
-  /**
-   * Borra de disco los mapas de todas las partidas de un máster. Las filas
-   * las borra el CASCADE de la BD, pero los ficheros no los ve nadie: sin
-   * esto quedarían huérfanos en uploads/ para siempre.
-   */
-  async borrarMapasDeMaster(masterId: string): Promise<void> {
-    const partidas = await this.partidas.find({ where: { masterId } });
-    for (const partida of partidas) {
-      await this.borrarFichero(partida.mapaFichero);
-    }
-  }
-
-  /** Borrado best-effort: si el fichero ya no está, no es un error. */
-  private async borrarFichero(nombre: string | null): Promise<void> {
-    if (!nombre) {
-      return;
-    }
-    try {
-      await unlink(this.rutaDelMapa(nombre));
-    } catch {
-      // El fichero pudo borrarse a mano; el registro en BD ya está limpio
-    }
-  }
-
   async actualizar(
     id: string,
     dto: UpdatePartidaDto,
@@ -346,13 +268,11 @@ export class PartidasService {
 
   /**
    * Cierra la mesa entera. Solo el máster. Los asientos se los lleva el
-   * CASCADE de la BD, pero hay dos cosas que la base de datos no ve y
-   * quedarían de basura para siempre:
-   *  - el FICHERO del mapa, que vive en disco (uploads/) y del que la
-   *    columna solo guarda el nombre;
-   *  - las INSTANCIAS de PNJ, fichas desechables que existían solo para
-   *    esta mesa. Misma regla que en sacar(): un PJ (es del jugador) o una
-   *    PLANTILLA del bestiario NO se borran jamás por cerrar una partida.
+   * CASCADE de la BD, pero hay algo que la base de datos no ve y quedaría
+   * de basura para siempre: las INSTANCIAS de PNJ, fichas desechables que
+   * existían solo para esta mesa. Misma regla que en sacar(): un PJ (es del
+   * jugador) o una PLANTILLA del bestiario NO se borran jamás por cerrar
+   * una partida.
    * Al final se avisa a la sala: si no, los que estuvieran dentro seguirían
    * mirando una mesa que ya no existe.
    */
@@ -364,13 +284,11 @@ export class PartidasService {
     const instancias = partida.personajes
       .map((pep) => pep.character)
       .filter((ficha) => ficha?.tipo === 'pnj' && ficha.plantillaId);
-    const mapa = partida.mapaFichero;
 
     await this.partidas.remove(partida);
     for (const instancia of instancias) {
       await this.characters.borrarPorId(instancia.id);
     }
-    await this.borrarFichero(mapa);
 
     this.gateway.emitirMesaEliminada(id);
   }

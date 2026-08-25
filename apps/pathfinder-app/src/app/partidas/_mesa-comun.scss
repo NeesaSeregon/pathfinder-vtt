@@ -221,3 +221,57 @@
     border-color: var(--actitud-enemigo);
   }
 }
+
+// -- Terreno de una zona ----------------------------------------------------
+// El relleno lo usan DOS sitios: la zona pintada en el tablero y la muestra
+// de color en la lista de zonas. Si divergen, la lista deja de servir para
+// saber cuál es cuál. Van sueltos (sin bloque) porque se pegan sobre
+// cualquier elemento, igual que .marca o .vital.
+//
+// Y una regla que no es de estilo: el terreno NUNCA se dice solo con el
+// color. Cada uno lleva su trama, y el nombre del estado está en el title
+// de la zona y escrito en la lista.
+.zona--dificil {
+  background: color-mix(in oklab, var(--terreno-dificil) 16%, transparent);
+  border-color: color-mix(in oklab, var(--terreno-dificil) 55%, transparent);
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in oklab, var(--terreno-dificil) 22%, transparent) 0 3px,
+    transparent 3px 9px
+  );
+}
+
+.zona--agua {
+  background: color-mix(in oklab, var(--terreno-agua) 16%, transparent);
+  border-color: color-mix(in oklab, var(--terreno-agua) 55%, transparent);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--terreno-agua) 20%, transparent) 0 2px,
+    transparent 2px 8px
+  );
+}
+
+// La oscuridad no se pinta con un color: se pinta QUITÁNDOLO.
+.zona--oscuridad {
+  background: color-mix(in oklab, var(--bg) 82%, transparent);
+  border-color: var(--border-strong);
+  background-image: radial-gradient(
+    circle at 50% 50%,
+    transparent 40%,
+    color-mix(in oklab, var(--bg) 70%, transparent) 100%
+  );
+
+  .zona__rotulo {
+    color: var(--text-faint);
+  }
+}
+
+.zona--peligro {
+  background: color-mix(in oklab, var(--terreno-peligro) 14%, transparent);
+  border-color: color-mix(in oklab, var(--terreno-peligro) 60%, transparent);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in oklab, var(--terreno-peligro) 24%, transparent) 0 3px,
+    transparent 3px 9px
+  );
+}

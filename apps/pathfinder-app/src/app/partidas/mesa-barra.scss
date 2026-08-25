@@ -125,7 +125,7 @@
 
 // -- Menú del máster --------------------------------------------------------
 // Todo lo que NO es de uso continuo vive aquí dentro: antes era una fila
-// plana de botones donde "Cerrar mesa" pesaba lo mismo que subir un mapa.
+// plana de botones donde "Cerrar mesa" pesaba lo mismo que lo demás.
 .menu {
   position: relative;
 
@@ -168,11 +168,6 @@
     &:hover:not(:disabled) {
       background: var(--surface-2);
       box-shadow: none;
-    }
-
-    /* La opción del mapa es un <label> con un input file dentro */
-    input[type='file'] {
-      display: none;
     }
 
     &--peligro {

@@ -4,7 +4,6 @@ import { CuentaService } from './cuenta.service';
 import { CuentaController } from './cuenta.controller';
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
-import { PartidasModule } from '../partidas/partidas.module';
 import { Character } from '../characters/entities/character.entity';
 import { Partida } from '../partidas/entities/partida.entity';
 import { PersonajeEnPartida } from '../partidas/entities/personaje-en-partida.entity';
@@ -16,7 +15,6 @@ import { PersonajeEnPartida } from '../partidas/entities/personaje-en-partida.en
     TypeOrmModule.forFeature([Character, Partida, PersonajeEnPartida]),
     UsersModule,
     AuthModule,
-    PartidasModule,
   ],
   controllers: [CuentaController],
   providers: [CuentaService],

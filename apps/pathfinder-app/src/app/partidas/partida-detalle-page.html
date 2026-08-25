@@ -6,8 +6,7 @@
       [eliminando]="eliminando()"
       (recargar)="cargar()"
       (anadirPnj)="abrirPnj()"
-      (subirMapa)="subirMapa($event)"
-      (quitarMapa)="quitarMapa()"
+      (verZonas)="zonasAbiertas.set(true)"
       (regenerarCodigo)="regenerarCodigo()"
       (cerrarMesa)="eliminarMesa()"
     />
@@ -51,9 +50,10 @@
         [esMaster]="p.esMaster"
         [seleccionadoId]="seleccionado()"
         [turnoPepId]="p.turnoPepId"
-        [fondo]="fondoTablero()"
+        [zonas]="p.zonas"
         (seleccionar)="seleccionar($event)"
         (mover)="mover($event.pepId, $event.x, $event.y)"
+        (dibujarZona)="dibujarZona($event)"
       />
 
       <!-- ================= ZONA 3 · SELECCIÓN + REGISTRO =================
@@ -99,6 +99,19 @@
       (sembrar)="sembrarDesdePlantilla($event)"
       (crear)="crearPnjs($event)"
       (cerrar)="cerrarPnj()"
+    />
+  }
+
+  <!-- Las zonas se DIBUJAN en el tablero y se gestionan aquí: dibujar es un
+       gesto y ponerle nombre es escribir. Además, esta lista es la única
+       vía con teclado a algo que si no sería solo de ratón. -->
+  @if (zonasAbiertas() && partida(); as p) {
+    <app-zonas-modal
+      [zonas]="p.zonas"
+      [guardando]="guardandoZonas()"
+      [error]="errorZonas()"
+      (guardar)="guardarZonas($event)"
+      (cerrar)="zonasAbiertas.set(false); errorZonas.set(null)"
     />
   }
 

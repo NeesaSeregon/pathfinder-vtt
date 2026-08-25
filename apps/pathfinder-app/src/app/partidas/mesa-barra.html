@@ -59,24 +59,14 @@
           (click)="menuAbierto.set(false)"
         ></div>
         <div class="menu__panel" role="menu">
-          <label class="menu__opcion">
-            <span>{{ p.tieneMapa ? 'Cambiar mapa de fondo' : 'Subir mapa de fondo' }}</span>
-            <input
-              type="file"
-              name="mapa"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              (change)="elegirMapa($event)"
-            />
-          </label>
-          @if (p.tieneMapa) {
-            <button
-              type="button"
-              class="menu__opcion"
-              (click)="desdeElMenu('quitarMapa')"
-            >
-              Quitar el mapa
-            </button>
-          }
+          <button
+            type="button"
+            class="menu__opcion"
+            title="Salas, pasillos y terreno dibujados sobre el tablero"
+            (click)="desdeElMenu('verZonas')"
+          >
+            Zonas del tablero
+          </button>
           <button
             type="button"
             class="menu__opcion"

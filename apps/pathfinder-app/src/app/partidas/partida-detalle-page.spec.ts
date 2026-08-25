@@ -23,7 +23,7 @@ const DETALLE: PartidaDetalle = {
   enCombate: false,
   ronda: 0,
   turnoPepId: null,
-  tieneMapa: false,
+  zonas: [],
   personajes: [
     {
       id: 'pep-1',

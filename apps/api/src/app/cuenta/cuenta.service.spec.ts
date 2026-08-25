@@ -4,7 +4,6 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CuentaService } from './cuenta.service';
 import { UsersService } from '../users/users.service';
 import { AuthService } from '../auth/auth.service';
-import { PartidasService } from '../partidas/partidas.service';
 import { Character } from '../characters/entities/character.entity';
 import { Partida } from '../partidas/entities/partida.entity';
 import { PersonajeEnPartida } from '../partidas/entities/personaje-en-partida.entity';
@@ -25,7 +24,6 @@ describe('CuentaService', () => {
     cambiarPassword: jest.Mock;
     renovarSesion: jest.Mock;
   };
-  let partidas: { borrarMapasDeMaster: jest.Mock };
   let enviados: MensajeCorreo[];
 
   beforeEach(async () => {
@@ -41,14 +39,12 @@ describe('CuentaService', () => {
         .fn()
         .mockResolvedValue({ token: 'token-nuevo', username: USER.username }),
     };
-    partidas = { borrarMapasDeMaster: jest.fn().mockResolvedValue(undefined) };
 
     const modulo = await Test.createTestingModule({
       providers: [
         CuentaService,
         { provide: UsersService, useValue: users },
         { provide: AuthService, useValue: auth },
-        { provide: PartidasService, useValue: partidas },
         {
           provide: EnviadorCorreo,
           useValue: {
@@ -141,10 +137,9 @@ describe('CuentaService', () => {
     expect(auth.renovarSesion).toHaveBeenCalledWith('user-1');
   });
 
-  it('borrar: limpia los mapas de disco y luego el usuario', async () => {
+  it('borrar: con la contraseña buena, borra el usuario', async () => {
     await service.borrar('user-1', 'secreta-123');
 
-    expect(partidas.borrarMapasDeMaster).toHaveBeenCalledWith('user-1');
     expect(users.eliminar).toHaveBeenCalledWith('user-1');
   });
 
@@ -156,7 +151,6 @@ describe('CuentaService', () => {
     await expect(service.borrar('user-1', 'la-que-no-es')).rejects.toThrow(
       ForbiddenException,
     );
-    expect(partidas.borrarMapasDeMaster).not.toHaveBeenCalled();
     expect(users.eliminar).not.toHaveBeenCalled();
   });
 });

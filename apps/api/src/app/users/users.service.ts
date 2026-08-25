@@ -43,9 +43,9 @@ export class UsersService {
   }
 
   /**
-   * Borra el usuario. Sus personajes y sus partidas caen con él por las
-   * FK ON DELETE CASCADE de las entidades; los ficheros de los mapas hay
-   * que limpiarlos aparte (lo hace CuentaService antes de llamar aquí).
+   * Borra el usuario. Sus personajes y sus partidas caen con él por las FK
+   * ON DELETE CASCADE de las entidades, y ya no queda nada suyo fuera de la
+   * base de datos que haya que limpiar aparte.
    */
   async eliminar(id: string): Promise<void> {
     await this.repo.delete({ id });

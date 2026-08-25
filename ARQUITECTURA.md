@@ -141,7 +141,8 @@ El módulo más grande. Contiene:
 
 - **`PartidasController` / `PartidasService`** — crear/buscar/unirse a mesas,
   el estado de la sesión (posición de tokens, PG, condiciones, iniciativa,
-  combate), sembrar PNJ, subir el mapa de fondo, y las tiradas de dados.
+  combate), sembrar PNJ, dibujar las zonas del tablero, y las tiradas de
+  dados.
 - **`PartidasGateway`** — el servidor de **WebSocket** (ver §6). Vive en su
   propio submódulo (`PartidasGatewayModule`) para romper un ciclo de
   dependencias: tanto `partidas` como `characters` necesitan emitir eventos.
@@ -383,7 +384,7 @@ navegador real. Cubre los flujos completos, entre ellos:
   entra sin código.
 - Mover un token y ver el cambio reflejado **por el WebSocket sin recargar**.
 - Sembrar PNJ desde el bestiario, la emboscada (PNJ oculto), el rastreador de
-  iniciativa, subir un mapa de fondo, cambiar la contraseña, borrar la cuenta.
+  iniciativa, dibujar una zona, cambiar la contraseña, borrar la cuenta.
 
 Son la red de seguridad que confirma que las piezas encajan de verdad, no solo
 por separado.

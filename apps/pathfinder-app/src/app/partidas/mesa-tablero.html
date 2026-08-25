@@ -31,6 +31,22 @@
         <path d="M7 8.5v3M12 8.5v4M17 8.5v3" />
       </svg>
     </button>
+    <!-- Dibujar zonas es cosa del máster: es SU mazmorra. -->
+    @if (esMaster()) {
+      <button
+        type="button"
+        class="util"
+        [class.util--activa]="herramienta() === 'zona'"
+        [attr.aria-pressed]="herramienta() === 'zona'"
+        title="Dibujar una zona (arrastra de esquina a esquina)"
+        (click)="usarHerramienta('zona')"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.5" y="5.5" width="17" height="13" rx="1.5" />
+          <path d="M9 5.5v13" />
+        </svg>
+      </button>
+    }
   </div>
 </header>
 
@@ -38,15 +54,36 @@
   #marcoTablero
   class="tablero-marco"
   [class.tablero-marco--agarrando]="agarrando()"
-  [class.tablero-marco--midiendo]="herramienta() === 'medir'"
+  [class.tablero-marco--midiendo]="herramienta() !== 'seleccionar'"
   (pointerdown)="empezarAgarre($event)"
 >
-  <div
-    class="tablero"
-    role="grid"
-    [class.tablero--con-mapa]="fondo()"
-    [style.background-image]="fondo()"
-  >
+  <div class="tablero" role="grid">
+    <!-- Las zonas van en la MISMA rejilla que las casillas: cada una se
+         coloca con grid-area y encaja sola, sin convertir casillas a
+         píxeles. No reciben eventos ni tapan nada: están por DEBAJO del
+         token y son transparentes al puntero, así que la casilla de debajo
+         se sigue pulsando y sigue admitiendo un token. -->
+    @for (zona of zonas(); track zona.id) {
+      <div
+        [class]="'zona ' + claseTerreno(zona.terreno)"
+        [class.zona--invisible]="!zona.visible"
+        [style.grid-area]="areaEnRejilla(zona)"
+        [title]="titulo(zona)"
+      >
+        @if (llevaRotulo(zona)) {
+          <span class="zona__rotulo">{{ zona.nombre }}</span>
+        }
+      </div>
+    }
+    @if (dibujando(); as r) {
+      <div
+        class="zona zona--dibujando"
+        [style.grid-area]="areaEnRejilla(r)"
+        aria-hidden="true"
+      >
+        <span class="zona__medida">{{ r.ancho }} × {{ r.alto }}</span>
+      </div>
+    }
     @for (y of filas; track y) { @for (x of columnas; track x) {
     <button
       type="button"

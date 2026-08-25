@@ -1,6 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { PersonajeEnPartidaResumen } from '@pathfinder/shared';
+import { PersonajeEnPartidaResumen, ZonaTablero } from '@pathfinder/shared';
 import { MesaTablero, Movimiento } from './mesa-tablero';
+
+function zona(extra: Partial<ZonaTablero> = {}): ZonaTablero {
+  return {
+    id: 'z1',
+    nombre: 'Sala del trono',
+    terreno: 'ninguno',
+    visible: true,
+    x: 2,
+    y: 3,
+    ancho: 6,
+    alto: 5,
+    ...extra,
+  };
+}
 
 function asiento(
   extra: Partial<PersonajeEnPartidaResumen> = {},
@@ -199,5 +213,67 @@ describe('MesaTablero', () => {
 
     expect(movimientos).toEqual([{ pepId: 'pep1', x: 9, y: 9 }]);
     expect(component['arrastrando']()).toBeNull();
+  });
+
+  describe('zonas', () => {
+    it('se pintan en la rejilla del tablero, no encima', async () => {
+      await montar([], { zonas: [zona()] });
+      const pintada = fixture.nativeElement.querySelector('.tablero .zona');
+
+      expect(pintada).toBeTruthy();
+      // grid-area en líneas base 1, con el final exclusivo
+      expect(pintada.style.gridArea).toContain('4');
+    });
+
+    // La regla que ya costó una tarde con la barra de herramientas: si algo
+    // se pone sobre el tablero y recibe puntero, las casillas de debajo
+    // dejan de poder pulsarse y de admitir un token.
+    it('la zona NO se come el clic de la casilla que tiene debajo', async () => {
+      await montar([], { zonas: [zona()] });
+      const pintada = fixture.nativeElement.querySelector('.tablero .zona');
+
+      expect(getComputedStyle(pintada).pointerEvents).toBe('none');
+    });
+
+    it('una zona estrecha no lleva rótulo; una sala sí', async () => {
+      await montar([], { zonas: [zona({ ancho: 1, alto: 10 })] });
+      expect(
+        fixture.nativeElement.querySelector('.zona__rotulo'),
+      ).toBeFalsy();
+
+      await montar([], { zonas: [zona()] });
+      expect(
+        fixture.nativeElement.querySelector('.zona__rotulo').textContent,
+      ).toContain('Sala del trono');
+    });
+
+    it('el terreno se dice también con palabras, no solo con el color', async () => {
+      await montar([], { zonas: [zona({ terreno: 'agua' })] });
+      const pintada = fixture.nativeElement.querySelector('.tablero .zona');
+
+      expect(pintada.classList).toContain('zona--agua');
+      expect(pintada.getAttribute('title')).toBe('Sala del trono · Agua');
+    });
+
+    it('solo el máster tiene la herramienta de dibujar', async () => {
+      await montar([]);
+      expect(
+        fixture.nativeElement.querySelector('[title^="Dibujar una zona"]'),
+      ).toBeFalsy();
+
+      await montar([], { esMaster: true });
+      expect(
+        fixture.nativeElement.querySelector('[title^="Dibujar una zona"]'),
+      ).toBeTruthy();
+    });
+
+    it('con el lápiz en la mano, pulsar una casilla no mueve a nadie', async () => {
+      await montar([asiento()], { esMaster: true, seleccionadoId: 'pep1' });
+      component['usarHerramienta']('zona');
+
+      component['clickCelda'](10, 10);
+
+      expect(movimientos).toEqual([]);
+    });
   });
 });

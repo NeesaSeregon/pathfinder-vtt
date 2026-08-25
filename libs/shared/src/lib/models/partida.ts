@@ -265,20 +265,107 @@ export interface PartidaDetalle extends PartidaResumen {
   ronda: number;
   /** pepId del personaje que tiene el turno (null fuera de combate). */
   turnoPepId: string | null;
-  /** ¿La mesa tiene mapa de fondo? (se sirve en GET :id/mapa) */
-  tieneMapa: boolean;
+  /**
+   * Las zonas dibujadas sobre el tablero. A quien no es el máster el
+   * servidor le manda SOLO las visibles: el filtro está en detalle(),
+   * igual que con los PNJ ocultos.
+   */
+  zonas: ZonaTablero[];
 }
 
-/** Tipos de imagen admitidos para el mapa y su extensión en disco. */
-export const MAPA_TIPOS: Record<string, string> = {
-  'image/png': '.png',
-  'image/jpeg': '.jpg',
-  'image/webp': '.webp',
-  'image/gif': '.gif',
+// -- Zonas del tablero -------------------------------------------------------
+
+/**
+ * El estado del terreno de una zona. Es un RECORDATORIO VISUAL y nada más:
+ * la aplicación no impide ni encarece ningún movimiento por pisarlo, y no
+ * debe empezar a hacerlo. Quien decide qué cuesta cruzar un pantano es el
+ * máster en voz alta, como en la mesa de verdad; el tablero solo se encarga
+ * de que a nadie se le olvide que ahí hay un pantano.
+ */
+export const TERRENOS = [
+  'ninguno',
+  'dificil',
+  'agua',
+  'oscuridad',
+  'peligro',
+] as const;
+export type Terreno = (typeof TERRENOS)[number];
+
+export const TERRENO_LABELS: Record<Terreno, string> = {
+  ninguno: 'Sin marcar',
+  dificil: 'Terreno difícil',
+  agua: 'Agua',
+  oscuridad: 'Oscuridad',
+  peligro: 'Peligro',
 };
 
-/** Tope de tamaño del mapa subido (8 MB). */
-export const MAPA_MAX_BYTES = 8 * 1024 * 1024;
+/**
+ * Un rectángulo dibujado sobre el tablero: una sala, un pasillo, un charco.
+ *
+ * Las zonas NO son exclusivas y NO colisionan: una casilla puede estar en
+ * varias a la vez y se pintan en orden de lista, así que la última manda.
+ * Eso es deliberado — es lo que permite meter una fuente dentro de una sala
+ * o dar forma de L a una habitación con dos rectángulos, sin inventar una
+ * geometría más complicada que un rectángulo.
+ */
+export interface ZonaTablero {
+  id: string;
+  /** Lo que es, en palabras del máster: "Sala del trono", "Pasillo norte". */
+  nombre: string;
+  terreno: Terreno;
+  /** Si es false, el servidor no se la manda a los jugadores. */
+  visible: boolean;
+  /** Esquina superior izquierda, en casillas. */
+  x: number;
+  y: number;
+  /** Tamaño en casillas (mínimo 1×1). */
+  ancho: number;
+  alto: number;
+}
+
+/** Tope de zonas por mesa: sobra para una mazmorra y acota el jsonb. */
+export const ZONAS_MAX = 60;
+
+/** Tope del nombre de una zona (lo que cabe de rótulo sin estorbar). */
+export const ZONA_NOMBRE_MAX = 40;
+
+/** ¿Cabe este rectángulo dentro del tablero y mide al menos una casilla? */
+export function zonaCabeEnTablero(zona: {
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
+}): boolean {
+  return (
+    Number.isInteger(zona.x) &&
+    Number.isInteger(zona.y) &&
+    Number.isInteger(zona.ancho) &&
+    Number.isInteger(zona.alto) &&
+    zona.ancho >= 1 &&
+    zona.alto >= 1 &&
+    zona.x >= 0 &&
+    zona.y >= 0 &&
+    zona.x + zona.ancho <= TABLERO_ANCHO &&
+    zona.y + zona.alto <= TABLERO_ALTO
+  );
+}
+
+/**
+ * Normaliza dos esquinas cualesquiera (las de un arrastre, que puede ir en
+ * cualquier dirección) al rectángulo que forman, recortado al tablero.
+ */
+export function rectanguloEntre(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): { x: number; y: number; ancho: number; alto: number } {
+  const izq = Math.max(0, Math.min(x1, x2));
+  const arr = Math.max(0, Math.min(y1, y2));
+  const der = Math.min(TABLERO_ANCHO - 1, Math.max(x1, x2));
+  const aba = Math.min(TABLERO_ALTO - 1, Math.max(y1, y2));
+  return { x: izq, y: arr, ancho: der - izq + 1, alto: aba - arr + 1 };
+}
 
 /** Lo mínimo para ordenar el turno: la tirada y su desempate. */
 export interface Combatiente {

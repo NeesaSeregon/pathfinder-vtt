@@ -3,6 +3,10 @@ import {
   distanciaEnCasillas,
   estadoVitalDe,
   ordenarIniciativa,
+  rectanguloEntre,
+  TABLERO_ALTO,
+  TABLERO_ANCHO,
+  zonaCabeEnTablero,
 } from './partida';
 
 describe('ordenarIniciativa', () => {
@@ -111,5 +115,56 @@ describe('distanciaEnCasillas', () => {
   it('es simetrica y no negativa', () => {
     expect(distanciaEnCasillas(9, 7, 2, 4)).toBe(distanciaEnCasillas(2, 4, 9, 7));
     expect(distanciaEnCasillas(5, 5, 5, 5)).toBe(0);
+  });
+});
+
+describe('zonas del tablero', () => {
+  describe('zonaCabeEnTablero', () => {
+    it('acepta un rectángulo pegado a la esquina de abajo', () => {
+      expect(
+        zonaCabeEnTablero({ x: 20, y: 26, ancho: 4, alto: 4 }),
+      ).toBe(true);
+    });
+
+    it('rechaza el que se sale por una sola casilla', () => {
+      expect(zonaCabeEnTablero({ x: 20, y: 26, ancho: 5, alto: 4 })).toBe(
+        false,
+      );
+      expect(zonaCabeEnTablero({ x: 20, y: 26, ancho: 4, alto: 5 })).toBe(
+        false,
+      );
+    });
+
+    it('rechaza el rectángulo vacío y el de medidas rotas', () => {
+      expect(zonaCabeEnTablero({ x: 1, y: 1, ancho: 0, alto: 3 })).toBe(false);
+      expect(zonaCabeEnTablero({ x: -1, y: 1, ancho: 2, alto: 2 })).toBe(false);
+      expect(zonaCabeEnTablero({ x: 1, y: 1, ancho: 2.5, alto: 2 })).toBe(
+        false,
+      );
+    });
+  });
+
+  describe('rectanguloEntre', () => {
+    it('da igual en qué dirección se arrastre', () => {
+      const baja = rectanguloEntre(2, 3, 5, 7);
+      expect(baja).toEqual({ x: 2, y: 3, ancho: 4, alto: 5 });
+      // El mismo gesto al revés tiene que dar el mismo rectángulo
+      expect(rectanguloEntre(5, 7, 2, 3)).toEqual(baja);
+    });
+
+    it('un clic sin arrastrar es una casilla', () => {
+      expect(rectanguloEntre(4, 4, 4, 4)).toEqual({
+        x: 4,
+        y: 4,
+        ancho: 1,
+        alto: 1,
+      });
+    });
+
+    it('recorta al tablero en vez de devolver algo imposible', () => {
+      const r = rectanguloEntre(-3, -2, 99, 99);
+      expect(r).toEqual({ x: 0, y: 0, ancho: TABLERO_ANCHO, alto: TABLERO_ALTO });
+      expect(zonaCabeEnTablero(r)).toBe(true);
+    });
   });
 });

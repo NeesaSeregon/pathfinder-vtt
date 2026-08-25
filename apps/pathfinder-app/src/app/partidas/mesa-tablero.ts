@@ -11,10 +11,27 @@ import {
   distanciaEnCasillas,
   PersonajeEnPartidaResumen,
   PIES_POR_CASILLA,
+  rectanguloEntre,
   TABLERO_ALTO,
   TABLERO_ANCHO,
+  TERRENO_LABELS,
+  ZonaTablero,
 } from '@pathfinder/shared';
 import { colorToken, esCaido, iniciales, ladoToken } from './mesa-visual';
+import {
+  areaEnRejilla,
+  claseTerreno,
+  llevaRotulo,
+  tituloZona,
+} from './mesa-zonas';
+
+/** Un rectángulo recién dibujado sobre el tablero, en casillas. */
+export interface RectanguloDibujado {
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
+}
 
 /**
  * Píxeles que hay que recorrer con el botón pulsado para que el gesto deje
@@ -56,11 +73,13 @@ export class MesaTablero {
   readonly esMaster = input(false);
   readonly seleccionadoId = input<string | null>(null);
   readonly turnoPepId = input<string | null>(null);
-  /** La url() del mapa de fondo, o null si la mesa no tiene mapa. */
-  readonly fondo = input<string | null>(null);
+  /** Las zonas que este usuario puede ver (el servidor ya filtró). */
+  readonly zonas = input<ZonaTablero[]>([]);
 
   readonly seleccionar = output<PersonajeEnPartidaResumen>();
   readonly mover = output<Movimiento>();
+  /** El máster acaba de dibujar un rectángulo: la página lo convierte en zona. */
+  readonly dibujarZona = output<RectanguloDibujado>();
 
   protected readonly columnas = Array.from(
     { length: TABLERO_ANCHO },
@@ -72,6 +91,14 @@ export class MesaTablero {
   protected readonly colorToken = colorToken;
   protected readonly ladoToken = ladoToken;
   protected readonly esCaido = esCaido;
+  protected readonly areaEnRejilla = areaEnRejilla;
+  protected readonly claseTerreno = claseTerreno;
+  protected readonly llevaRotulo = llevaRotulo;
+  protected readonly etiquetasTerreno = TERRENO_LABELS;
+
+  protected titulo(zona: ZonaTablero): string {
+    return tituloZona(zona, this.etiquetasTerreno);
+  }
 
   /** El marco que recorta el tablero; se desplaza al agarrar el fondo. */
   private readonly marcoTablero =
@@ -85,9 +112,15 @@ export class MesaTablero {
    * Herramienta activa. Es el contenedor que faltaba: sin un modo activo,
    * medir, plantillas o niebla no tienen dónde vivir.
    */
-  protected readonly herramienta = signal<'seleccionar' | 'medir'>(
+  protected readonly herramienta = signal<'seleccionar' | 'medir' | 'zona'>(
     'seleccionar',
   );
+
+  /**
+   * El rectángulo que se está arrastrando ahora mismo con la herramienta de
+   * zonas. Es solo la vista previa: al soltar sube y aquí no queda nada.
+   */
+  protected readonly dibujando = signal<RectanguloDibujado | null>(null);
 
   /** Medición en curso o recién terminada (se borra al cambiar de tarea). */
   protected readonly medicion = signal<{
@@ -159,8 +192,8 @@ export class MesaTablero {
   }
 
   protected clickCelda(x: number, y: number): void {
-    // Con la regla en la mano no se mueve a nadie sin querer
-    if (this.herramienta() === 'medir') {
+    // Con la regla o el lápiz en la mano no se mueve a nadie sin querer
+    if (this.herramienta() !== 'seleccionar') {
       return;
     }
     const ocupante = this.ocupanteDe(x, y);
@@ -178,10 +211,11 @@ export class MesaTablero {
     }
   }
 
-  /** Cambia de herramienta; al salir de medir se borra lo medido. */
-  protected usarHerramienta(cual: 'seleccionar' | 'medir'): void {
+  /** Cambia de herramienta; al salir se borra lo que dejó la anterior. */
+  protected usarHerramienta(cual: 'seleccionar' | 'medir' | 'zona'): void {
     this.herramienta.set(cual);
     this.medicion.set(null);
+    this.dibujando.set(null);
   }
 
   protected iniciarArrastre(
@@ -262,6 +296,48 @@ export class MesaTablero {
   }
 
   /**
+   * Dibujar una zona es arrastrar de esquina a esquina, igual que medir. Al
+   * soltar sube el rectángulo y la vista previa desaparece: la zona no la
+   * crea el tablero, la crea la página al guardarla.
+   *
+   * Se admite el clic sin arrastrar (una casilla): rectanguloEntre() trata
+   * los dos casos igual y recorta lo que se salga del tablero.
+   */
+  private empezarDibujo(evento: PointerEvent): void {
+    const desde = this.casillaEn(evento);
+    if (!desde) {
+      return;
+    }
+    evento.preventDefault();
+    const esquina = { x1: desde.x, y1: desde.y, x2: desde.x, y2: desde.y };
+    this.dibujando.set(rectanguloEntre(esquina.x1, esquina.y1, desde.x, desde.y));
+
+    const mover = (e: PointerEvent) => {
+      const hasta = this.casillaEn(e);
+      if (hasta) {
+        esquina.x2 = hasta.x;
+        esquina.y2 = hasta.y;
+        this.dibujando.set(
+          rectanguloEntre(esquina.x1, esquina.y1, esquina.x2, esquina.y2),
+        );
+      }
+    };
+    const soltar = () => {
+      document.removeEventListener('pointermove', mover);
+      document.removeEventListener('pointerup', soltar);
+      document.removeEventListener('pointercancel', soltar);
+      const rectangulo = this.dibujando();
+      this.dibujando.set(null);
+      if (rectangulo) {
+        this.dibujarZona.emit(rectangulo);
+      }
+    };
+    document.addEventListener('pointermove', mover);
+    document.addEventListener('pointerup', soltar);
+    document.addEventListener('pointercancel', soltar);
+  }
+
+  /**
    * Recorrer el tablero agarrando el fondo. El tablero es más alto que el
    * hueco disponible, así que hay que poder moverse por él.
    *
@@ -273,9 +349,14 @@ export class MesaTablero {
    */
   protected empezarAgarre(evento: PointerEvent): void {
     if (evento.button !== 0) return;
-    // Con la regla activa, el gesto es medir, no recorrer el tablero
+    // El mismo arrastre significa una cosa u otra según lo que haya en la
+    // mano: recorrer el tablero, medir, o dibujar una zona.
     if (this.herramienta() === 'medir') {
       this.empezarMedicion(evento);
+      return;
+    }
+    if (this.herramienta() === 'zona') {
+      this.empezarDibujo(evento);
       return;
     }
     const destino = evento.target as HTMLElement | null;

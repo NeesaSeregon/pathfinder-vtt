@@ -107,9 +107,11 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   migrate puede depender de tener las devDependencies podadas.
 - La base de datos NO publica puertos en prod: solo la ve la red interna.
 - COPIAS DE SEGURIDAD: pendientes, y pasan a ser urgentes el día del
-  despliegue. Hay que salvar el volumen pgdata (pg_dump) Y el volumen de
-  uploads (los mapas no están en la base de datos). Comandos concretos en
-  DESPLIEGUE.md §6; automatizar con cron cuando haya datos reales.
+  despliegue. Hay que salvar el volumen pgdata (pg_dump). Desde que el
+  tablero no admite mapas subidos (ver ZONAS DEL TABLERO) ya no hay nada de
+  usuario fuera de la base de datos, así que el volumen de uploads dejó de
+  llevar nada que salvar. Comandos concretos en DESPLIEGUE.md §6;
+  automatizar con cron cuando haya datos reales.
 - WebEmpresa (lo que tiene Luis a día de 2026-07-20) es HOSTING COMPARTIDO
   (cPanel): NO sirve para esta app (sin Docker, sin PostgreSQL —da MySQL—,
   sin proceso Node permanente ni WebSockets estables). Hace falta un VPS con
@@ -274,8 +276,8 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   si falla responde 403, NO 401 — un 401
   significa "sesión caducada" y el authInterceptor te echaría a /entrar en
   vez de enseñarte el error. Personajes y partidas caen por el ON DELETE
-  CASCADE de la BD; los ficheros de mapas hay que borrarlos a mano antes
-  (PartidasService.borrarMapasDeMaster) o quedarían huérfanos en uploads/.
+  CASCADE de la BD, y desde que no hay mapas subidos no queda nada suyo
+  fuera de la base de datos que limpiar aparte.
 - Los personajes tienen dueño (Character.ownerId → users): cada usuario
   solo ve y toca los suyos; el personaje de otro devuelve 404, no 403.
   EXCEPCIÓN de LECTURA: GET /api/characters/:id lo sirve CharactersService.
@@ -438,6 +440,25 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   pide confirmación solo si hay cambios. Botón Cancelar explícito.
   (El soporte de e2e espera a que la API responda antes del primer test,
   para evitar carreras de arranque en frío.)
+- EL E2E RECOGE LO SUYO (2026-08-25). Cada pasada dejaba unas dos docenas de
+  mesas, sus asientos y los personajes de los tests tirados en la base de
+  datos de desarrollo. En cinco semanas se juntaron 649 partidas de las que
+  solo 4 eran de verdad, 380 usuarios generados y 711 personajes; el
+  escritorio de tester-fijo llegó a pintar 457 tarjetas. Ahora un after() en
+  support/e2e.ts entra en cada cuenta que ha tocado la pasada y la borra: el
+  ON DELETE CASCADE se lleva de un golpe partidas, asientos y personajes, y
+  no hay que ir apuntando ids por el camino. tester-fijo entra en el barrido
+  como las demás — se llama "fijo" porque se reutiliza DENTRO de una pasada,
+  y empezar la siguiente con la cuenta recién hecha hace los tests más
+  deterministas. Dos avisos para quien lo toque:
+  · Las cuentas se apuntan con el COMANDO cy.apuntarCuenta, no importando
+    una función del fichero de soporte. Si el spec importa support/commands,
+    Cypress lo empaqueta aparte y hay DOS instancias del módulo: cy.login
+    escribe en un Map y el barrido lee el otro, vacío. Pasó, y la pasada
+    entera se quedó sin limpiar.
+  · Los tests que CAMBIAN la contraseña o crean la cuenta por la interfaz
+    tienen que llamar a cy.apuntarCuenta ellos mismos: el barrido entra con
+    la contraseña apuntada, y con la vieja no abre.
 - Usuarios funcionando: /entrar y /registro con JWT en cookie httpOnly
   (ver sección Autenticación); los personajes tienen dueño. Recuperación de
   contraseña por correo en /recuperar y /restablecer (ambas públicas), con
@@ -485,16 +506,62 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
     selección, así que recibe el pep como input.required, no como null.
   · MesaRegistro: tiradas + lanzador. Sin selección se lleva la columna.
   · PnjModal: la siembra de PNJ, con sus dos pestañas.
-  Dos ficheros de apoyo, para que las tres zonas dibujen igual a la misma
-  gente: mesa-visual.ts (funciones puras: colorToken, iniciales, ladoToken,
-  fraccionPg, esCaido, nombres de condición) y el parcial _mesa-comun.scss
-  (.rotulo, .tarjeta, .boton, .ficha, .marca, .pgbar, .vital), que cada zona
-  hace @use — no van a styles.scss porque son nombres demasiado genéricos
-  para el ámbito global.
+  · ZonasModal: la lista de zonas del tablero (ver ZONAS más abajo).
+  Tres ficheros de apoyo, para que las zonas dibujen igual a la misma gente:
+  mesa-visual.ts (funciones puras: colorToken, iniciales, ladoToken,
+  fraccionPg, esCaido, nombres de condición), mesa-zonas.ts (areaEnRejilla,
+  llevaRotulo, claseTerreno, tituloZona) y el parcial _mesa-comun.scss
+  (.rotulo, .tarjeta, .boton, .ficha, .marca, .pgbar, .vital y los rellenos
+  .zona--*), que cada zona hace @use — no van a styles.scss porque son
+  nombres demasiado genéricos para el ámbito global.
   La rejilla de tres columnas y sus puntos de corte se quedan en la página;
   la caja de cada zona la pone el :host de su componente.
   Cada zona tiene su spec (124 tests en la app); los de la página siguen
   siendo de integración y atraviesan los hijos.
+- ZONAS DEL TABLERO (2026-08-25). El máster dibuja RECTÁNGULOS sobre el
+  tablero —una sala, un pasillo, un charco— y les pone nombre. Sustituyen al
+  mapa de fondo subido, que se retiró entero (endpoints, columna, ficheros
+  en disco y la limpieza que arrastraba al borrar una cuenta): no había
+  ninguno subido en producción. Compartir imágenes puede volver algún día,
+  pero como ILUSTRACIÓN de algo, no como fondo del tablero.
+  Decisiones, y el porqué de cada una:
+  · EL TERRENO NO AFECTA AL MOVIMIENTO. "Terreno difícil" es un recordatorio
+    visual y nada más: la app no encarece ni impide pisar nada, y no debe
+    empezar a hacerlo. Quien decide qué cuesta cruzar un pantano es el
+    máster en voz alta, como en la mesa de verdad. Está escrito en el
+    comentario de TERRENOS (libs/shared) porque es la clase de decisión que
+    alguien "arregla" dentro de seis meses.
+  · LAS ZONAS NO SON EXCLUSIVAS Y NO COLISIONAN. Una casilla puede estar en
+    varias; se pintan en orden de lista y la última manda. Eso no es un
+    descuido: es lo que permite meter una fuente dentro de una sala y hacer
+    una habitación en L con dos rectángulos, sin inventar una geometría más
+    complicada. Por eso tampoco hay reglas de partición ni de solape.
+  · SE DIBUJAN EN EL TABLERO Y SE GESTIONAN EN LA MODAL. Dibujar es un gesto
+    de ratón (arrastrar de esquina a esquina, misma vía que medir:
+    empezarAgarre bifurca por herramienta y casillaEn traduce puntero →
+    casilla) y ponerle nombre es escribir. Un formulario flotando sobre el
+    tablero rompería la regla de que nada opaco tapa casillas. Además, la
+    lista es la única vía CON TECLADO a algo que si no sería solo de ratón.
+  · SE PINTAN EN LA MISMA REJILLA CSS que las casillas, con grid-area. Ni
+    capa SVG ni píxeles: encajan solas con el hueco de 2px. Van al fondo
+    (z-index 0; el token está en el 2) y con pointer-events: none, así que
+    la casilla de debajo se sigue pulsando y sigue admitiendo un token —
+    la regla que ya costó una tarde con la barra de herramientas.
+  · EL COLOR NO VA SOLO: cada terreno lleva trama además de color, el nombre
+    del estado está en el title y escrito en la lista. Y una zona pequeña NO
+    lleva rótulo (mínimo 3×2): en 1×2 el nombre sale recortado y pisando la
+    casilla vecina; el nombre sigue en el title y en la lista.
+  · LO QUE UN JUGADOR NO DEBE VER NO SE LE MANDA. visible: false lo filtra
+    el SERVIDOR en detalle(), igual que los PNJ ocultos. Ocultarlo en el
+    cliente sería enseñarlo en la respuesta de la API a quien la mire. Esto
+    NO es niebla de guerra —no hay descubrimiento ni visión por personaje—,
+    pero evita que dibujar la mazmorra entera antes de la sesión les enseñe
+    el plano.
+  · SE GUARDAN ENTERAS: columna jsonb "zonas" y un PUT /partidas/:id/zonas
+    que reemplaza la lista. Las edita una sola persona, así que no hay dos
+    versiones que fusionar, y un reemplazo no deja estados a medias. El
+    aviso a la mesa es mesa-cambiada (recarga filtrada), que además es el
+    único correcto aquí: cada jugador ve una lista distinta.
 - Partidas: entidad Partida (el creador es el máster; código de invitación
   de 6 caracteres, visible solo para él) y PersonajeEnPartida (tabla
   intermedia con el ESTADO DE SESIÓN: pgActuales —inicializado desde la
@@ -551,8 +618,8 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   y unir() no pedía el código — el código de invitación existía pero ningún
   endpoint lo usaba, era decorativo. Cualquiera entraba en la mesa de otro.
   Las cuatro puertas, cerradas y con test de regresión:
-  · detalle() y mapaDe() → solo participantes, y responden 404 (no 403: un
-    403 confirmaría que esa partida existe).
+  · detalle() → solo participantes, y responde 404 (no 403: un 403
+    confirmaría que esa partida existe).
   · unir() → EXIGE el código, salvo que ya seas participante (el máster, o
     un jugador que trae un segundo personaje). Se compara en mayúsculas y
     sin espacios.
@@ -574,9 +641,10 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   mesa" en la cabecera de la mesa, la única acción irreversible de esa
   pantalla). El endpoint existía desde el principio pero no lo llamaba nadie
   y se dejaba tres cosas sin hacer (arregladas el 2026-08-01, con los
-  primeros usuarios reales): el FICHERO del mapa (vive en disco, el CASCADE
-  no lo ve), las INSTANCIAS de PNJ (fichas desechables de esa mesa; un PJ o
-  una PLANTILLA no se tocan, misma regla que sacar()) y avisar a la sala.
+  primeros usuarios reales): las INSTANCIAS de PNJ (fichas desechables de
+  esa mesa; un PJ o una PLANTILLA no se tocan, misma regla que sacar()) y
+  avisar a la sala. Había una tercera, el fichero del mapa, que dejó de
+  existir al retirarse el mapa de fondo.
 - PERDER EL SITIO EN UNA MESA. La mesa es privada, así que en cuanto dejas
   de ser participante detalle() responde 404 — y esa es justo la respuesta
   que llega cuando te sacan el personaje (mesa-cambiada → recarga → 404).
@@ -645,12 +713,12 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   un significado claro, y toda función nueva entra por uno de ellos; si no
   encaja en ninguno, falta una zona y eso es una decisión de diseño, no un
   botón más en la cabecera. Era justo el fallo de antes: la cabecera era una
-  fila plana donde "Cerrar mesa" pesaba lo mismo que subir un mapa.
+  fila plana donde "Cerrar mesa" pesaba lo mismo que lo demás.
   1. BARRA DE MESA (.barra): sustituye a la navbar general — App.enLaMesa la
      esconde en /partidas/:id (ojo: /partidas/crear NO es una mesa y sí la
      lleva). Trae nombre, máster, el estado de la conexión, el código, el
      único botón de uso continuo ("+ Añadir PNJ") y el menú "Máster" con lo
-     demás (mapa, código, y al final y marcado, cerrar la mesa).
+     demás (zonas, código, y al final y marcado, cerrar la mesa).
      El antiguo botón "Actualizar" permanente es ahora un indicador "En
      vivo" (PartidaSocket.conectado); recargar a mano solo se ofrece cuando
      el socket está caído, que es cuando sirve de algo.
@@ -694,17 +762,8 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   iniciativa de los PNJ sola al iniciar combate y la vista de tablet con
   hoja inferior. La barra de herramientas y Medir YA ESTÁN (con el defecto
   de que tapa la esquina; ver Mejoras futuras).
-- Mapa de fondo del tablero: lo sube el MÁSTER (POST :id/mapa, multipart,
-  campo "mapa"); GET :id/mapa lo sirve y DELETE :id/mapa lo quita. Se guarda
-  EN DISCO, no en la BD: la columna partidas.mapaFichero solo lleva el nombre
-  generado (uuid + extensión por MIME — nunca el nombre del cliente). Carpeta
-  configurable con UPLOADS_DIR (por defecto ./uploads/mapas, en .gitignore);
-  en despliegue debe ser un VOLUMEN montado. Tipos admitidos y tope de 8 MB
-  en libs/shared (MAPA_TIPOS, MAPA_MAX_BYTES), validados también en servidor.
-  Se usa el almacenamiento en memoria de multer y escribimos el fichero a
-  mano (así no hace falta @types/multer). Al reemplazar o quitar se borra el
-  fichero anterior. En el front, el tablero lo pinta de fondo y las casillas
-  se vuelven translúcidas (clase tablero--con-mapa).
+- Zonas del tablero: PUT /partidas/:id/zonas con la lista entera, solo el
+  máster. Ver ZONAS DEL TABLERO más arriba para las decisiones de diseño.
 - Mover tokens: dos clics (token → casilla) Y arrastrar (drag & drop nativo;
   el dragover hace preventDefault para admitir el soltar). Ambas rutas acaban
   en el mismo PATCH, así que el servidor valida la huella igual.

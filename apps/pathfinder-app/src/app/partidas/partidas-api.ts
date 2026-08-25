@@ -11,6 +11,7 @@ import {
   PersonajeEnPartidaResumen,
   SembrarPnj,
   TiradaResultado,
+  ZonaTablero,
 } from '@pathfinder/shared';
 
 @Service()
@@ -125,18 +126,19 @@ export class PartidasApi {
     );
   }
 
-  /** Sube el mapa de fondo (multipart; el navegador pone el Content-Type). */
-  subirMapa(partidaId: string, fichero: File): Observable<PartidaDetalle> {
-    const datos = new FormData();
-    datos.append('mapa', fichero);
-    return this.http.post<PartidaDetalle>(
-      `${this.baseUrl}/${partidaId}/mapa`,
-      datos,
+  /**
+   * Guarda las zonas del tablero. Es un PUT con la lista ENTERA: la edita
+   * solo el máster, así que no hay nada que fusionar y el servidor se queda
+   * exactamente con lo que ve en pantalla.
+   */
+  guardarZonas(
+    partidaId: string,
+    zonas: ZonaTablero[],
+  ): Observable<PartidaDetalle> {
+    return this.http.put<PartidaDetalle>(
+      `${this.baseUrl}/${partidaId}/zonas`,
+      { zonas },
     );
-  }
-
-  quitarMapa(partidaId: string): Observable<PartidaDetalle> {
-    return this.http.delete<PartidaDetalle>(`${this.baseUrl}/${partidaId}/mapa`);
   }
 
   tirarIniciativa(
