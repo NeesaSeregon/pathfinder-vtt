@@ -112,10 +112,7 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   usuario fuera de la base de datos, así que el volumen de uploads dejó de
   llevar nada que salvar. Comandos concretos en DESPLIEGUE.md §6;
   automatizar con cron cuando haya datos reales.
-- WebEmpresa (lo que tiene Luis a día de 2026-07-20) es HOSTING COMPARTIDO
-  (cPanel): NO sirve para esta app (sin Docker, sin PostgreSQL —da MySQL—,
-  sin proceso Node permanente ni WebSockets estables). Hace falta un VPS con
-  root. El dominio de Cloudflare sí vale con cualquier host.
+
 
 ## Convenciones
 - Todo modelo o evento compartido entre front y back se define en
