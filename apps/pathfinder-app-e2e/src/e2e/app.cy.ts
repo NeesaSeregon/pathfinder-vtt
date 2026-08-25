@@ -33,6 +33,21 @@ describe('autenticación', () => {
 });
 
 describe('partidas', () => {
+  /**
+   * La mesa rediseñada reparte las acciones por ZONAS, y eso cambia cómo se
+   * la maneja desde fuera:
+   *
+   * · La LISTA (.fila) dice quién está y en qué estado, pero no se toca ahí.
+   * · Todo lo que se HACE con alguien —PG, condiciones, ficha, revelar,
+   *   sacar— vive en el panel de Selección (.insp), que solo aparece al
+   *   elegir a alguien. Por eso casi todo empieza con un clic en su fila.
+   * · Lo que no es de uso continuo (mapa, código, cerrar la mesa) está
+   *   dentro del menú del máster, que hay que abrir.
+   */
+  const elegir = (nombre: string) => cy.contains('.fila', nombre).click();
+  const abrirMenuMaster = () =>
+    cy.contains('.menu > button', 'Máster').click();
+
   it('crear una mesa, encontrarla por nombre y unirse con un personaje', () => {
     const nombre = `Mesa-${Date.now()}`;
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
@@ -72,36 +87,43 @@ describe('partidas', () => {
       '1 personaje',
     );
 
-    // Entrar a la mesa: el personaje espera en el banquillo con sus PG
+    // Entrar a la mesa: el personaje espera en el banquillo con sus PG. Tu
+    // personaje tiene tarjeta fija arriba para no tener que buscarte.
     cy.contains('.partida__resultados li', nombre)
       .contains('a', 'Entrar')
       .click();
     cy.get('h1').should('contain', nombre);
-    cy.get('.tablero__banquillo').should('exist');
-    cy.get('.mesa__pg input').should('have.value', '31');
+    cy.get('.banquillo').should('exist');
+    cy.get('.mio .pg__valor').should('have.value', '31');
 
-    // Colocar el token: clic en el token del banquillo + clic en casilla
-    cy.get('.tablero__banquillo .tablero__token').click();
-    cy.get('.tablero__celda').first().click();
-    cy.get('.tablero__banquillo').should('not.exist');
+    // Colocar el token: clic en la pieza del banquillo + clic en casilla.
+    // Se elige una casilla del centro a propósito: la esquina superior
+    // izquierda la tapa la barra de herramientas, que flota sobre el
+    // tablero (ver "Mejoras futuras" de CLAUDE.md).
+    cy.get('.banquillo__pieza').click();
+    cy.get('.tablero__celda[data-x="5"][data-y="5"]').click();
+    cy.get('.banquillo').should('not.exist');
     cy.get('.tablero .tablero__token').should('exist');
 
-    // El máster ajusta los PG tras un golpe
-    cy.get('.mesa__pg input').clear();
-    cy.get('.mesa__pg input').type('24');
-    cy.get('.mesa__pg input').blur();
+    // El máster ajusta los PG tras un golpe. Seleccionar es lo que abre el
+    // panel: mirar a alguien y tocarlo son dos gestos distintos.
+    cy.get('.tablero .tablero__token').click();
+    cy.get('.insp .pg__valor').clear();
+    cy.get('.insp .pg__valor').type('24');
+    cy.get('.insp .pg__valor').blur();
 
     // Recarga: posición y PG vienen de PostgreSQL, no de la memoria
     cy.reload();
     cy.get('.tablero .tablero__token').should('exist');
-    cy.get('.tablero__banquillo').should('not.exist');
-    cy.get('.mesa__pg input').should('have.value', '24');
+    cy.get('.banquillo').should('not.exist');
+    cy.get('.mio .pg__valor').should('have.value', '24');
 
     // TIEMPO REAL: un cambio hecho "desde fuera" (cy.request simula a
     // otro jugador) aparece en pantalla SIN recargar, empujado por el socket
+    cy.get('.tablero .tablero__token').click();
     cy.location('pathname').then((ruta) => {
       const partidaId = ruta.split('/').pop();
-      cy.get('.mesa__pg input')
+      cy.get('.insp .pg__valor')
         .invoke('attr', 'data-pep')
         .then((pepId) => {
           cy.request(
@@ -111,19 +133,22 @@ describe('partidas', () => {
           );
         });
     });
-    cy.get('.mesa__pg input').should('have.value', '7');
-    // La condición estructurada aparece con su nombre y su efecto (−2 CA)
-    cy.get('.mesa__condiciones').should('contain', 'Aturdido');
-    cy.get('.mesa__cond').should('contain', 'CA');
+    cy.get('.insp .pg__valor').should('have.value', '7');
+    // La condición estructurada aparece con su nombre y su efecto (−2 CA).
+    // El nombre va en el chip; la descripción, debajo, que es material de
+    // consulta y en la lista ocupaba sitio de estado de mesa.
+    cy.get('.insp .chips').should('contain', 'Aturdido');
+    cy.get('.insp .condicion').should('contain', 'CA');
     // SISTEMA DE EFECTOS: aturdido baja la CA (base 10 → 8) en tiempo real
-    cy.get('.mesa__personaje').should('contain', 'CA 8');
-    cy.get('.mesa__personaje').should('contain', 'base 10');
+    cy.get('.insp__meta').should('contain', 'CA 8');
+    cy.get('.insp__meta').should('contain', 'base 10');
 
-    // Reparto de columnas: las fichas a la izquierda, el turno a la derecha
-    cy.get('.mesa__panel--personajes .mesa__personaje').should('exist');
-    cy.get('.mesa__panel--juego .mesa__combate').should('exist');
-    cy.get('.mesa__panel--juego .mesa__dados').should('exist');
-    cy.get('.mesa__panel--juego .mesa__personaje').should('not.exist');
+    // Reparto de zonas: las personas a la izquierda, y a la derecha lo del
+    // token elegido y el registro. La misma gente NO sale dos veces.
+    cy.get('.zona--personas .fila').should('exist');
+    cy.get('.zona--panel .insp').should('exist');
+    cy.get('.zona--panel .lanzador').should('exist');
+    cy.get('.zona--panel .fila').should('not.exist');
   });
 
   // Regresión del agujero que encontró Neesa: entrar en la mesa de otro sin
@@ -190,13 +215,14 @@ describe('partidas', () => {
       (mesa) => {
         const viejo = mesa.body.codigo;
         cy.visit(`/partidas/${mesa.body.id}`);
-        cy.contains('.mesa__codigo', viejo);
+        cy.contains('.codigo', viejo);
 
         cy.on('window:confirm', () => true);
-        cy.contains('.mesa__codigo-cambiar', 'cambiar').click();
+        abrirMenuMaster();
+        cy.contains('.menu__opcion', 'Cambiar el código de invitación').click();
 
         // El código cambia en pantalla y el viejo deja de encontrar la mesa
-        cy.get('.mesa__codigo').should('not.contain', viejo);
+        cy.get('.codigo').should('not.contain', viejo);
         cy.request(`/api/partidas?buscar=${viejo}`)
           .its('body')
           .should('have.length', 0);
@@ -212,7 +238,10 @@ describe('partidas', () => {
         cy.visit(`/partidas/${mesa.body.id}`);
 
         cy.on('window:confirm', () => true);
-        cy.contains('.mesa__peligro', 'Cerrar mesa').click();
+        // Lo irreversible está guardado en el menú y marcado, no suelto en
+        // la barra pesando lo mismo que subir un mapa.
+        abrirMenuMaster();
+        cy.contains('.menu__opcion--peligro', 'Cerrar la mesa').click();
 
         // Sale al escritorio sabiendo qué ha pasado, y la mesa ya no existe
         cy.location('pathname').should('eq', '/');
@@ -256,7 +285,8 @@ describe('partidas', () => {
           cy.get('h1').should('contain', nombre);
 
           // Se levanta de la mesa (el dueño también puede sacar su ficha)
-          cy.contains('.mesa__acciones button', 'Sacar de la mesa').click();
+          elegir(`Valeros-${sufijo}`);
+          cy.contains('.insp__acciones button', 'Sacar de la mesa').click();
 
           cy.location('pathname').should('eq', '/');
           cy.get('.escritorio__aviso').should('contain', 'Ya no tienes');
@@ -272,11 +302,11 @@ describe('partidas', () => {
         cy.visit(`/partidas/${res.body.id}`);
 
         // La columna izquierda arranca pegada al borde (solo el padding)
-        cy.get('.mesa__panel--personajes').then(($izq) => {
+        cy.get('.zona--personas').then(($izq) => {
           expect($izq[0].getBoundingClientRect().left).to.be.lessThan(30);
         });
         // Y la derecha termina pegada al otro extremo
-        cy.get('.mesa__panel--juego').then(($der) => {
+        cy.get('.zona--panel').then(($der) => {
           expect(1920 - $der[0].getBoundingClientRect().right).to.be.lessThan(30);
         });
 
@@ -325,6 +355,47 @@ describe('partidas', () => {
     );
   });
 
+  it('la regla mide de casilla a casilla y lo medido se queda en pantalla', () => {
+    cy.viewport(1920, 1080);
+    cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
+    cy.request('POST', '/api/partidas', { nombre: `Medir-${Date.now()}` }).then(
+      (res) => {
+        cy.visit(`/partidas/${res.body.id}`);
+
+        // Con la regla en la mano, el gesto sobre el tablero es medir
+        cy.get('.utiles .util').eq(1).click();
+
+        // Lejos de la barra de herramientas, que flota sobre la esquina:
+        // elementFromPoint devolvería la barra y no habría casilla que medir
+        cy.get('.tablero__celda[data-x="5"][data-y="5"]').then(($desde) => {
+          const a = $desde[0].getBoundingClientRect();
+          cy.get('.tablero__celda[data-x="8"][data-y="5"]').then(($hasta) => {
+            const b = $hasta[0].getBoundingClientRect();
+            cy.get('.tablero-marco').trigger('pointerdown', {
+              button: 0,
+              clientX: a.left + a.width / 2,
+              clientY: a.top + a.height / 2,
+            });
+            cy.document().trigger('pointermove', {
+              clientX: b.left + b.width / 2,
+              clientY: b.top + b.height / 2,
+            });
+            cy.document().trigger('pointerup');
+          });
+        });
+
+        // Tres casillas a lo ancho son 15 pies, y no se borra al soltar:
+        // en mesa se pregunta "¿llego?" y se mira la respuesta con calma.
+        cy.get('.regla__etiqueta').should('contain', '15 pies');
+        cy.get('.regla').should('exist');
+
+        // Volver a Seleccionar borra lo medido: es otra tarea
+        cy.get('.utiles .util').first().click();
+        cy.get('.regla').should('not.exist');
+      },
+    );
+  });
+
   it('un participante tira los dados y el total aparece en el registro', () => {
     cy.login('tester-fijo', 'tester-fijo@mesa.es', 'contraseña-larga');
     // El máster de la mesa ya es participante: puede tirar sin unir ficha
@@ -333,12 +404,12 @@ describe('partidas', () => {
       .then((id) => {
         cy.visit(`/partidas/${id}`);
         // 2d1+3 siempre suma 5: assert determinista sin depender del azar
-        cy.get('.mesa__dados-libre input').type('2d1+3');
-        cy.get('.mesa__dados-libre').contains('button', 'Tirar').click();
-        cy.get('.mesa__tiradas')
+        cy.get('.lanzador__libre input').type('2d1+3');
+        cy.get('.lanzador__libre').contains('button', 'Tirar').click();
+        cy.get('.tiradas')
           .should('contain', '2d1+3')
           .and('contain', 'tester-fijo');
-        cy.get('.mesa__tirada-total').first().should('contain', '5');
+        cy.get('.tirada__total').first().should('contain', '5');
       });
   });
 
@@ -359,10 +430,9 @@ describe('partidas', () => {
               characterId,
             });
             cy.visit(`/partidas/${partidaId}`);
-            cy.get('.mesa__personaje')
-              .contains('button', 'Ver ficha')
-              .click();
-            cy.get('.mesa__modal')
+            cy.get('.fila').first().click();
+            cy.contains('.insp__acciones button', 'Ver ficha').click();
+            cy.get('.modal')
               .should('contain', 'Explorador')
               .and('contain', 'PG 28');
           });
@@ -395,23 +465,26 @@ describe('partidas', () => {
             });
 
             cy.visit(`/partidas/${partidaId}`);
-            cy.get('.mesa__personaje').should('contain', 'nivel 3');
+            // Tu personaje, en su tarjeta fija de arriba
+            cy.get('.mio').should('contain', 'nivel 3');
 
             // Abre SU ficha y la edita ahí mismo
-            cy.get('.mesa__personaje').contains('button', 'Ver ficha').click();
-            cy.get('.mesa__modal').contains('button', 'Editar').click();
-            cy.get('.mesa__modal input[name="level"]').clear();
-            cy.get('.mesa__modal input[name="level"]').type('7');
-            cy.get('.mesa__modal').contains('button', 'Guardar').click();
+            elegir(`Valeros-${sufijo}`);
+            cy.contains('.insp__acciones button', 'Ver ficha').click();
+            cy.get('.modal').contains('button', 'Editar').click();
+            cy.get('.modal input[name="level"]').clear();
+            cy.get('.modal input[name="level"]').type('7');
+            cy.get('.modal').contains('button', 'Guardar').click();
 
             // La tarjeta de la mesa refleja el cambio sin recargar a mano
-            cy.get('.mesa__personaje').should('contain', 'nivel 7');
+            cy.get('.mio').should('contain', 'nivel 7');
 
             // El máster ve la ficha, pero NO puede editarla
             cy.login(`m-${sufijo}`, `m-${sufijo}@mesa.es`, 'contraseña-larga');
             cy.visit(`/partidas/${partidaId}`);
-            cy.get('.mesa__personaje').contains('button', 'Ver ficha').click();
-            cy.get('.mesa__modal').should('not.contain', 'Editar');
+            elegir(`Valeros-${sufijo}`);
+            cy.contains('.insp__acciones button', 'Ver ficha').click();
+            cy.get('.modal').should('not.contain', 'Editar');
           });
       }
     });
@@ -423,7 +496,7 @@ describe('partidas', () => {
       .its('body.id')
       .then((partidaId) => {
         cy.visit(`/partidas/${partidaId}`);
-        cy.contains('button', '+ Añadir PNJ').click();
+        cy.contains('button', 'Añadir PNJ').click();
         // Este máster ya tiene bestiario, así que el modal abre ahí: para
         // crear uno desde cero hay que pedir la otra pestaña.
         cy.contains('button', 'Crear uno nuevo').click();
@@ -445,11 +518,15 @@ describe('partidas', () => {
         cy.get('.pnj__previa').should('contain', 'CA 17');
         cy.contains('button', 'Añadir a la mesa').click();
 
-        // Tres tokens numerados, con la CA y los PG ya derivados
-        cy.get('.mesa__personaje').should('have.length', 3);
-        cy.contains('.mesa__personaje', 'Goblin 1').should('contain', 'CA 17');
-        cy.contains('.mesa__personaje', 'Goblin 3').should('contain', '6');
-        cy.contains('.mesa__personaje', 'Goblin 1').should('contain', 'Enemigo');
+        // Tres en la lista, con sus PG ya derivados
+        cy.get('.fila').should('have.length', 3);
+        cy.contains('.fila', 'Goblin 3').should('contain', '6');
+
+        // La CA y la actitud son material de consulta: viven en el panel,
+        // no en la fila, que es estado de mesa.
+        elegir('Goblin 1');
+        cy.get('.insp__meta').should('contain', 'CA 17');
+        cy.get('.insp .actitud').should('contain', 'Enemigo');
       });
   });
 
@@ -463,32 +540,32 @@ describe('partidas', () => {
       .its('body.id')
       .then((primera) => {
         cy.visit(`/partidas/${primera}`);
-        cy.contains('button', '+ Añadir PNJ').click();
+        cy.contains('button', 'Añadir PNJ').click();
         // Sin bestiario todavía, arranca en la pestaña de crear
         cy.get('input[name="nombre"]').type(bicho);
         cy.get('input[name="pgTotal"]').clear();
         cy.get('input[name="pgTotal"]').type('30');
         cy.contains('button', 'Añadir a la mesa').click();
-        cy.contains('.mesa__personaje', bicho).should('exist');
+        cy.contains('.fila', bicho).should('exist');
 
         // Segunda mesa: ahora ya está en el bestiario, sin volver a teclearlo
         cy.request('POST', '/api/partidas', { nombre: `Mesa2-${sufijo}` })
           .its('body.id')
           .then((segunda) => {
             cy.visit(`/partidas/${segunda}`);
-            cy.contains('button', '+ Añadir PNJ').click();
+            cy.contains('button', 'Añadir PNJ').click();
 
             // Se abre directamente en el bestiario porque ya hay monstruos
-            cy.get('.mesa__bestiario').should('contain', bicho);
+            cy.get('.siembra__lista').should('contain', bicho);
             cy.get('input[name="cantidadPlantilla"]').clear();
             cy.get('input[name="cantidadPlantilla"]').type('2');
-            cy.contains('.mesa__bestiario li', bicho)
+            cy.contains('.siembra__lista li', bicho)
               .contains('button', 'Traer al tablero')
               .click();
 
             // Dos copias numeradas, con los PG que se guardaron en la plantilla
-            cy.contains('.mesa__personaje', `${bicho} 1`).should('contain', '30');
-            cy.contains('.mesa__personaje', `${bicho} 2`).should('exist');
+            cy.contains('.fila', `${bicho} 1`).should('contain', '30');
+            cy.contains('.fila', `${bicho} 2`).should('exist');
 
             // El bestiario NO se llena de copias: sigue habiendo una entrada
             cy.visit('/personajes');
@@ -520,10 +597,9 @@ describe('partidas', () => {
         });
 
         cy.visit(`/partidas/${partidaId}`);
-        cy.contains('.mesa__personaje', `${bicho} 1`)
-          .contains('button', 'Sacar de la mesa')
-          .click();
-        cy.contains('.mesa__personaje', `${bicho} 1`).should('not.exist');
+        elegir(`${bicho} 1`);
+        cy.contains('.insp__acciones button', 'Sacar de la mesa').click();
+        cy.contains('.fila', `${bicho} 1`).should('not.exist');
 
         // La instancia desaparece, pero la PLANTILLA sigue en el bestiario
         cy.request('/api/characters?tipo=pnj').then((res) => {
@@ -566,7 +642,7 @@ describe('partidas', () => {
               codigo,
             });
             cy.visit(`/partidas/${partidaId}`);
-            cy.contains('.mesa__personaje', `Heroe-${sufijo}`).should('exist');
+            cy.contains('.fila', `Heroe-${sufijo}`).should('exist');
             cy.contains('Goblin acechante').should('not.exist');
 
             // Y tampoco viaja en la respuesta de la API, no solo en pantalla
@@ -574,18 +650,18 @@ describe('partidas', () => {
               expect(JSON.stringify(res.body)).to.not.contain('Goblin');
             });
 
-            // El máster lo revela
+            // El máster lo revela. Los ocultos NO se agrupan aparte: siguen
+            // en su sitio de la lista, marcados.
             cy.login(`gm-${sufijo}`, `gm-${sufijo}@mesa.es`, 'contraseña-larga');
             cy.visit(`/partidas/${partidaId}`);
-            cy.contains('.mesa__personaje', 'Goblin acechante')
-              .should('contain', 'oculto')
-              .contains('button', 'Revelar')
-              .click();
+            cy.contains('.fila', 'Goblin acechante').should('contain', 'oculto');
+            elegir('Goblin acechante');
+            cy.contains('.insp__acciones button', 'Revelar').click();
 
             // Ahora sí llega al jugador
             cy.login(`pj-${sufijo}`, `pj-${sufijo}@mesa.es`, 'contraseña-larga');
             cy.visit(`/partidas/${partidaId}`);
-            cy.contains('.mesa__personaje', 'Goblin acechante').should('exist');
+            cy.contains('.fila', 'Goblin acechante').should('exist');
           });
       }
     });
@@ -616,16 +692,19 @@ describe('partidas', () => {
                 );
                 cy.visit(`/partidas/${partidaId}`);
 
+                // El rastreador encabeza la lista de personas: es la misma
+                // gente, no una segunda columna con los mismos nombres.
                 cy.contains('button', 'Iniciar combate').click();
-                cy.get('.mesa__ronda').should('contain', 'Ronda 1');
-                cy.get('.mesa__orden--turno').should('contain', 'Comb-');
+                cy.get('.combate__ronda').should('contain', 'Ronda 1');
+                cy.get('.combate__turno').should('contain', 'Comb-');
+                cy.get('.fila--turno').should('contain', 'Comb-');
 
                 // Un solo combatiente: al pasar turno se da la vuelta → ronda 2
                 cy.contains('button', 'Siguiente turno').click();
-                cy.get('.mesa__ronda').should('contain', 'Ronda 2');
+                cy.get('.combate__ronda').should('contain', 'Ronda 2');
 
-                cy.contains('button', 'Terminar combate').click();
-                cy.get('.mesa__combate').should('contain', 'Sin combate activo');
+                cy.contains('.combate__acciones button', 'Terminar').click();
+                cy.get('.combate').should('contain', 'Sin combate activo');
               });
           });
       });
@@ -650,11 +729,12 @@ describe('partidas', () => {
             });
             cy.visit(`/partidas/${partidaId}`);
 
-            cy.get('.tablero__banquillo .tablero__token').trigger('dragstart');
-            cy.get('.tablero__celda').eq(0).trigger('drop');
+            cy.get('.banquillo__pieza').trigger('dragstart');
+            // Casilla del centro: la esquina la tapa la barra de herramientas
+            cy.get('.tablero__celda[data-x="5"][data-y="5"]').trigger('drop');
 
             // Ya no está en el banquillo: está sobre el tablero
-            cy.get('.tablero__banquillo').should('not.exist');
+            cy.get('.banquillo').should('not.exist');
             cy.get('.tablero .tablero__token').should('exist');
           });
       });
@@ -666,6 +746,8 @@ describe('partidas', () => {
       .its('body.id')
       .then((partidaId) => {
         cy.visit(`/partidas/${partidaId}`);
+        // El mapa no es de uso continuo: vive dentro del menú del máster
+        abrirMenuMaster();
         cy.fixture('mapa.png', 'base64').then((base64) => {
           cy.get('input[name="mapa"]').selectFile(
             {
@@ -678,7 +760,9 @@ describe('partidas', () => {
         });
         cy.get('.tablero').should('have.class', 'tablero--con-mapa');
 
-        cy.contains('button', 'Quitar mapa').click();
+        // Elegir el fichero cierra el menú, así que hay que volver a abrirlo
+        abrirMenuMaster();
+        cy.contains('.menu__opcion', 'Quitar el mapa').click();
         cy.get('.tablero').should('not.have.class', 'tablero--con-mapa');
       });
   });
@@ -741,16 +825,17 @@ describe('partidas', () => {
               characterId,
             });
             cy.visit(`/partidas/${partidaId}`);
+            cy.get('.fila').first().click();
 
-            // Añadir "Enredado" desde el desplegable → aparece con su efecto
-            cy.get('.mesa__cond-anadir').select('enredado');
-            cy.get('.mesa__cond')
-              .should('contain', 'Enredado')
-              .and('contain', 'media velocidad');
+            // Añadir "Enredado" desde el desplegable → chip con su nombre y,
+            // debajo, su efecto completo para consultarlo
+            cy.get('.chips__anadir').select('enredado');
+            cy.get('.chip').should('contain', 'Enredado');
+            cy.get('.condicion').should('contain', 'media velocidad');
 
             // Quitarla con la ✕ → vuelve a "Ninguna"
-            cy.get('.mesa__cond').contains('button', '✕').click();
-            cy.get('.mesa__condiciones').should('contain', 'Ninguna');
+            cy.get('.chip').contains('button', '✕').click();
+            cy.get('.chips').should('contain', 'Ninguna');
           });
       });
   });

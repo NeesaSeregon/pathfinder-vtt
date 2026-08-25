@@ -335,6 +335,20 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   No hay migración: estadoVital es derivado, como la CA o la iniciativa.
 
 ## Mejoras futuras
+- LA BARRA DE HERRAMIENTAS TAPA LA ESQUINA DEL TABLERO. `.utiles` es
+  position:absolute con fondo opaco sobre la esquina superior izquierda del
+  marco (y `.banquillo` hace lo mismo abajo): las casillas que quedan
+  debajo NO se pueden pulsar ni soltar nada en ellas. No lo arregla
+  desplazar el tablero — a lo ancho cabe entero, así que las columnas 0-1
+  están siempre bajo la barra, y la fila 0 solo se ve con scrollTop 0, que
+  es justo cuando la tapa. Lo destapó el e2e el 2026-08-25 ("cy.click()
+  failed because this element is being covered by .utiles"); viene del
+  rediseño del 2026-08-24, no de la partición en componentes. De momento el
+  e2e coloca en una casilla del centro para no depender de la esquina, pero
+  el defecto sigue ahí. Salidas posibles: sacar la barra fuera del marco,
+  ponerla en fila horizontal encima del tablero, o dar a la rejilla un
+  margen interior del tamaño de la barra. Es decisión de diseño: hay
+  maquetas en Desktop/workspace/diseno-mesa/.
 - (HECHO el 2026-08-24: PARTIR LA MESA EN COMPONENTES. Ver la sección
   "La mesa, por dentro" del Estado actual. El presupuesto anyComponentStyle
   volvió a 10/16 kB, que es donde estaba antes del rediseño.)
