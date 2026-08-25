@@ -120,6 +120,13 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   libs/shared, nunca duplicado.
 - El front consume la API vía /api con proxy.conf.json en desarrollo.
 - Angular: componentes standalone y signals; evitar NgModules y Zone.js.
+- CSS: ESTILOS.md manda. Ahí está en qué nivel va cada regla (global /
+  parcial de zona / componente), el contrato del tema —los componentes NO
+  declaran colores propios; para transparencias, color-mix() sobre la
+  variable, no un rgba() reescrito a mano—, la nomenclatura, las invariantes
+  de maqueta de la mesa y los presupuestos. Leerlo ANTES de tocar un .scss:
+  la trampa de las clases compartidas entre zonas no da error, solo se ve
+  mal.
 - Generar código nuevo con generadores de Nx cuando exista uno
   (nx g @nx/nest:resource, nx g @angular/...), no a mano.
 - Los comandos se ejecutan en PowerShell (Windows).

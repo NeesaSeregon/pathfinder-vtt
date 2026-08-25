@@ -5,9 +5,11 @@ bloque, cómo se comunican el frontend y el backend entre sí y con PostgreSQL,
 y cómo está montado el testing.
 
 > Documentos hermanos: [CLAUDE.md](CLAUDE.md) (notas de trabajo y decisiones
-> de diseño con su porqué) y [DESPLIEGUE.md](DESPLIEGUE.md) (puesta en
-> producción). Este documento explica **cómo funciona**; aquellos, **por qué**
-> y **cómo se despliega**.
+> de diseño con su porqué), [ESTILOS.md](ESTILOS.md) (dónde va cada regla de
+> CSS, el contrato del tema y las invariantes de maqueta) y
+> [DESPLIEGUE.md](DESPLIEGUE.md) (puesta en producción). Este documento
+> explica **cómo funciona**; aquellos, **por qué**, **cómo se pinta** y
+> **cómo se despliega**.
 
 ---
 
@@ -242,13 +244,37 @@ apps/pathfinder-app/src/app/
   `/entrar`. (Por eso ciertos errores usan 403 y no 401 a propósito: un 401
   significa "tu sesión ha caducado" y te echaría.)
 
-### La vista del tablero
+### La mesa (`/partidas/:id`)
 
+Es la pantalla más rica de la aplicación, y desde agosto de 2026 está
+**repartida en cinco zonas**, cada una un componente.
 [partida-detalle-page.ts](apps/pathfinder-app/src/app/partidas/partida-detalle-page.ts)
-es el componente más rico: pinta la rejilla (24×30 casillas), coloca los tokens
-según su huella, permite moverlos (dos clics o arrastrar), gestiona PG y
-condiciones, el rastreador de iniciativa y las tiradas. Se mantiene sincronizado
-por WebSocket a través de [partida-socket.ts](apps/pathfinder-app/src/app/partidas/partida-socket.ts).
+ya no pinta nada: es el **contenedor**, el dueño del estado de la partida y
+el único que habla con la API y con el socket. Cada zona recibe lo que pinta
+por inputs y devuelve lo que cambia por outputs; ninguna pide la partida por
+su cuenta.
+
+| Componente | De qué es dueño |
+|---|---|
+| `mesa-barra` | La barra de la mesa y el menú del máster. Sustituye a la navbar general dentro de una partida |
+| `mesa-personas` | El ORDEN de la lista: por iniciativa en combate; fuera, jugadores y luego PNJ |
+| `mesa-tablero` | El GESTO: herramienta activa, medición, arrastre y el agarre del marco |
+| `mesa-seleccion` | El panel del asiento elegido. Solo existe si hay selección |
+| `mesa-registro` | Las tiradas y el lanzador |
+| `pnj-modal` | La siembra de PNJ |
+
+Dos ficheros de apoyo evitan que las zonas divergan al dibujar a la misma
+gente: `mesa-visual.ts` (funciones puras de pintado — color del token,
+iniciales, huella, fracción de PG) y el parcial `_mesa-comun.scss` (el
+vocabulario visual compartido). Si el token del tablero, la fila de la lista
+y la cabecera del panel no salieran del mismo sitio, dejarían de reconocerse
+como la misma persona. Las reglas de CSS que sostienen todo esto están en
+[ESTILOS.md](ESTILOS.md).
+
+La mesa se mantiene sincronizada por WebSocket a través de
+[partida-socket.ts](apps/pathfinder-app/src/app/partidas/partida-socket.ts),
+que además publica si la conexión está viva — es lo que pinta el "En vivo"
+de la barra.
 
 ---
 

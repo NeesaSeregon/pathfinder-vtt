@@ -54,51 +54,6 @@
   }
 }
 
-// -- Botones ----------------------------------------------------------------
-// Heredan de styles.scss; aquí solo la talla de la mesa y las variantes.
-.boton {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.7rem;
-  font-size: 0.85rem;
-  white-space: nowrap;
-
-  svg {
-    width: 0.9rem;
-    height: 0.9rem;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.9;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  /* Lo irreversible se ve que lo es */
-  &--peligro {
-    background: none;
-    border-color: rgba(255, 107, 129, 0.5);
-    color: var(--danger);
-
-    &:hover:not(:disabled) {
-      color: var(--bg);
-      background: var(--danger);
-      border-color: var(--danger);
-      box-shadow: none;
-    }
-  }
-
-  &--dano {
-    border-color: rgba(224, 82, 82, 0.55);
-    color: var(--actitud-enemigo);
-  }
-
-  &--cura {
-    border-color: rgba(91, 181, 106, 0.55);
-    color: var(--actitud-aliado);
-  }
-}
-
 // -- Zonas ------------------------------------------------------------------
 // Las zonas se colocan aquí (rejilla) pero se maquetan por dentro cada una:
 // el :host de cada componente lleva su propia caja. Aquí solo queda lo que
@@ -109,30 +64,6 @@
   gap: 0.6rem;
   min-height: 0;
   overflow: hidden;
-}
-
-.rotulo {
-  margin: 0;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-faint);
-  font-weight: 650;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  span {
-    text-transform: none;
-    letter-spacing: 0.01em;
-    font-weight: 400;
-  }
-}
-
-.tarjeta {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.6rem;
 }
 
 // -- Modales (siembra de PNJ y ficha) --------------------------------------
