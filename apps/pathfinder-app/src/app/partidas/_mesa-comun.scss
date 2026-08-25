@@ -222,6 +222,46 @@
   }
 }
 
+// -- Zonas del tablero: el ASPECTO ------------------------------------------
+// El aspecto vive aquí y la COLOCACIÓN en mesa-tablero.scss, y no es un
+// capricho: lo comparten la zona pintada en el tablero y la muestra de
+// color de la lista de zonas. Y hay una razón de orden — si la base se
+// declarara en la hoja del tablero, Sass la compilaría DESPUÉS de este
+// parcial y su background pisaría a los modificadores de terreno, que
+// tienen la misma especificidad. Los terrenos dejaban de verse.
+.zona {
+  border-radius: 0.35rem;
+  // Relleno CONTENIDO y borde marcado: la zona tiñe el suelo, no lo
+  // sustituye, y hay que seguir viendo el foco de la casilla debajo.
+  background: color-mix(in oklab, var(--surface-2) 60%, transparent);
+  // --text-faint y no --border-strong: el borde de la zona tiene que
+  // distinguirse de las LÍNEAS DE LA REJILLA, que ya son --border.
+  border: 2px solid var(--text-faint);
+  // La "iluminación": un halo hacia dentro que despega la sala del suelo
+  // sin subir el relleno, que es lo que taparía la rejilla.
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, #ffffff 6%, transparent),
+    inset 0 0 1.25rem color-mix(in oklab, #000000 35%, transparent);
+}
+
+// Chapa detrás del texto: el rótulo cae sobre casillas, tramas y a veces un
+// token, y sin fondo propio no se lee en ninguna de las tres.
+.zona__rotulo {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--bg) 78%, transparent);
+  border: 1px solid var(--border-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text);
+  text-align: center;
+  max-width: calc(100% - 0.5rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 // -- Terreno de una zona ----------------------------------------------------
 // El relleno lo usan DOS sitios: la zona pintada en el tablero y la muestra
 // de color en la lista de zonas. Si divergen, la lista deja de servir para
@@ -232,8 +272,8 @@
 // color. Cada uno lleva su trama, y el nombre del estado está en el title
 // de la zona y escrito en la lista.
 .zona--dificil {
-  background: color-mix(in oklab, var(--terreno-dificil) 16%, transparent);
-  border-color: color-mix(in oklab, var(--terreno-dificil) 55%, transparent);
+  background: color-mix(in oklab, var(--terreno-dificil) 30%, transparent);
+  border-color: var(--terreno-dificil);
   background-image: repeating-linear-gradient(
     45deg,
     color-mix(in oklab, var(--terreno-dificil) 22%, transparent) 0 3px,
@@ -242,8 +282,8 @@
 }
 
 .zona--agua {
-  background: color-mix(in oklab, var(--terreno-agua) 16%, transparent);
-  border-color: color-mix(in oklab, var(--terreno-agua) 55%, transparent);
+  background: color-mix(in oklab, var(--terreno-agua) 30%, transparent);
+  border-color: var(--terreno-agua);
   background-image: repeating-linear-gradient(
     to bottom,
     color-mix(in oklab, var(--terreno-agua) 20%, transparent) 0 2px,
@@ -253,8 +293,8 @@
 
 // La oscuridad no se pinta con un color: se pinta QUITÁNDOLO.
 .zona--oscuridad {
-  background: color-mix(in oklab, var(--bg) 82%, transparent);
-  border-color: var(--border-strong);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  border-color: var(--accent-2);
   background-image: radial-gradient(
     circle at 50% 50%,
     transparent 40%,
@@ -267,8 +307,8 @@
 }
 
 .zona--peligro {
-  background: color-mix(in oklab, var(--terreno-peligro) 14%, transparent);
-  border-color: color-mix(in oklab, var(--terreno-peligro) 60%, transparent);
+  background: color-mix(in oklab, var(--terreno-peligro) 28%, transparent);
+  border-color: var(--terreno-peligro);
   background-image: repeating-linear-gradient(
     -45deg,
     color-mix(in oklab, var(--terreno-peligro) 24%, transparent) 0 3px,

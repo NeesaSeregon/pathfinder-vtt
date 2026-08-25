@@ -251,51 +251,36 @@
 }
 
 // -- Zonas: salas, pasillos y terreno --------------------------------------
-// Son celdas de LA MISMA rejilla que las casillas (grid-area), no una capa
-// flotante: por eso encajan solas con el hueco de 2px y no hay que traducir
-// casillas a píxeles. Y por eso, sobre todo, no tapan nada — van al fondo
-// (z-index 0, el token está en el 2) y no reciben puntero, así que la
-// casilla de debajo se sigue pulsando y sigue admitiendo un token. Esa es
-// la regla que ya nos costó una tarde con la barra de herramientas.
+// Se colocan con grid-area, así encajan solas con el hueco de 2px sin
+// traducir casillas a píxeles.
+//
+// POSITION: ABSOLUTE + INSET: 0, y no es adorno. Un hijo de la rejilla con
+// posición explícita RESERVA su hueco, y las 720 casillas —que se colocan
+// solas— fluyen alrededor: una sala de 6×5 empujaba seis columnas a todas
+// las casillas posteriores. El tablero parecía rotar, los tokens salían
+// movidos y se dibujaba donde no habías clicado. Un hijo absoluto no
+// reserva hueco pero sigue usando grid-area (la rejilla le hace de bloque
+// contenedor); el inset: 0 hace falta porque una caja absoluta se encoge a
+// su contenido.
+//
+// Z-INDEX: 1, ENCIMA de las casillas. Estuvo en 0 y la zona era invisible:
+// la casilla es OPACA (--surface), está posicionada y va DESPUÉS en el
+// marcado, así que la tapaba entera. Solo asomaba por los huecos de 2px de
+// la rejilla — el rótulo salía troceado en tiras y el color no se veía. El
+// token está en el 2, así que sigue por encima de la zona.
 .zona {
-  /* ABSOLUTA, y no es un detalle de adorno: es lo que impide que la zona
-     desordene el tablero. Un hijo de la rejilla con posición explícita
-     RESERVA su hueco, y las 720 casillas —que se colocan solas— fluirían
-     alrededor: una sala de 6×5 empujaba seis columnas a todas las casillas
-     posteriores. El tablero parecía rotar, los tokens salían movidos y, lo
-     peor, el botón bajo el puntero ya no era el que decía su data-x, así
-     que se dibujaba donde no se había clicado.
-     Un hijo ABSOLUTO no reserva hueco, pero sigue pudiendo usar grid-area:
-     la rejilla le sirve de bloque contenedor (por el position: relative de
-     .tablero) y encaja igual de exacto, sin matemáticas de píxeles. */
   position: absolute;
-  /* Y el inset, que no sobra: una caja absoluta se ENCOGE a su contenido.
-     Sin esto la zona medía lo que su rótulo, no lo que su área. */
   inset: 0;
+  z-index: 1;
   pointer-events: none;
-  z-index: 0;
-  border-radius: 0.35rem;
+  // El rótulo va ARRIBA A LA IZQUIERDA, como en un mapa de batalla de
+  // papel, y no centrado: el centro de una sala es justo donde se juntan
+  // los tokens, y el nombre acababa debajo de uno.
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 0.15rem;
   overflow: hidden;
-  background: color-mix(in oklab, var(--surface-2) 85%, transparent);
-  border: 1px solid var(--border-strong);
-
-  &__rotulo {
-    padding: 0 0.25rem;
-    font-size: 0.6rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    text-align: center;
-    /* Un nombre largo se corta antes que desbordar sobre la sala vecina */
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 
   /* Dibujada pero aún no revelada: solo la ve el máster (al jugador el
      servidor ni se la manda). El borde discontinuo se lo recuerda. */

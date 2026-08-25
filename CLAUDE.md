@@ -574,9 +574,25 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
     absoluta se encoge a su contenido. El e2e lo vigila midiendo que una
     casilla lejana no se mueva al pintar una zona.
   · EL COLOR NO VA SOLO: cada terreno lleva trama además de color, el nombre
-    del estado está en el title y escrito en la lista. Y una zona pequeña NO
-    lleva rótulo (mínimo 3×2): en 1×2 el nombre sale recortado y pisando la
-    casilla vecina; el nombre sigue en el title y en la lista.
+    del estado está en el title y escrito en la lista.
+  · LA ZONA VA POR ENCIMA DE LA CASILLA (z-index 1), no debajo. Estuvo en 0
+    y era invisible: la casilla es OPACA (--surface), está posicionada y va
+    DESPUÉS en el marcado, así que la tapaba entera; la zona solo asomaba
+    por los huecos de 2px de la rejilla y el rótulo salía TROCEADO en tiras.
+    El token está en el 2, así que sigue por encima de la zona.
+  · EL RÓTULO VA EN LA ESQUINA superior izquierda, como en un mapa de
+    batalla de papel, y sobre una chapa opaca: centrado acababa debajo de un
+    token (el centro de una sala es donde se juntan), y sin chapa no se lee
+    sobre las tramas. Una zona de menos de 3 casillas de ANCHO no lo lleva
+    —con dos, la chapa recorta hasta dejar "P…", que informa menos que
+    nada—; el alto nunca fue el límite, porque la chapa mide menos que una
+    casilla. El nombre completo sigue en el title y en la lista.
+  · EL ASPECTO DE LA ZONA VIVE EN _mesa-comun.scss, NO en la hoja del
+    tablero. Aparte de que lo comparte con la muestra de color de la lista,
+    hay una razón de orden: si la base se declarara en mesa-tablero.scss,
+    Sass la compilaría DESPUÉS del parcial y su background pisaría a los
+    modificadores .zona--*, que tienen la misma especificidad. Los terrenos
+    dejaban de verse.
   · LO QUE UN JUGADOR NO DEBE VER NO SE LE MANDA. visible: false lo filtra
     el SERVIDOR en detalle(), igual que los PNJ ocultos. Ocultarlo en el
     cliente sería enseñarlo en la respuesta de la API a quien la mire. Esto

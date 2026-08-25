@@ -35,7 +35,7 @@
         @for (zona of borrador(); track zona.id) {
           <li class="zonas__fila">
             <span
-              [class]="'zonas__muestra ' + claseTerreno(zona.terreno)"
+              [class]="'zonas__muestra zona ' + claseTerreno(zona.terreno)"
               aria-hidden="true"
             ></span>
 

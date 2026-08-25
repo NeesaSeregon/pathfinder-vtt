@@ -238,10 +238,24 @@ hueco pero sigue usando `grid-area`, porque la rejilla le hace de bloque
 contenedor. El `inset: 0` va con él: una caja absoluta se encoge a su
 contenido, y sin eso la zona medía lo que su rótulo.
 
+Y un cuarto ingrediente: **`z-index: 1`, por encima de la casilla**. Estuvo
+en 0 y la zona era invisible — la casilla es opaca (`--surface`), está
+posicionada y va después en el marcado, así que la tapaba entera. La zona
+solo asomaba por los huecos de 2px de la rejilla, y el rótulo salía troceado
+en tiras. El token está en el 2 y sigue por encima.
+
 El e2e lo vigila con tres medidas: que la zona caiga sobre las casillas que
 dice, que se guarde donde se arrastró, y que una casilla lejana **no se
 mueva ni un píxel** al pintar una zona. Esa última se mide relativa a
 `.tablero` y no a la ventana: el marco se desplaza por el camino.
+
+> **Dónde va el aspecto de una zona**: en `_mesa-comun.scss`, no en
+> `mesa-tablero.scss`. Además de compartirlo con la muestra de color de la
+> lista, hay una razón de orden: declarar la base en la hoja del componente
+> la compila **después** del parcial, y su `background` pisa a los
+> modificadores `.zona--*`, que tienen la misma especificidad. Los terrenos
+> dejaban de verse. Regla general: **la base va siempre antes que sus
+> modificadores en el CSS compilado**, y con `@use` eso significa el parcial.
 
 ### Los cortes
 

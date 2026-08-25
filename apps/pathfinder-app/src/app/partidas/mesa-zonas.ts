@@ -6,21 +6,22 @@ import { Terreno, ZonaTablero } from '@pathfinder/shared';
  */
 
 /**
- * Una zona demasiado pequeña no lleva rótulo. El nombre no cabe en 1×2 y lo
- * que sale es un recorte ilegible pisando la casilla de al lado; el nombre
- * sigue estando en el title y en la lista de zonas, que es donde se busca.
+ * Una zona estrecha no lleva rótulo. El nombre sigue estando en el title y
+ * en la lista de zonas, que es donde se busca.
  *
- * El corte es por ANCHO: es la dimensión que gasta el texto. Tres casillas
- * dan sitio a una palabra corta a 0,6rem.
+ * El corte es por ANCHO y solo por ancho: es la dimensión que gasta el
+ * texto. El alto nunca fue el límite — la chapa del rótulo mide bastante
+ * menos que una casilla, así que un pasillo de una sola fila sí lo lleva.
+ *
+ * Tres y no dos: con dos casillas (~86px) la chapa recorta hasta dejar
+ * "P…", que informa menos que no poner nada. Con tres cabe una palabra.
  */
 export const ZONA_ANCHO_MINIMO_ROTULO = 3;
-export const ZONA_ALTO_MINIMO_ROTULO = 2;
 
 export function llevaRotulo(zona: ZonaTablero): boolean {
   return (
     zona.nombre.trim().length > 0 &&
-    zona.ancho >= ZONA_ANCHO_MINIMO_ROTULO &&
-    zona.alto >= ZONA_ALTO_MINIMO_ROTULO
+    zona.ancho >= ZONA_ANCHO_MINIMO_ROTULO
   );
 }
 

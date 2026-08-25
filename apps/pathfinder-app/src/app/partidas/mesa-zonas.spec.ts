@@ -26,13 +26,17 @@ describe('llevaRotulo', () => {
     expect(llevaRotulo(zona())).toBe(true);
   });
 
-  it('un pasillo de 1 casilla de ancho NO lo lleva', () => {
+  // Con dos casillas la chapa del rótulo recorta hasta dejar "P…", que
+  // informa menos que no poner nada.
+  it('un pasillo estrecho NO lo lleva', () => {
     expect(llevaRotulo(zona({ ancho: 1, alto: 8 }))).toBe(false);
     expect(llevaRotulo(zona({ ancho: 2, alto: 8 }))).toBe(false);
   });
 
-  it('tampoco una franja de una sola fila', () => {
-    expect(llevaRotulo(zona({ ancho: 10, alto: 1 }))).toBe(false);
+  // El alto NUNCA fue el límite: la chapa mide bastante menos que una
+  // casilla, así que una franja de una sola fila sí lo lleva.
+  it('una franja de una sola fila SÍ lo lleva', () => {
+    expect(llevaRotulo(zona({ ancho: 10, alto: 1 }))).toBe(true);
   });
 
   it('sin nombre no hay rótulo por grande que sea', () => {

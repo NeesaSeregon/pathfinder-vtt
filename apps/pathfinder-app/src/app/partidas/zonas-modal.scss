@@ -25,18 +25,14 @@
     border-radius: 0.5rem;
   }
 
-  /* El mismo color y la misma trama que la zona en el tablero: sin esto hay
-     que adivinar cuál de la lista es cuál del tablero. */
+  /* Lleva también la clase .zona, así que el color, el borde y la trama
+     salen del MISMO sitio que en el tablero (_mesa-comun). Sin eso hay que
+     adivinar cuál de la lista es cuál del tablero. Aquí solo el tamaño. */
   &__muestra {
     width: 2rem;
     height: 2rem;
     flex-shrink: 0;
     align-self: center;
-    border-radius: 0.35rem;
-    /* El aspecto de una zona sin terreno marcado, igual que en el tablero;
-       las clases .zona--* de mesa-comun lo tapan cuando lo hay. */
-    background: color-mix(in oklab, var(--surface-2) 85%, transparent);
-    border: 1px solid var(--border-strong);
   }
 
   &__campo {
