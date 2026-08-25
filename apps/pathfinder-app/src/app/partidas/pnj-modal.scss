@@ -27,22 +27,22 @@
       font-size: 0.85rem;
     }
 
+    /* Solo el relleno y el tope de ancho: el resto, la regla global */
     input[type='number'],
     select {
-      background: var(--bg);
-      color: var(--text);
-      border: 1px solid var(--border-strong);
-      border-radius: 0.375rem;
       padding: 0.4rem 0.5rem;
-      font: inherit;
       max-width: 8rem;
     }
   }
 
-  &__oculto {
-    flex-direction: row !important;
+  /* La casilla "oculto" es un label como los demás, pero en fila: el texto
+     va al lado de la casilla, no encima. Se gana la partida con el
+     selector (label.siembra__oculto pesa más que label a secas) en vez de
+     con !important, que es lo que había. */
+  &__opciones label#{&}__oculto {
+    flex-direction: row;
     align-items: center;
-    gap: 0.4rem !important;
+    gap: 0.4rem;
     padding-bottom: 0.45rem;
   }
 

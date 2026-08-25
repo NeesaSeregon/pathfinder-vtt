@@ -3,7 +3,7 @@
     <h1>Crear partida</h1>
 
     @if (creada(); as partida) {
-      <div class="partida__creada">
+      <div>
         <p class="partida__texto">
           <strong>{{ partida.nombre }}</strong> está lista. Comparte este
           código de invitación con tus jugadores:
@@ -19,7 +19,7 @@
         Prepara una mesa como máster: dale nombre a la partida e invita a tus
         jugadores con sus fichas.
       </p>
-      <form class="partida__form" (ngSubmit)="crear()">
+      <form (ngSubmit)="crear()">
         <label>
           Nombre de la partida
           <input
@@ -49,7 +49,7 @@
         </button>
       </form>
       @if (error()) {
-        <p class="acceso__error">{{ error() }}</p>
+        <p class="acceso__error" role="alert">{{ error() }}</p>
       }
     }
   </section>

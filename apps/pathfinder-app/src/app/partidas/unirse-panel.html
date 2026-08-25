@@ -38,10 +38,10 @@
 }
 
 @if (mensaje()) {
-  <p class="partida__exito">{{ mensaje() }}</p>
+  <p class="partida__exito" role="status">{{ mensaje() }}</p>
 }
 @if (error()) {
-  <p class="acceso__error">{{ error() }}</p>
+  <p class="acceso__error" role="alert">{{ error() }}</p>
 }
 
 <p class="partida__texto partida__hint">
@@ -83,7 +83,7 @@
       <!-- "Entrar" SOLO si ya estás dentro: la mesa es privada y sin asiento
            la página responde 404, que es donde acababa el recién llegado. -->
       @if (partida.soyParticipante) {
-        <a class="partida__entrar" [routerLink]="['/partidas', partida.id]">
+        <a class="boton-enlace" [routerLink]="['/partidas', partida.id]">
           Entrar
         </a>
       }

@@ -9,7 +9,6 @@ import { mensajeDeError } from '../characters/mensaje-de-error';
   selector: 'app-registro-page',
   imports: [RouterLink, FormsModule],
   templateUrl: './registro-page.html',
-  styleUrl: './registro-page.scss',
 })
 export class RegistroPage {
   private readonly api = inject(AuthApi);
@@ -44,7 +43,11 @@ export class RegistroPage {
         next: (respuesta) => {
           // Registrarse ya te deja dentro: no obligamos a hacer login aparte
           this.sesion.establecer(respuesta.username);
-          this.router.navigate(['/personajes']);
+          // Al mismo sitio que el login. Una cuenta recién hecha no tiene
+          // mesas NI personajes, y el escritorio explica mejor el primer
+          // paso que una lista vacía: el panel de unirse dice "todavía no
+          // tienes ninguno" y enlaza a crearlo.
+          this.router.navigate(['/']);
         },
         error: (err) => {
           this.cargando.set(false);

@@ -51,7 +51,7 @@
   /* Lo irreversible se ve que lo es */
   &--peligro {
     background: none;
-    border-color: rgba(255, 107, 129, 0.5);
+    border-color: color-mix(in oklab, var(--danger) 50%, transparent);
     color: var(--danger);
 
     &:hover:not(:disabled) {
@@ -63,12 +63,12 @@
   }
 
   &--dano {
-    border-color: rgba(224, 82, 82, 0.55);
+    border-color: color-mix(in oklab, var(--actitud-enemigo) 55%, transparent);
     color: var(--actitud-enemigo);
   }
 
   &--cura {
-    border-color: rgba(91, 181, 106, 0.55);
+    border-color: color-mix(in oklab, var(--actitud-aliado) 55%, transparent);
     color: var(--actitud-aliado);
   }
 }

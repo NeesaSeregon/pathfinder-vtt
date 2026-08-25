@@ -157,7 +157,11 @@
 
     .fila__nombre {
       text-decoration: line-through;
-      text-decoration-color: rgba(224, 82, 82, 0.7);
+      text-decoration-color: color-mix(
+        in oklab,
+        var(--actitud-enemigo) 70%,
+        transparent
+      );
     }
   }
 
@@ -167,10 +171,10 @@
     border-color: var(--border-strong);
     background: repeating-linear-gradient(
       45deg,
-      rgba(26, 33, 50, 0.35),
-      rgba(26, 33, 50, 0.35) 8px,
-      rgba(18, 23, 36, 0.35) 8px,
-      rgba(18, 23, 36, 0.35) 16px
+      color-mix(in oklab, var(--surface-2) 35%, transparent),
+      color-mix(in oklab, var(--surface-2) 35%, transparent) 8px,
+      color-mix(in oklab, var(--surface) 35%, transparent) 8px,
+      color-mix(in oklab, var(--surface) 35%, transparent) 16px
     );
   }
 

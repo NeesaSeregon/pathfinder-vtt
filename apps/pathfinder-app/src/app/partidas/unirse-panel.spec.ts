@@ -110,7 +110,7 @@ describe('UnirsePanel', () => {
   // camino por el que se perdía el recién llegado.
   it('"Entrar" solo aparece si ya participas en esa mesa', async () => {
     expect(
-      fixture.nativeElement.querySelector('.partida__entrar'),
+      fixture.nativeElement.querySelector('.boton-enlace'),
     ).toBeNull();
 
     component['buscar']();
@@ -120,7 +120,7 @@ describe('UnirsePanel', () => {
     await fixture.whenStable();
 
     expect(
-      fixture.nativeElement.querySelector('.partida__entrar'),
+      fixture.nativeElement.querySelector('.boton-enlace'),
     ).toBeTruthy();
   });
 

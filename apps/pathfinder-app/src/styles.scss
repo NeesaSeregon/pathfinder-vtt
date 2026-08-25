@@ -17,10 +17,16 @@
   /* Acentos neón (cian principal, violeta secundario) */
   --accent: #4cd7e5;
   --accent-2: #a78bfa;
-  --accent-soft: rgba(76, 215, 229, 0.12);
-  --glow: 0 0 0.75rem rgba(76, 215, 229, 0.25);
-  /* Estado */
+  --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+  --glow: 0 0 0.75rem color-mix(in oklab, var(--accent) 25%, transparent);
+  /* Estado. Van en pareja: uno dice que algo ha salido mal y el otro que ha
+     salido bien. OJO: --exito NO es --actitud-aliado, que significa otra
+     cosa (un PNJ amistoso en el tablero) y no se puede reutilizar aquí sin
+     mezclar dos significados. */
   --danger: #ff6b81;
+  --exito: #7bd88f;
+  /* El velo que oscurece el fondo tras una modal: mas profundo que --bg */
+  --velo: rgba(4, 6, 10, 0.7);
   /* Paleta de fichas/avatares del tablero (colores distinguibles entre sí) */
   --token-0: #4cd7e5;
   --token-1: #a78bfa;
@@ -58,8 +64,16 @@ body {
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(60rem 30rem at 85% -10%, rgba(167, 139, 250, 0.08), transparent),
-    radial-gradient(50rem 25rem at 0% 0%, rgba(76, 215, 229, 0.06), transparent),
+    radial-gradient(
+      60rem 30rem at 85% -10%,
+      color-mix(in oklab, var(--accent-2) 8%, transparent),
+      transparent
+    ),
+    radial-gradient(
+      50rem 25rem at 0% 0%,
+      color-mix(in oklab, var(--accent) 6%, transparent),
+      transparent
+    ),
     var(--bg);
   color: var(--text);
   font-family: 'Segoe UI', system-ui, sans-serif;
@@ -119,7 +133,9 @@ button {
   border-radius: 0.375rem;
   font: inherit;
   cursor: pointer;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 
   &:hover:not(:disabled) {
     border-color: var(--accent);
@@ -137,12 +153,72 @@ button {
   }
 }
 
-/* Botón de acción principal (guardar, entrar...) */
+/* Botón de acción principal (guardar, entrar, crear una mesa...).
+   Se declara ENTERO, sin apoyarse en la regla del elemento <button>, porque
+   la mitad de las acciones principales de la app son enlaces: "Crear cuenta"
+   en la navbar, los accesos del escritorio, las tarjetas de la portada. Un
+   <a> no hereda nada de button, así que cada página se escribía su propia
+   copia — y acabaron con DOS bordes distintos en reposo (--accent aquí,
+   --border-strong en las copias) según quién copiara de quién. */
 .boton-primario {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
   background: var(--accent-soft);
-  border-color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 0.375rem;
   color: var(--accent);
+  font: inherit;
   font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+
+  &:hover:not(:disabled) {
+    box-shadow: var(--glow);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* El mismo problema, un peldaño más abajo: un <a> que hace de botón normal.
+   Es el "Entrar" de una mesa en la lista, que no compite con la acción
+   principal de su pantalla pero tampoco puede ser un enlace suelto. */
+.boton-enlace {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.85rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.375rem;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+
+  &:hover {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 
 fieldset {
@@ -205,7 +281,7 @@ legend {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 10, 0.7);
+  background: var(--velo);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -235,6 +311,28 @@ legend {
       margin: 0;
     }
   }
+}
+
+/* El mensaje de error bajo un formulario. Estaba copiado en cuatro hojas con
+   TRES rojos distintos: #b00020 en /entrar (y de rebote en /recuperar y
+   /restablecer, que comparten su .scss por styleUrl), #ff6b6b en el panel de
+   unirse, y --danger en crear. El peor no era la incoherencia: #b00020 sobre
+   --bg da 2,64:1 de contraste, por debajo del 4,5:1 que pide WCAG AA para
+   texto — un aviso de error que costaba leer. --danger da 7,06:1. */
+.acceso__error {
+  margin: 0.75rem 0 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+/* El pie de un panel de acceso: "¿Aún no tienes cuenta?", "¿Te has
+   acordado?", la letra pequeña de después del formulario. Estaba declarado
+   igual en login-page.scss y en registro-page.scss, y lo usan cuatro
+   plantillas. */
+.acceso__alternativa {
+  margin: 1.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 /* Pestañas. También estaban copiadas en cada página que las usa. */
@@ -271,7 +369,7 @@ legend {
   margin-top: 1.25rem;
   padding: 0.6rem 0.9rem;
   border-left: 3px solid var(--accent-2);
-  background: rgba(167, 139, 250, 0.08);
+  background: color-mix(in oklab, var(--accent-2) 8%, transparent);
   color: var(--text-muted);
   font-size: 0.85rem;
   border-radius: 0 0.375rem 0.375rem 0;

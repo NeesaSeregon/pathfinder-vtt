@@ -72,36 +72,27 @@
     font-size: 0.95rem;
   }
 
-  &__boton {
-    background: var(--accent-soft);
-    color: var(--accent);
-    border: 1px solid var(--border-strong);
-    border-radius: 0.375rem;
+  /* Cancelar, cerrar sesión: van en tono normal para que no compitan con
+     la acción que de verdad avanza (.boton-primario). */
+  &__secundario {
     padding: 0.45rem 1rem;
-    font: inherit;
+  }
+
+  /* Borrar la cuenta es lo único de la app que no se puede deshacer y que
+     además se lleva TODO por delante: es el único botón macizo. El rojo de
+     la mesa (.boton--peligro) es de contorno porque allí se convive con él
+     toda la partida; aquí se quiere que frene. --danger es un rosa claro,
+     así que el texto va oscuro para que se lea. */
+  &__peligro {
+    padding: 0.45rem 1rem;
+    color: var(--bg);
+    background: var(--danger);
+    border-color: var(--danger);
     font-weight: 600;
-    cursor: pointer;
 
     &:hover:not(:disabled) {
-      border-color: var(--accent);
-      box-shadow: var(--glow);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    &--peligro {
-      /* --danger es un rosa claro: el texto va oscuro para que se lea */
-      color: var(--bg);
-      background: var(--danger);
-      border-color: var(--danger);
-
-      &:hover:not(:disabled) {
-        box-shadow: none;
-        filter: brightness(1.12);
-      }
+      box-shadow: none;
+      filter: brightness(1.12);
     }
   }
 
@@ -116,13 +107,11 @@
       color: var(--text-muted);
     }
 
+    /* El campo lo pinta la regla global de input: aquí solo el relleno.
+       Tenía su propia copia con OTRO fondo (--bg) y OTRO borde, así que la
+       misma app tenía dos clases de campo según la pantalla. */
     input {
-      background: var(--bg);
-      color: var(--text);
-      border: 1px solid var(--border-strong);
-      border-radius: 0.375rem;
       padding: 0.45rem 0.6rem;
-      font: inherit;
     }
   }
 

@@ -52,7 +52,7 @@
         </p>
         <button
           type="button"
-          class="cuenta__boton"
+          class="boton-primario"
           (click)="cambiandoPassword.set(true)"
         >
           Cambiar contraseña
@@ -96,7 +96,7 @@
           <div class="cuenta__confirmar-botones">
             <button
               type="submit"
-              class="cuenta__boton"
+              class="boton-primario"
               [disabled]="
                 guardandoPassword() ||
                 !passwordActual() ||
@@ -108,7 +108,7 @@
             </button>
             <button
               type="button"
-              class="cuenta__boton"
+              class="cuenta__secundario"
               (click)="cancelarCambioPassword()"
             >
               Cancelar
@@ -123,7 +123,7 @@
       <p class="cuenta__nota">
         Cierra la sesión en este dispositivo. Tus datos no se tocan.
       </p>
-      <button type="button" class="cuenta__boton" (click)="salir()">
+      <button type="button" class="cuenta__secundario" (click)="salir()">
         Cerrar sesión
       </button>
     </section>
@@ -141,7 +141,7 @@
       @if (!confirmando()) {
         <button
           type="button"
-          class="cuenta__boton cuenta__boton--peligro"
+          class="cuenta__peligro"
           (click)="confirmando.set(true)"
         >
           Quiero borrar mi cuenta
@@ -167,14 +167,14 @@
           <div class="cuenta__confirmar-botones">
             <button
               type="submit"
-              class="cuenta__boton cuenta__boton--peligro"
+              class="cuenta__peligro"
               [disabled]="borrando() || !password()"
             >
               {{ borrando() ? 'Borrando…' : 'Borrar definitivamente' }}
             </button>
             <button
               type="button"
-              class="cuenta__boton"
+              class="cuenta__secundario"
               (click)="confirmando.set(false)"
             >
               Cancelar

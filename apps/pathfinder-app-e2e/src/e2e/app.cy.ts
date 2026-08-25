@@ -14,8 +14,9 @@ describe('autenticación', () => {
     cy.get('input[name="password2"]').type('contraseña-larga');
     cy.contains('button', 'Crear cuenta').click();
 
-    // Registrarse deja dentro: aterriza en personajes con su nombre arriba
-    cy.get('h1').contains('Personajes');
+    // Registrarse deja dentro: aterriza en el escritorio con su nombre arriba
+    cy.location('pathname').should('eq', '/');
+    cy.get('h1').contains(`Hola, tester-${sufijo}`);
     cy.get('.navbar__usuario').should('contain', `tester-${sufijo}`);
 
     cy.contains('button', 'Salir').click();
@@ -1247,7 +1248,7 @@ describe('pathfinder-app-e2e', () => {
     // El usuario cancela el aviso → la ventana sigue abierta y no se pierde nada.
     // Clic en el borde izquierdo del fondo (fuera del modal y del navbar).
     cy.on('window:confirm', () => false);
-    cy.get('.characters__overlay').click('left');
+    cy.get('.overlay').click('left');
     cy.get('.characters__modal').should('exist');
     cy.get('.characters__modal input[name="level"]').should('have.value', '5');
   });

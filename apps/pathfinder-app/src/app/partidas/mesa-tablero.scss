@@ -121,10 +121,10 @@
 
   // Con mapa, las casillas se vuelven translúcidas para que se vea debajo
   &--con-mapa .tablero__celda {
-    background: rgba(11, 14, 20, 0.2);
+    background: color-mix(in oklab, var(--bg) 20%, transparent);
 
     &:hover:not(:disabled) {
-      background: rgba(11, 14, 20, 0.38);
+      background: color-mix(in oklab, var(--bg) 38%, transparent);
     }
 
     &.tablero__celda--destino {
@@ -156,7 +156,7 @@
     }
 
     &--destino:hover:not(:disabled) {
-      background: rgba(76, 215, 229, 0.22);
+      background: color-mix(in oklab, var(--accent) 22%, transparent);
     }
   }
 
@@ -254,7 +254,7 @@
     transform: translate(-50%, -50%);
     padding: 0.15rem 0.55rem;
     border-radius: 999px;
-    background: rgba(11, 14, 20, 0.94);
+    background: color-mix(in oklab, var(--bg) 94%, transparent);
     border: 1px solid var(--accent);
     color: var(--accent);
     font-size: 0.76rem;
@@ -278,7 +278,7 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   padding: 0.5rem 0.6rem;
-  background: rgba(11, 14, 20, 0.92);
+  background: color-mix(in oklab, var(--bg) 92%, transparent);
   border: 1px solid var(--border-strong);
   border-radius: 0.6rem;
   backdrop-filter: blur(6px);

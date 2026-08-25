@@ -22,7 +22,7 @@
         Escribe el correo de tu cuenta y te enviaremos un enlace para elegir
         una contraseña nueva.
       </p>
-      <form class="acceso__form" (ngSubmit)="pedir()">
+      <form (ngSubmit)="pedir()">
         <label>
           Correo electrónico
           <input
@@ -42,7 +42,7 @@
         </button>
       </form>
       @if (error()) {
-        <p class="acceso__error">{{ error() }}</p>
+        <p class="acceso__error" role="alert">{{ error() }}</p>
       }
       <p class="acceso__alternativa">
         ¿Te has acordado? <a routerLink="/entrar">Inicia sesión</a>

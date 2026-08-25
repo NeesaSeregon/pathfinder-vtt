@@ -2,11 +2,11 @@
   <section class="panel">
     <h1>Iniciar sesión</h1>
     @if (recienRestablecida) {
-      <p class="acceso__aviso">
+      <p class="acceso__aviso" role="status">
         Contraseña cambiada. Entra con la nueva.
       </p>
     }
-    <form class="acceso__form" (ngSubmit)="entrar()">
+    <form (ngSubmit)="entrar()">
       <label>
         Correo electrónico
         <input
@@ -36,7 +36,7 @@
       </button>
     </form>
     @if (error()) {
-      <p class="acceso__error">{{ error() }}</p>
+      <p class="acceso__error" role="alert">{{ error() }}</p>
     }
     <p class="acceso__alternativa">
       <a routerLink="/recuperar">¿Has olvidado tu contraseña?</a>

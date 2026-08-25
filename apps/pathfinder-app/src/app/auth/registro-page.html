@@ -1,7 +1,7 @@
 <main class="pagina-estrecha">
   <section class="panel">
     <h1>Crear cuenta</h1>
-    <form class="acceso__form" (ngSubmit)="crearCuenta()">
+    <form (ngSubmit)="crearCuenta()">
       <label>
         Nombre de usuario
         <input
@@ -46,7 +46,7 @@
         />
       </label>
       @if (password2() && !contrasenasCoinciden()) {
-        <p class="acceso__error">Las contraseñas no coinciden</p>
+        <p class="acceso__error" role="alert">Las contraseñas no coinciden</p>
       }
       <button
         type="submit"
@@ -63,7 +63,7 @@
       </button>
     </form>
     @if (error()) {
-      <p class="acceso__error">{{ error() }}</p>
+      <p class="acceso__error" role="alert">{{ error() }}</p>
     }
     <p class="acceso__alternativa">
       ¿Ya tienes cuenta?

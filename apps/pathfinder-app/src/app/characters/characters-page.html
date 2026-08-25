@@ -8,11 +8,12 @@
 
   <!-- El bestiario son los monstruos que has creado dirigiendo: viven en
        su pestaña para no sepultar a los personajes de verdad. -->
-  <div class="characters__pestanas" role="tablist">
+  <div class="pestanas" role="tablist">
     <button
       type="button"
       role="tab"
-      [class.characters__pestana--activa]="pestana() === 'pj'"
+      class="pestana"
+      [class.pestana--activa]="pestana() === 'pj'"
       [attr.aria-selected]="pestana() === 'pj'"
       (click)="verPestana('pj')"
     >
@@ -21,7 +22,8 @@
     <button
       type="button"
       role="tab"
-      [class.characters__pestana--activa]="pestana() === 'pnj'"
+      class="pestana"
+      [class.pestana--activa]="pestana() === 'pnj'"
       [attr.aria-selected]="pestana() === 'pnj'"
       (click)="verPestana('pnj')"
     >
@@ -30,16 +32,16 @@
   </div>
 
   @if (error()) {
-    <p class="characters__error">{{ error() }}</p>
+    <p class="characters__error" role="alert">{{ error() }}</p>
   }
 
   @if (loading()) {
     <p>Cargando…</p>
   } @else if (visibles().length === 0) {
     @if (pestana() === 'pj') {
-      <p>No hay personajes todavía. ¡Crea el primero!</p>
+      <p class="characters__nota">No hay personajes todavía. ¡Crea el primero!</p>
     } @else {
-      <p>
+      <p class="characters__nota">
         Tu bestiario está vacío. Los monstruos que crees en una mesa con
         «Añadir PNJ» se guardan aquí y podrás reutilizarlos.
       </p>
@@ -48,13 +50,27 @@
     <ul class="characters__list">
       @for (character of visibles(); track character.id) {
         <li>
-          <span class="characters__name">{{ character.name }}</span>
-          @if (character.sheetData.clase) {
-            <span class="characters__clase">{{ character.sheetData.clase }}</span>
-          }
-          <span class="characters__level">Nivel {{ character.level }}</span>
-          <button type="button" (click)="openModal(character)">Ver ficha</button>
-          <button type="button" (click)="remove(character)">Borrar</button>
+          <div class="characters__info">
+            <strong class="characters__name">{{ character.name }}</strong>
+            <small class="characters__meta">
+              @if (character.sheetData.clase) {
+                {{ character.sheetData.clase }} ·
+              }
+              Nivel {{ character.level }}
+            </small>
+          </div>
+          <div class="characters__acciones">
+            <button type="button" (click)="openModal(character)">
+              Ver ficha
+            </button>
+            <button
+              type="button"
+              class="characters__borrar"
+              (click)="remove(character)"
+            >
+              Borrar
+            </button>
+          </div>
         </li>
       }
     </ul>
@@ -62,11 +78,11 @@
 
   @if (creating()) {
     <div
-      class="characters__overlay"
+      class="overlay"
       (click)="onOverlayClick($event)"
       role="presentation"
     >
-      <div class="characters__modal" role="dialog" aria-modal="true">
+      <div class="modal characters__modal" role="dialog" aria-modal="true">
         <header>
           <h2>Nuevo personaje</h2>
           <button type="button" aria-label="Cerrar" (click)="intentarCerrar()">
@@ -87,12 +103,12 @@
 
   @if (selected(); as character) {
     <div
-      class="characters__overlay"
+      class="overlay"
       (click)="onOverlayClick($event)"
       (keyup.escape)="intentarCerrar()"
       role="presentation"
     >
-      <div class="characters__modal" role="dialog" aria-modal="true">
+      <div class="modal characters__modal" role="dialog" aria-modal="true">
         <header>
           <h2>{{ character.name }}</h2>
           <button type="button" aria-label="Cerrar" (click)="intentarCerrar()">

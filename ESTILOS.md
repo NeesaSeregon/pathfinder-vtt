@@ -19,7 +19,7 @@ Hay **tres niveles**, y elegir mal no da error: se ve mal y ya.
 
 | Nivel | Fichero | Para qué |
 |---|---|---|
-| Global | `src/styles.scss` | El tema (variables), los elementos desnudos (`button`, `input`, `h1`), y patrones que usa **toda** la app: `.overlay`, `.modal`, `.pestanas`, `.panel`, `.pagina-estrecha` |
+| Global | `src/styles.scss` | El tema (variables), los elementos desnudos (`button`, `input`, `h1`), y patrones que usa **toda** la app: `.boton-primario`, `.boton-enlace`, `.overlay`, `.modal`, `.pestanas`, `.panel`, `.pagina-estrecha`, `.acceso__error`, `.acceso__alternativa` |
 | Compartido de una zona | `_mesa-comun.scss` | Vocabulario que usan **varios componentes de una misma pantalla** pero cuyo nombre es demasiado genérico para el ámbito global: `.rotulo`, `.tarjeta`, `.boton`, `.ficha`, `.marca`, `.pg`, `.pgbar`, `.vital` |
 | Propio | `mesa-tablero.scss`, … | Lo que solo existe en ese componente |
 
@@ -59,42 +59,92 @@ Todo componente que use el vocabulario compartido debe empezar con:
 colores propios**, siempre las variables, y así el tema se ajusta tocando un
 solo fichero.
 
-En la práctica ese contrato **está incumplido en 23 sitios**, y casi siempre
-por la misma razón legítima: hace falta el color de un token **con
-transparencia**, y a una variable que guarda un hex no se le puede sacar
-alfa. Así que se reescribe a mano:
+Ese contrato estuvo incumplido en 25 sitios, y casi siempre por la misma
+razón legítima: hace falta el color de un token **con transparencia**, y a
+una variable que guarda un hex no se le puede sacar alfa. Así que se
+reescribía a mano:
 
 ```scss
 /* Esto es --actitud-aliado, pero escrito otra vez */
 background: rgba(91, 181, 106, 0.08);
 ```
 
-El resultado es que cambiar un token no cambia sus transparencias, y la
-deriva ya empezó: `crear-partida-page.scss` usa `#ff6b6b` donde `--danger`
-es `#ff6b81`. Parecidos, distintos, e invisibles a ojo.
+El resultado es que cambiar un token no cambia sus transparencias.
 
-**La salida sancionada es `color-mix()`**, que trabaja con la variable en
-lugar de contra ella:
+**La salida es `color-mix()`**, que trabaja con la variable en lugar de
+contra ella:
 
 ```scss
 /* En vez de rgba(91, 181, 106, 0.08) */
 background: color-mix(in oklab, var(--actitud-aliado) 8%, transparent);
 ```
 
-Sigue el token si el token cambia, y no añade variables nuevas.
+Sigue el token si el token cambia, y no añade variables nuevas. Al mezclar
+con `transparent` **el porcentaje ES el alfa resultante**, así que la
+conversión es mecánica: `rgba(…, 0.08)` pasa a `… 8%, transparent`. El
+espacio da igual mezclando con transparente (el alfa va premultiplicado);
+se usa `in oklab` por coherencia con el resto del tema.
+
+Migrado el 2026-08-25: **cero `rgba()` de token en toda la aplicación.**
 
 Excepciones que **sí** pueden ir literales, porque no son tema sino tinta
 del propio elemento: las sombras negras (`rgba(0,0,0,…)`), los brillos
 blancos de los tokens (`rgba(255,255,255,…)`) y el color de texto de un
-avatar sobre su color de fondo.
+avatar sobre su color de fondo (`#0c1018`).
 
-> **Deuda conocida**: los 23 `rgba()` de token siguen ahí. Migrarlos es
-> mecánico pero toca ocho ficheros; hacerlo de golpe y a la vez, no a
-> trozos, para no dejar dos estilos conviviendo.
+> **Lo que queda sin token**: el **token caído** del tablero (`#444b5c` de
+> fondo y `#98a1b5` de tinta, en `mesa-tablero.scss`). Es un par de estado,
+> pero se usa en una sola regla, así que no llega a justificar una variable
+> por ahora. Sí tiene un problema aparte: esa tinta sobre ese fondo da
+> **3,37:1**, por debajo del 4,5:1, y son iniciales pequeñas.
 
 ---
 
-## 3. Nomenclatura
+## 3. Los controles se pintan una vez
+
+Un componente **no repinta un campo ni un botón**: solo dice cuánto miden.
+
+```scss
+/* NO: esto es la regla global de input, escrita otra vez */
+input { background: var(--bg); border: 1px solid var(--border-strong); … }
+
+/* SÍ: lo único que es asunto de esta pantalla */
+input { padding: 0.4rem 0.5rem; }
+```
+
+Se incumplía en tres hojas (`cuenta-page`, `pnj-form`, `pnj-modal`), y las
+tres habían elegido el mismo fondo alternativo (`--bg` en vez de
+`--surface-2`): la app tenía **dos clases de campo** según en qué pantalla
+estuvieras, sin que nadie lo hubiera decidido.
+
+### El botón que es un enlace
+
+La mitad de las acciones principales de la app son `<a routerLink>`, y un
+`<a>` **no hereda nada** de la regla del elemento `button`. Por eso
+`.boton-primario` se declara entero — relleno, borde, radio, foco — en vez
+de apoyarse en el elemento: así vale para los dos.
+
+Sin eso, cada pantalla se escribía su copia. Había **cinco**: la navbar, los
+accesos del escritorio, las tarjetas de la portada, los botones de la cuenta
+y la propia regla global, y ya se habían separado en dos bordes distintos en
+reposo (`--accent` en unas, `--border-strong` en otras).
+
+Quedan tres tonos, y son tres decisiones, no tres copias:
+
+| Clase | Cuándo |
+|---|---|
+| `.boton-primario` | La acción que la pantalla quiere que hagas. Una por zona |
+| `.boton-enlace` | Un `<a>` que hace de botón normal ("Entrar" en una mesa) |
+| `<button>` a secas | Todo lo demás: cancelar, cerrar sesión, acciones de fila |
+
+Lo irreversible es aparte y **no** está unificado a propósito:
+`.boton--peligro` de la mesa es de contorno rojo porque se convive con él
+toda la partida, y `.cuenta__peligro` es macizo porque borra la cuenta
+entera y se quiere que frene. Dos usos distintos, no dos copias.
+
+---
+
+## 4. Nomenclatura
 
 BEM con guion bajo doble y guion doble, en **castellano**, como el resto del
 código:
@@ -119,7 +169,7 @@ vital, que es `[class]="'vital vital--' + pep.estadoVital"`.
 
 ---
 
-## 4. Invariantes de maqueta
+## 5. Invariantes de maqueta
 
 Estas tres cosas parecen arbitrarias y no lo son. Romperlas rompe la mesa.
 
@@ -180,7 +230,7 @@ un test de que la barra es **hermana** del marco y no hija.
 
 ---
 
-## 5. Presupuestos de CSS
+## 6. Presupuestos de CSS
 
 En [project.json](apps/pathfinder-app/project.json):
 
@@ -202,7 +252,7 @@ donde estaban copiados en dos páginas.
 
 ---
 
-## 6. Accesibilidad
+## 7. Accesibilidad
 
 Lo que ya está y no hay que estropear:
 
@@ -218,6 +268,15 @@ Lo que ya está y no hay que estropear:
   PNJ oculto lleva borde punteado **y** la etiqueta "oculto"; el tramo vital
   se dice con palabras (Ileso / Herido / Malherido / Caído), no solo con el
   color de la barra.
+- **Un mensaje que aparece solo, se anuncia**: los errores llevan
+  `role="alert"` y los avisos de buenas noticias `role="status"`. Lo tenían
+  la cuenta, la mesa y los PNJ; faltaba en los seis formularios de acceso y
+  de partida, donde el error es justo lo único que cambia en la pantalla.
+- **Contraste de texto ≥ 4,5:1** sobre su fondo (WCAG AA). No es teórico:
+  `.acceso__error` usaba `#b00020` en /entrar, /registro, /recuperar y
+  /restablecer, que sobre `--bg` da **2,64:1** — un aviso de error que
+  costaba leer. Con `--danger` son 7,06:1. Al elegir un color nuevo para
+  texto, medirlo antes; los del tema ya están comprobados.
 
 Deudas conocidas, por orden de lo que más molesta:
 
@@ -231,7 +290,7 @@ Deudas conocidas, por orden de lo que más molesta:
 
 ---
 
-## 7. Dónde están las maquetas
+## 8. Dónde están las maquetas
 
 El rediseño de la mesa (agosto de 2026) se decidió sobre maquetas, no sobre
 código. Están fuera del repositorio, en `Desktop/workspace/diseno-mesa/`:

@@ -8,8 +8,10 @@
         <p class="escritorio__lema">Tu mesa de Pathfinder, en cualquier parte.</p>
       </div>
       <nav class="escritorio__accesos" aria-label="Accesos rápidos">
-        <a routerLink="/personajes">Personajes</a>
-        <a routerLink="/cuenta">Tu cuenta</a>
+        <a class="boton-primario" routerLink="/personajes">Personajes</a>
+        <a class="boton-primario" routerLink="/cuenta">Tu cuenta</a>
+        <!-- En tono normal, como en la navbar: cerrar sesión no compite
+             con los accesos. -->
         <button type="button" (click)="salir()">Cerrar sesión</button>
       </nav>
     </header>
@@ -54,7 +56,7 @@
                   }
                 </div>
                 <a
-                  class="mesa-tarjeta__entrar"
+                  class="boton-enlace"
                   [routerLink]="['/partidas', mesa.id]"
                 >
                   Entrar
@@ -119,8 +121,8 @@
           dispositivo.
         </p>
         <div class="home__tarjeta-botones">
-          <a routerLink="/entrar">Iniciar sesión</a>
-          <a routerLink="/registro">Crear cuenta</a>
+          <a class="boton-primario" routerLink="/entrar">Iniciar sesión</a>
+          <a class="boton-primario" routerLink="/registro">Crear cuenta</a>
         </div>
       </div>
     </section>

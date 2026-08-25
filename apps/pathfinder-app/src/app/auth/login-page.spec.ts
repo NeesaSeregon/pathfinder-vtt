@@ -19,9 +19,9 @@ describe('LoginPage', () => {
     await TestBed.configureTestingModule({
       imports: [LoginPage],
       providers: [
-        // El login navega a /personajes al entrar: el router de test
+        // El login navega al escritorio al entrar: el router de test
         // necesita conocer esa ruta (vacía nos basta).
-        provideRouter([{ path: 'personajes', children: [] }]),
+        provideRouter([{ path: '', children: [] }]),
         provideHttpClient(),
         provideHttpClientTesting(),
       ],

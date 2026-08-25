@@ -37,7 +37,10 @@ export class LoginPage {
       .subscribe({
         next: (respuesta) => {
           this.sesion.establecer(respuesta.username);
-          this.router.navigate(['/personajes']);
+          // Al escritorio, no a los personajes: se inicia sesión para
+          // jugar. Es además donde vuelve TODO lo demás de la app (salir,
+          // cerrar una mesa, borrar la cuenta, una URL que no existe).
+          this.router.navigate(['/']);
         },
         error: (err) => {
           this.cargando.set(false);

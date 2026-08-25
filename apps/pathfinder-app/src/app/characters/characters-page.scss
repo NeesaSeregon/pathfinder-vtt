@@ -1,33 +1,9 @@
+/* Las pestañas, el velo y la caja de la modal son GLOBALES (styles.scss).
+   Vivían copiados aquí, y la copia de las pestañas necesitaba dos
+   !important para ganarle a su propio selector de elemento: la señal de que
+   se estaba peleando con una regla que ya existía en otro sitio. */
 .characters {
-  &__pestanas {
-    display: flex;
-    gap: 0.35rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 1.25rem;
-
-    button {
-      background: none;
-      border: none;
-      border-bottom: 2px solid transparent;
-      border-radius: 0;
-      padding: 0.5rem 0.9rem;
-      color: var(--text-muted);
-      font: inherit;
-      font-weight: 600;
-      cursor: pointer;
-
-      &:hover {
-        color: var(--text);
-      }
-    }
-  }
-
-  &__pestana--activa {
-    color: var(--accent) !important;
-    border-bottom-color: var(--accent) !important;
-  }
-
-  max-width: 48rem;
+  max-width: 60rem;
   margin: 2rem auto;
   padding: 0 1rem;
 
@@ -36,10 +12,6 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-
-    button {
-      padding: 0.5rem 1rem;
-    }
   }
 
   app-character-form {
@@ -48,68 +20,88 @@
 
   &__error {
     color: var(--danger);
+    font-size: 0.9rem;
   }
 
+  &__nota {
+    color: var(--text-muted);
+    max-width: 42rem;
+  }
+
+  /* Cada personaje es una fila-tarjeta, la misma pieza que una mesa en el
+     escritorio: en la app un elemento de una lista se coge, no se lee de un
+     renglón. Antes eran renglones separados por una raya. */
   &__list {
     list-style: none;
     padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 
     li {
       display: flex;
       align-items: center;
       gap: 1rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid var(--border);
+      padding: 0.9rem 1rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      transition:
+        border-color 120ms ease,
+        box-shadow 120ms ease;
+
+      &:hover {
+        border-color: var(--accent);
+        box-shadow: var(--glow);
+      }
     }
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
   }
 
   &__name {
-    flex: 1;
     font-weight: 600;
   }
 
-  &__clase {
+  /* Clase y nivel son la letra pequeña de la fila, no dos columnas: en un
+     nombre largo se apretaban unas contra otras. */
+  &__meta {
     color: var(--text-muted);
-    font-style: italic;
+    font-size: 0.9rem;
   }
 
-  &__level {
-    color: var(--text-faint);
-  }
-
-  &__overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(4, 6, 10, 0.7);
+  &__acciones {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    z-index: 10;
+    gap: 0.5rem;
+    flex-shrink: 0;
   }
 
-  &__modal {
-    background: var(--surface);
-    border: 1px solid var(--border-strong);
-    border-radius: 0.5rem;
-    padding: 1.25rem;
-    // Más ancha: la hoja completa cabe mejor y hay menos fondo que clicar
-    max-width: 54rem;
-    width: 100%;
-    max-height: 85vh;
-    overflow-y: auto;
-    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.6);
+  /* Borrar un personaje no se deshace: se ve que no es un botón más. */
+  &__borrar {
+    padding: 0.4rem 0.9rem;
+    background: none;
+    border-color: color-mix(in oklab, var(--danger) 50%, transparent);
+    color: var(--danger);
 
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-
-      h2 {
-        margin: 0;
-      }
+    &:hover:not(:disabled) {
+      color: var(--bg);
+      background: var(--danger);
+      border-color: var(--danger);
+      box-shadow: none;
     }
+  }
+
+  /* La ficha completa cabe mejor a lo ancho que las 42rem de la modal
+     normal, y así queda menos fondo que clicar por error. */
+  &__modal {
+    max-width: 54rem;
   }
 
   &__cancelar {

@@ -15,7 +15,7 @@
   align-items: center;
   gap: 0.85rem;
   padding: 0 1.25rem;
-  background: rgba(18, 23, 36, 0.85);
+  background: color-mix(in oklab, var(--surface) 85%, transparent);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(8px);
 
@@ -81,7 +81,7 @@
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(91, 181, 106, 0.08);
+  background: color-mix(in oklab, var(--actitud-aliado) 8%, transparent);
   white-space: nowrap;
 
   i {
@@ -90,14 +90,15 @@
     height: 0.45rem;
     border-radius: 50%;
     background: var(--actitud-aliado);
-    box-shadow: 0 0 0.5rem rgba(91, 181, 106, 0.8);
+    box-shadow: 0 0 0.5rem
+      color-mix(in oklab, var(--actitud-aliado) 80%, transparent);
   }
 
   &--roto {
     font: inherit;
     font-size: 0.8rem;
     cursor: pointer;
-    background: rgba(246, 169, 74, 0.1);
+    background: color-mix(in oklab, var(--token-2) 10%, transparent);
     border-color: var(--token-2);
     color: var(--token-2);
 
@@ -178,7 +179,7 @@
       color: var(--danger);
 
       &:hover:not(:disabled) {
-        background: rgba(255, 107, 129, 0.12);
+        background: color-mix(in oklab, var(--danger) 12%, transparent);
       }
     }
   }
