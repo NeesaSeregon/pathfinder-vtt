@@ -31,8 +31,10 @@ export class TokenRecuperacion {
   id: string;
 
   // Indexado a mano: en Postgres una FK NO crea índice, y por userId van
-  // tanto la invalidación de los vales pendientes como la limpieza.
-  @Index()
+  // tanto la invalidación de los vales pendientes como la limpieza. Con
+  // NOMBRE: sin él TypeORM le pone un hash, no reconoce el que creó la
+  // migración y cada migration:generate propone borrarlo y rehacerlo.
+  @Index('IDX_a1b2c3d4e5f60718293a4b5c6d')
   @Column({ type: 'uuid' })
   userId: string;
 

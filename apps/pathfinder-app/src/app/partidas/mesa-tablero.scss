@@ -258,6 +258,20 @@
 // casilla de debajo se sigue pulsando y sigue admitiendo un token. Esa es
 // la regla que ya nos costó una tarde con la barra de herramientas.
 .zona {
+  /* ABSOLUTA, y no es un detalle de adorno: es lo que impide que la zona
+     desordene el tablero. Un hijo de la rejilla con posición explícita
+     RESERVA su hueco, y las 720 casillas —que se colocan solas— fluirían
+     alrededor: una sala de 6×5 empujaba seis columnas a todas las casillas
+     posteriores. El tablero parecía rotar, los tokens salían movidos y, lo
+     peor, el botón bajo el puntero ya no era el que decía su data-x, así
+     que se dibujaba donde no se había clicado.
+     Un hijo ABSOLUTO no reserva hueco, pero sigue pudiendo usar grid-area:
+     la rejilla le sirve de bloque contenedor (por el position: relative de
+     .tablero) y encaja igual de exacto, sin matemáticas de píxeles. */
+  position: absolute;
+  /* Y el inset, que no sobra: una caja absoluta se ENCOGE a su contenido.
+     Sin esto la zona medía lo que su rótulo, no lo que su área. */
+  inset: 0;
   pointer-events: none;
   z-index: 0;
   border-radius: 0.35rem;

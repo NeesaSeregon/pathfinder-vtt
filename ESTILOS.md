@@ -222,11 +222,26 @@ pasó con la barra de herramientas; lo cazó el e2e, y hoy `MesaTablero` tiene
 un test de que la barra es **hermana** del marco y no hija.
 
 Las **zonas** (salas, pasillos, terreno) son el segundo inquilino de esa
-regla, y la respetan por construcción: no son una capa encima sino **celdas
-de la misma rejilla**, colocadas con `grid-area`. Así encajan solas con el
-`gap` de 2px sin traducir casillas a píxeles, van al fondo (`z-index: 0`; el
-token está en el 2) y llevan `pointer-events: none`, de modo que el clic
-sigue llegando a la casilla. Hay un test que comprueba justo eso.
+regla. Se colocan con `grid-area`, así encajan solas con el `gap` de 2px sin
+traducir casillas a píxeles; van al fondo (`z-index: 0`, el token está en el
+2) y llevan `pointer-events: none`, de modo que el clic sigue llegando a la
+casilla.
+
+Pero hay un tercer ingrediente que **no es opcional**: `position: absolute`
+con `inset: 0`. Un hijo de la rejilla con posición explícita **reserva su
+hueco**, y las 720 casillas —que se colocan solas— fluyen alrededor. Con la
+zona en el flujo, una sala de 6×5 empujaba seis columnas a todas las
+casillas posteriores: el tablero parecía rotar, los tokens salían movidos y,
+lo peor, el botón bajo el puntero ya no era el que decía su `data-x`, así
+que se dibujaba donde no se había clicado. Un hijo absoluto no reserva
+hueco pero sigue usando `grid-area`, porque la rejilla le hace de bloque
+contenedor. El `inset: 0` va con él: una caja absoluta se encoge a su
+contenido, y sin eso la zona medía lo que su rótulo.
+
+El e2e lo vigila con tres medidas: que la zona caiga sobre las casillas que
+dice, que se guarde donde se arrastró, y que una casilla lejana **no se
+mueva ni un píxel** al pintar una zona. Esa última se mide relativa a
+`.tablero` y no a la ventana: el marco se desplaza por el camino.
 
 ### Los cortes
 

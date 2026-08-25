@@ -752,12 +752,30 @@ describe('partidas', () => {
       .then((partidaId) => {
         cy.visit(`/partidas/${partidaId}`);
 
+        // Antes de dibujar: dónde cae una casilla LEJANA, para comprobar
+        // después que pintar una zona no ha movido el tablero. Se mide
+        // RELATIVO al tablero y no a la ventana: el marco se desplaza por
+        // el camino (abrir el menú, la modal) y contra la ventana saldría
+        // un falso positivo.
+        cy.get('.tablero').then(($t) => {
+          const t = $t[0].getBoundingClientRect();
+          cy.get('.tablero__celda[data-x="10"][data-y="20"]').then(($c) => {
+            const r = $c[0].getBoundingClientRect();
+            cy.wrap({
+              x: Math.round(r.left - t.left),
+              y: Math.round(r.top - t.top),
+            }).as('antes');
+          });
+        });
+
         // Dibujar es arrastrar de esquina a esquina con la herramienta en
-        // la mano, igual que medir.
+        // la mano, igual que medir. OJO al medir en el test: el pointerdown
+        // desplaza la casilla a la vista, así que las coordenadas del
+        // destino hay que leerlas DESPUÉS de él.
         cy.get('[title^="Dibujar una zona"]').click();
         cy.get('.tablero__celda[data-x="3"][data-y="4"]').trigger(
           'pointerdown',
-          { button: 0, force: true },
+          { button: 0 },
         );
         cy.get('.tablero__celda[data-x="8"][data-y="9"]').then(($celda) => {
           const r = $celda[0].getBoundingClientRect();
@@ -770,6 +788,50 @@ describe('partidas', () => {
 
         // La zona nace ya pintada en el tablero, sin nombre todavía
         cy.get('.tablero .zona').should('have.length', 1);
+
+        // Y nace DONDE se ha arrastrado, que es lo que de verdad importa:
+        // se guardó (3,4) de 6×6 y se pinta sobre esas mismas casillas.
+        cy.request(`/api/partidas/${partidaId}`)
+          .its('body.zonas')
+          .then((zonas) => {
+            expect(zonas[0]).to.include({ x: 3, y: 4, ancho: 6, alto: 6 });
+          });
+        cy.get('.tablero .zona').then(($z) => {
+          const z = $z[0].getBoundingClientRect();
+          cy.get('.tablero__celda[data-x="3"][data-y="4"]').then(($i) => {
+            const i = $i[0].getBoundingClientRect();
+            expect(Math.abs(z.left - i.left), 'esquina izquierda').to.be.lessThan(4);
+            expect(Math.abs(z.top - i.top), 'esquina superior').to.be.lessThan(4);
+          });
+          cy.get('.tablero__celda[data-x="8"][data-y="9"]').then(($f) => {
+            const f = $f[0].getBoundingClientRect();
+            expect(Math.abs(z.right - f.right), 'esquina derecha').to.be.lessThan(4);
+            expect(Math.abs(z.bottom - f.bottom), 'esquina inferior').to.be.lessThan(4);
+          });
+        });
+
+        // REGRESIÓN: una zona NO puede mover ni una casilla. Con grid-area
+        // a secas, un hijo colocado reserva su hueco y las 720 casillas
+        // —que se colocan solas— fluían alrededor: el tablero parecía
+        // rotar, los tokens salían movidos y se dibujaba donde no habías
+        // clicado, porque el botón bajo el puntero ya no era el suyo.
+        cy.get('@antes').then((antes) => {
+          const donde = antes as unknown as { x: number; y: number };
+          cy.get('.tablero').then(($t) => {
+            const t = $t[0].getBoundingClientRect();
+            cy.get('.tablero__celda[data-x="10"][data-y="20"]').then(($c) => {
+              const r = $c[0].getBoundingClientRect();
+              expect(
+                Math.round(r.left - t.left),
+                'la zona no mueve el tablero',
+              ).to.eq(donde.x);
+              expect(
+                Math.round(r.top - t.top),
+                'la zona no mueve el tablero',
+              ).to.eq(donde.y);
+            });
+          });
+        });
 
         // Y el nombre se pone en la lista, no sobre el tablero
         abrirMenuMaster();

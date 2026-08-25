@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -35,6 +36,13 @@ export class Partida {
   @JoinColumn({ name: 'masterId' })
   master: User;
 
+  // Indexado: "las mesas de este máster" es la consulta del escritorio, la
+  // primera pantalla tras entrar. En PostgreSQL una FK no crea índice en la
+  // tabla que apunta, así que sin esto era un Seq Scan (y el CASCADE al
+  // borrar la cuenta, otro). El índice va CON NOMBRE: sin él TypeORM le
+  // pone un hash propio, no reconoce el de la migración y cada
+  // migration:generate propone borrarlo y rehacerlo.
+  @Index('IDX_partidas_masterId')
   @Column({ type: 'uuid' })
   masterId: string;
 
@@ -47,7 +55,7 @@ export class Partida {
    * partida, y las escribe una sola persona: no hay nada que fusionar ni
    * que consultar por separado.
    */
-  @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
+  @Column({ type: 'jsonb', default: () => "'[]'" })
   zonas: ZonaTablero[];
 
   /** Rastreador de combate (estado de sesión de la mesa). */

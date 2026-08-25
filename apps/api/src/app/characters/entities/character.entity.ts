@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -28,6 +29,9 @@ export class Character implements CharacterModel {
   @JoinColumn({ name: 'ownerId' })
   owner: User | null;
 
+  // Indexado: "los personajes de este usuario" se pide en /personajes, al
+  // unirse a una mesa y al contar lo que se pierde al borrar la cuenta.
+  @Index('IDX_characters_ownerId')
   @Column({ type: 'uuid', nullable: true })
   ownerId: string | null;
 

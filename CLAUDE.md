@@ -518,6 +518,22 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   la caja de cada zona la pone el :host de su componente.
   Cada zona tiene su spec (124 tests en la app); los de la página siguen
   siendo de integración y atraviesan los hijos.
+- ÍNDICES DE CLAVES AJENAS (2026-08-25). En PostgreSQL una FK NO crea
+  índice en la tabla que apunta, solo en la apuntada. partidas.masterId y
+  characters.ownerId no lo tenían, así que "las mesas de este máster" y "los
+  personajes de este usuario" —las dos consultas del escritorio, la primera
+  pantalla tras entrar— eran un Seq Scan. Medido con EXPLAIN ANALYZE sobre
+  649 partidas daba 1 ms, irrelevante, pero es un coste que crece en línea
+  recta; y el ON DELETE CASCADE los usa también, así que borrar una cuenta
+  recorría las tablas enteras. Añadidos en la migración
+  IndicesDeClavesAjenas. OJO al declararlos: el @Index de la entidad VA CON
+  NOMBRE (@Index('IDX_partidas_masterId')). Sin nombre, TypeORM le pone un
+  hash propio, no reconoce el que creó la migración, y cada
+  migration:generate propone borrarlo y rehacerlo. Pasaba ya con el índice
+  de tokens_recuperacion.userId, arreglado de paso.
+  personajes_en_partida no necesita nada: su índice único (partidaId,
+  characterId) ya sirve para buscar por partidaId, la columna de la
+  izquierda; por characterId sola no se busca nunca.
 - ZONAS DEL TABLERO (2026-08-25). El máster dibuja RECTÁNGULOS sobre el
   tablero —una sala, un pasillo, un charco— y les pone nombre. Sustituyen al
   mapa de fondo subido, que se retiró entero (endpoints, columna, ficheros
@@ -547,6 +563,16 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
     (z-index 0; el token está en el 2) y con pointer-events: none, así que
     la casilla de debajo se sigue pulsando y sigue admitiendo un token —
     la regla que ya costó una tarde con la barra de herramientas.
+    Y POSITION: ABSOLUTE CON INSET: 0, que no es adorno. Un hijo de la
+    rejilla con posición explícita RESERVA su hueco y las 720 casillas
+    —que se colocan solas— fluyen alrededor: una sala de 6×5 empujaba seis
+    columnas a todas las casillas posteriores. El tablero parecía rotar,
+    los tokens salían movidos y se dibujaba donde no habías clicado, porque
+    el botón bajo el puntero ya no era el que decía su data-x. Un hijo
+    absoluto no reserva hueco pero sigue usando grid-area (la rejilla le
+    hace de bloque contenedor); el inset: 0 hace falta porque una caja
+    absoluta se encoge a su contenido. El e2e lo vigila midiendo que una
+    casilla lejana no se mueva al pintar una zona.
   · EL COLOR NO VA SOLO: cada terreno lleva trama además de color, el nombre
     del estado está en el title y escrito en la lista. Y una zona pequeña NO
     lleva rótulo (mínimo 3×2): en 1×2 el nombre sale recortado y pisando la
