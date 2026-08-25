@@ -152,6 +152,25 @@ describe('MesaTablero', () => {
     expect(etiqueta.textContent).toContain('pies');
   });
 
+  // La barra flotaba sobre la esquina con fondo opaco y dejaba las columnas
+  // 0-1 intocables (lo cazó el e2e el 2026-08-25). Va EN FILA y encima del
+  // marco: fuera de él, no sobre él. Si alguien la devuelve a flotar, esto
+  // avisa antes que el e2e.
+  it('la barra de herramientas va fuera del marco, no encima', async () => {
+    await montar([asiento()]);
+    const raiz: HTMLElement = fixture.nativeElement;
+    const utiles = raiz.querySelector('.utiles');
+    const marco = raiz.querySelector('.tablero-marco');
+    expect(utiles).not.toBeNull();
+    expect(marco).not.toBeNull();
+    // Ni dentro del marco ni dentro del tablero: es hermana, no hija
+    expect(utiles?.closest('.tablero-marco')).toBeNull();
+    expect(raiz.querySelector('.tablero .utiles')).toBeNull();
+    // Y va ANTES, para ocupar su propia fila en vez de taparlo
+    const orden = utiles?.compareDocumentPosition(marco as Node) ?? 0;
+    expect(orden & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('quien no está colocado espera en el banquillo', async () => {
     await montar([
       asiento({ id: 'a', nombre: 'Amiri', posX: null, posY: null }),

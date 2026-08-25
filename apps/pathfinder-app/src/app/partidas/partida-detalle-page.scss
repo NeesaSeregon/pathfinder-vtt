@@ -54,8 +54,6 @@
   }
 }
 
-/* La conexión, dicha en voz alta. Sustituye al antiguo botón "Actualizar"
-   permanente: recargar a mano solo tiene sentido si esto está roto. */
 // -- Botones ----------------------------------------------------------------
 // Heredan de styles.scss; aquí solo la talla de la mesa y las variantes.
 .boton {
@@ -137,10 +135,6 @@
   border-radius: 0.6rem;
 }
 
-/* Lo que ve un jugador en lugar de los PG de un PNJ: el tramo, sin cifras.
-   Los números exactos los recorta el servidor (soloLoPublico), no el CSS. */
-/* La descripción de la condición vive aquí, no en la lista: es material de
-   consulta y allí ocupaba sitio de estado de mesa. */
 // -- Modales (siembra de PNJ y ficha) --------------------------------------
 // El overlay y la caja son globales (styles.scss); aquí solo lo propio.
 

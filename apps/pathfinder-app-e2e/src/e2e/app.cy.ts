@@ -97,11 +97,12 @@ describe('partidas', () => {
     cy.get('.mio .pg__valor').should('have.value', '31');
 
     // Colocar el token: clic en la pieza del banquillo + clic en casilla.
-    // Se elige una casilla del centro a propósito: la esquina superior
-    // izquierda la tapa la barra de herramientas, que flota sobre el
-    // tablero (ver "Mejoras futuras" de CLAUDE.md).
+    // La ESQUINA (0,0) a propósito: es la que tapaba la barra de
+    // herramientas cuando flotaba sobre el tablero. Desde que la barra va
+    // en fila encima (2026-08-25) tiene que poder pulsarse, y este clic es
+    // lo que avisa si alguien vuelve a poner algo flotando ahí.
     cy.get('.banquillo__pieza').click();
-    cy.get('.tablero__celda[data-x="5"][data-y="5"]').click();
+    cy.get('.tablero__celda[data-x="0"][data-y="0"]').click();
     cy.get('.banquillo').should('not.exist');
     cy.get('.tablero .tablero__token').should('exist');
 

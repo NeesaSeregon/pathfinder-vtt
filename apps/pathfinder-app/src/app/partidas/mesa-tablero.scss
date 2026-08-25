@@ -1,3 +1,5 @@
+@use 'mesa-comun';
+
 // El tablero manda sobre su hueco: pide el 100% del alto que le deje la
 // rejilla de la mesa, y el marco recorta lo que no cabe. Position relative
 // porque el banquillo flota encima.
@@ -9,26 +11,36 @@
   position: relative;
 }
 
-// -- Barra de herramientas del tablero -------------------------------------
-// Vertical y pegada al borde: es el sitio de las herramientas que vengan
-// (plantillas de área, señalar, niebla, dibujo).
-.utiles {
-  position: absolute;
-  left: 0.6rem;
-  top: 0.6rem;
-  z-index: 3;
+// -- Cabecera de la zona: rótulo + herramientas -----------------------------
+// Las demás zonas ya encabezaban con su rotulillo; el tablero no tenía.
+.cabecera {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.3rem;
-  background: rgba(11, 14, 20, 0.92);
-  border: 1px solid var(--border-strong);
-  border-radius: 0.6rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+// -- Barra de herramientas del tablero -------------------------------------
+// EN FILA Y ENCIMA, no flotando sobre la esquina. Flotaba con fondo opaco y
+// las casillas de debajo no se podían pulsar ni recibir un token: a lo ancho
+// el tablero cabe entero, así que las columnas 0-1 estaban SIEMPRE tapadas y
+// no había forma de destaparlas desplazando. Lo cazó el e2e el 2026-08-25.
+// Cuesta ~3rem de alto (una fila de 30) pero no toca ni el ancho ni el
+// tamaño de casilla, que es el principio de esta pantalla: se pierden filas,
+// nunca columnas. Aquí caben además el zoom y el "centrar en el turno".
+.utiles {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
 }
 
 .util {
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2rem;
+  height: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,8 +66,6 @@
   }
 }
 
-// -- Registro ---------------------------------------------------------------
-// Sin selección se lleva la columna entera: nada de cajas vacías.
 // -- Marco del tablero: la ventana por la que se ve la mesa -----------------
 // El tablero es MÁS ALTO que la pantalla (24×30 sobre un monitor apaisado),
 // así que se recorta aquí y se recorre agarrándolo. A lo ANCHO cabe entero:

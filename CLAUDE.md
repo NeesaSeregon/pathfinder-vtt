@@ -335,20 +335,22 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   No hay migración: estadoVital es derivado, como la CA o la iniciativa.
 
 ## Mejoras futuras
-- LA BARRA DE HERRAMIENTAS TAPA LA ESQUINA DEL TABLERO. `.utiles` es
-  position:absolute con fondo opaco sobre la esquina superior izquierda del
-  marco (y `.banquillo` hace lo mismo abajo): las casillas que quedan
-  debajo NO se pueden pulsar ni soltar nada en ellas. No lo arregla
-  desplazar el tablero — a lo ancho cabe entero, así que las columnas 0-1
-  están siempre bajo la barra, y la fila 0 solo se ve con scrollTop 0, que
-  es justo cuando la tapa. Lo destapó el e2e el 2026-08-25 ("cy.click()
-  failed because this element is being covered by .utiles"); viene del
-  rediseño del 2026-08-24, no de la partición en componentes. De momento el
-  e2e coloca en una casilla del centro para no depender de la esquina, pero
-  el defecto sigue ahí. Salidas posibles: sacar la barra fuera del marco,
-  ponerla en fila horizontal encima del tablero, o dar a la rejilla un
-  margen interior del tamaño de la barra. Es decisión de diseño: hay
-  maquetas en Desktop/workspace/diseno-mesa/.
+- (HECHO el 2026-08-25: LA BARRA DE HERRAMIENTAS YA NO TAPA EL TABLERO. Iba
+  en position:absolute con fondo opaco sobre la esquina superior izquierda
+  del marco, y las casillas de debajo no se podían pulsar ni recibir un
+  token; como a lo ancho el tablero cabe entero, las columnas 0-1 estaban
+  SIEMPRE tapadas y no había forma de destaparlas desplazando. Lo cazó el
+  e2e ("this element is being covered by .utiles"). Ahora va EN FILA en una
+  cabecera propia encima del marco, junto al rótulo de la zona: cuesta ~3rem
+  de alto —una fila de 30— pero no toca el ancho ni el tamaño de casilla,
+  que es el principio de esta pantalla (se pierden filas, nunca columnas), y
+  deja sitio horizontal para el zoom y el "centrar en el turno". El e2e
+  vuelve a colocar en la casilla (0,0) A PROPÓSITO, para que avise si
+  alguien pone algo flotando ahí otra vez; MesaTablero tiene además un test
+  de que .utiles es HERMANA del marco y no hija.
+  El BANQUILLO sigue flotando abajo a la izquierda con el mismo problema,
+  pero es transitorio —solo existe con fichas sin colocar— y el tablero ya
+  está recortado por abajo. Si molesta: plegarlo, o subirlo a esa cabecera.)
 - (HECHO el 2026-08-24: PARTIR LA MESA EN COMPONENTES. Ver la sección
   "La mesa, por dentro" del Estado actual. El presupuesto anyComponentStyle
   volvió a 10/16 kB, que es donde estaba antes del rediseño.)
@@ -672,9 +674,19 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   de la iniciativa. Mover en dos clics (banquillo para los no colocados) y
   CA derivada POR EL SERVIDOR. Permisos: máster toca todo, cada jugador lo
   suyo (PATCH /api/partidas/:id/personajes/:pepId).
-  PENDIENTE del rediseño: la barra de herramientas del tablero (nace con
-  Medir), el zoom, la pestaña de Sucesos, tirar la iniciativa de los PNJ
-  sola al iniciar combate y la vista de tablet con hoja inferior.
+  Cada zona es un COMPONENTE desde el 2026-08-25: ver "LA MESA, POR DENTRO"
+  más arriba para el reparto. Al mover markup entre zonas, OJO con las
+  clases que usan dos: si una vive en el .scss de una sola, la otra se queda
+  sin estilos y no lo avisa nadie — le pasó a .pg, que dejó la tarjeta de tu
+  personaje con el input a lo ancho y los botones apilados (arreglado
+  subiéndolo a _mesa-comun.scss). Compilar el .scss y buscar en él las
+  clases del .html lo caza en un minuto. Con el reparto, la hoja más gorda
+  baja a ~5,5 kB (antes 17,1 kB en una sola) y el presupuesto
+  anyComponentStyle vuelve a su 10/16 kB sin un solo aviso.
+  PENDIENTE del rediseño: el zoom, la pestaña de Sucesos, tirar la
+  iniciativa de los PNJ sola al iniciar combate y la vista de tablet con
+  hoja inferior. La barra de herramientas y Medir YA ESTÁN (con el defecto
+  de que tapa la esquina; ver Mejoras futuras).
 - Mapa de fondo del tablero: lo sube el MÁSTER (POST :id/mapa, multipart,
   campo "mapa"); GET :id/mapa lo sirve y DELETE :id/mapa lo quita. Se guarda
   EN DISCO, no en la BD: la columna partidas.mapaFichero solo lleva el nombre

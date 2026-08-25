@@ -1,33 +1,38 @@
-<!-- La barra de herramientas: el contenedor que faltaba. Aquí
-     entrarán plantillas de área, señalar, niebla y dibujo sin
-     tocar nada más de la pantalla. -->
-<div class="utiles" role="toolbar" aria-label="Herramientas del tablero">
-  <button
-    type="button"
-    class="util"
-    [class.util--activa]="herramienta() === 'seleccionar'"
-    [attr.aria-pressed]="herramienta() === 'seleccionar'"
-    title="Seleccionar y mover"
-    (click)="usarHerramienta('seleccionar')"
-  >
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5.5 3.5l13 7.2-5.6 1.4-2.2 5.4z" />
-    </svg>
-  </button>
-  <button
-    type="button"
-    class="util"
-    [class.util--activa]="herramienta() === 'medir'"
-    [attr.aria-pressed]="herramienta() === 'medir'"
-    title="Medir distancia (arrastra de casilla a casilla)"
-    (click)="usarHerramienta('medir')"
-  >
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="2.5" y="8.5" width="19" height="7" rx="1.5" />
-      <path d="M7 8.5v3M12 8.5v4M17 8.5v3" />
-    </svg>
-  </button>
-</div>
+<header class="cabecera">
+  <p class="rotulo">Tablero <span>24 × 30 casillas</span></p>
+
+  <!-- La barra de herramientas: el contenedor que faltaba. Aquí entrarán
+       plantillas de área, señalar, niebla y dibujo sin tocar nada más de la
+       pantalla. En FILA y encima del tablero: flotando sobre la esquina
+       tapaba casillas que no se podían destapar. -->
+  <div class="utiles" role="toolbar" aria-label="Herramientas del tablero">
+    <button
+      type="button"
+      class="util"
+      [class.util--activa]="herramienta() === 'seleccionar'"
+      [attr.aria-pressed]="herramienta() === 'seleccionar'"
+      title="Seleccionar y mover"
+      (click)="usarHerramienta('seleccionar')"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5.5 3.5l13 7.2-5.6 1.4-2.2 5.4z" />
+      </svg>
+    </button>
+    <button
+      type="button"
+      class="util"
+      [class.util--activa]="herramienta() === 'medir'"
+      [attr.aria-pressed]="herramienta() === 'medir'"
+      title="Medir distancia (arrastra de casilla a casilla)"
+      (click)="usarHerramienta('medir')"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2.5" y="8.5" width="19" height="7" rx="1.5" />
+        <path d="M7 8.5v3M12 8.5v4M17 8.5v3" />
+      </svg>
+    </button>
+  </div>
+</header>
 
 <div
   #marcoTablero
@@ -42,95 +47,90 @@
     [class.tablero--con-mapa]="fondo()"
     [style.background-image]="fondo()"
   >
-    @for (y of filas; track y) {
-      @for (x of columnas; track x) {
-        <button
-          type="button"
-          class="tablero__celda"
-          [attr.data-x]="x"
-          [attr.data-y]="y"
-          [class.tablero__celda--destino]="hayDestino() && !ocupanteDe(x, y)"
-          (click)="clickCelda(x, y)"
-          (dragover)="permitirSoltar($event)"
-          (drop)="soltarEn($event, x, y)"
-        >
-          @if (tokenEn(x, y); as pep) {
-            <span
-              class="tablero__token"
-              [style.background]="colorToken(pep)"
-              [style.width]="ladoToken(pep)"
-              [style.height]="ladoToken(pep)"
-              [attr.data-casillas]="pep.casillas"
-              [attr.draggable]="puedeMover(pep)"
-              (dragstart)="iniciarArrastre($event, pep)"
-              (dragend)="terminarArrastre()"
-              [class.tablero__token--seleccionado]="seleccionadoId() === pep.id"
-              [class.tablero__token--turno]="esTurno(pep)"
-              [class.tablero__token--arrastrando]="arrastrando() === pep.id"
-              [class.tablero__token--ajeno]="!puedeMover(pep)"
-              [class.tablero__token--oculto]="pep.oculto"
-              [class.tablero__token--caido]="esCaido(pep)"
-              [title]="pep.nombre"
-            >
-              {{ iniciales(pep.nombre) }}
-            </span>
-          }
-        </button>
-      }
-    }
-    @if (medicion(); as m) {
-      <!-- viewBox en casillas: la línea se estira con el tablero y
-           el trazo no engorda (non-scaling-stroke). -->
-      <svg
-        class="regla"
-        [attr.viewBox]="'0 0 ' + columnas.length + ' ' + filas.length"
-        preserveAspectRatio="none"
-        aria-hidden="true"
+    @for (y of filas; track y) { @for (x of columnas; track x) {
+    <button
+      type="button"
+      class="tablero__celda"
+      [attr.data-x]="x"
+      [attr.data-y]="y"
+      [class.tablero__celda--destino]="hayDestino() && !ocupanteDe(x, y)"
+      (click)="clickCelda(x, y)"
+      (dragover)="permitirSoltar($event)"
+      (drop)="soltarEn($event, x, y)"
+    >
+      @if (tokenEn(x, y); as pep) {
+      <span
+        class="tablero__token"
+        [style.background]="colorToken(pep)"
+        [style.width]="ladoToken(pep)"
+        [style.height]="ladoToken(pep)"
+        [attr.data-casillas]="pep.casillas"
+        [attr.draggable]="puedeMover(pep)"
+        (dragstart)="iniciarArrastre($event, pep)"
+        (dragend)="terminarArrastre()"
+        [class.tablero__token--seleccionado]="seleccionadoId() === pep.id"
+        [class.tablero__token--turno]="esTurno(pep)"
+        [class.tablero__token--arrastrando]="arrastrando() === pep.id"
+        [class.tablero__token--ajeno]="!puedeMover(pep)"
+        [class.tablero__token--oculto]="pep.oculto"
+        [class.tablero__token--caido]="esCaido(pep)"
+        [title]="pep.nombre"
       >
-        <line
-          [attr.x1]="m.x1 + 0.5"
-          [attr.y1]="m.y1 + 0.5"
-          [attr.x2]="m.x2 + 0.5"
-          [attr.y2]="m.y2 + 0.5"
-          vector-effect="non-scaling-stroke"
-        />
-      </svg>
-      @if (distancia(); as d) {
-        <span
-          class="regla__etiqueta"
-          [style.left.%]="((m.x1 + m.x2) / 2 + 0.5) * 100 / columnas.length"
-          [style.top.%]="((m.y1 + m.y2) / 2 + 0.5) * 100 / filas.length"
-        >
-          {{ d.pies }} pies · {{ d.casillas }}
-          {{ d.casillas === 1 ? 'casilla' : 'casillas' }}
-        </span>
+        {{ iniciales(pep.nombre) }}
+      </span>
       }
-    }
+    </button>
+    } } @if (medicion(); as m) {
+    <!-- viewBox en casillas: la línea se estira con el tablero y
+           el trazo no engorda (non-scaling-stroke). -->
+    <svg
+      class="regla"
+      [attr.viewBox]="'0 0 ' + columnas.length + ' ' + filas.length"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <line
+        [attr.x1]="m.x1 + 0.5"
+        [attr.y1]="m.y1 + 0.5"
+        [attr.x2]="m.x2 + 0.5"
+        [attr.y2]="m.y2 + 0.5"
+        vector-effect="non-scaling-stroke"
+      />
+    </svg>
+    @if (distancia(); as d) {
+    <span
+      class="regla__etiqueta"
+      [style.left.%]="((m.x1 + m.x2) / 2 + 0.5) * 100 / columnas.length"
+      [style.top.%]="((m.y1 + m.y2) / 2 + 0.5) * 100 / filas.length"
+    >
+      {{ d.pies }} pies · {{ d.casillas }} {{ d.casillas === 1 ? 'casilla' :
+      'casillas' }}
+    </span>
+    } }
   </div>
 </div>
 
 <!-- Bandeja de los que aún no están en el tablero. Flota sobre él en
      vez de ser una franja a lo ancho: así no roba alto permanente. -->
 @if (banquillo().length > 0) {
-  <div class="banquillo">
-    <span class="banquillo__titulo">Sin colocar</span>
-    @for (pep of banquillo(); track pep.id) {
-      <button
-        type="button"
-        class="banquillo__pieza"
-        [style.background]="colorToken(pep)"
-        [attr.draggable]="puedeMover(pep)"
-        (dragstart)="iniciarArrastre($event, pep)"
-        (dragend)="terminarArrastre()"
-        [class.banquillo__pieza--seleccionada]="seleccionadoId() === pep.id"
-        [class.banquillo__pieza--ajena]="!puedeMover(pep)"
-        (click)="seleccionar.emit(pep)"
-      >
-        {{ pep.nombre }}
-      </button>
-    }
-    @if (hayDestino()) {
-      <span class="banquillo__pista">Haz clic en una casilla</span>
-    }
-  </div>
+<div class="banquillo">
+  <span class="banquillo__titulo">Sin colocar</span>
+  @for (pep of banquillo(); track pep.id) {
+  <button
+    type="button"
+    class="banquillo__pieza"
+    [style.background]="colorToken(pep)"
+    [attr.draggable]="puedeMover(pep)"
+    (dragstart)="iniciarArrastre($event, pep)"
+    (dragend)="terminarArrastre()"
+    [class.banquillo__pieza--seleccionada]="seleccionadoId() === pep.id"
+    [class.banquillo__pieza--ajena]="!puedeMover(pep)"
+    (click)="seleccionar.emit(pep)"
+  >
+    {{ pep.nombre }}
+  </button>
+  } @if (hayDestino()) {
+  <span class="banquillo__pista">Haz clic en una casilla</span>
+  }
+</div>
 }

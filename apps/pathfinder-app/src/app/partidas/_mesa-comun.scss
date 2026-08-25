@@ -127,6 +127,40 @@
   }
 }
 
+// -- El bloque de PG: cifra grande, total y los botones de daño/cura -------
+// Lo usan DOS zonas: la tarjeta de tu personaje (mesa-personas) y el panel
+// de selección (mesa-seleccion). Vivía solo en el panel y al partir la mesa
+// dejó la tarjeta sin estilos: el input a lo ancho y los botones apilados.
+.pg {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+
+  &__valor {
+    width: 4rem;
+    padding: 0.25rem 0.4rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__total {
+    color: var(--text-muted);
+  }
+
+  &__acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  &__cantidad {
+    width: 3.5rem;
+    padding: 0.25rem 0.4rem;
+  }
+}
+
 // -- Barra de PG y tramo vital ---------------------------------------------
 .pgbar {
   flex: 1;
