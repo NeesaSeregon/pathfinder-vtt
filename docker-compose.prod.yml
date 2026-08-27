@@ -19,6 +19,16 @@ services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
+    # Techo de memoria, no reserva: marca cuánto PUEDE llegar a usar, no
+    # cuánto se le guarda. Sin topes, los ocho contenedores compiten por los
+    # 3,8 GiB enteros y, cuando falta memoria, el kernel elige víctima por
+    # tamaño en toda la máquina. Con tope, el que se desmadra se lleva solo a
+    # sí mismo. Medido en reposo: 37 MiB, así que estos 768m son veinte veces
+    # de margen y solo saltarían ante una consulta desbocada de verdad.
+    #
+    # OJO: es `mem_limit` y no `deploy.resources.limits`. Lo segundo solo lo
+    # aplica Docker Swarm; `docker compose up` lo ignora en silencio.
+    mem_limit: 768m
     environment:
       POSTGRES_USER: ${DB_USER:-pathfinder}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD}
@@ -47,6 +57,11 @@ services:
       dockerfile: Dockerfile
       target: build
     restart: 'no'
+    # Más holgado que los demás A PROPÓSITO: aquí corre ts-node con todo el
+    # TypeScript del proyecto en memoria. Quedarse corto no protegería nada y
+    # sí rompería el despliegue en cada intento, que es peor que el riesgo
+    # que el tope evita.
+    mem_limit: 768m
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,6 +78,15 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    # Medido en reposo: 60 MiB. 512m es ocho veces eso, así que no estorba en
+    # uso normal; lo que hace es convertir una fuga de memoria en "se reinicia
+    # este contenedor" en lugar de "el kernel mata lo que más ocupa", que
+    # perfectamente podría ser PostgreSQL, que no tendría culpa de nada.
+    #
+    # Esto NO protege del pico de la compilación: los topes del compose se
+    # aplican a los servicios en marcha, no a `docker build`. De eso protege
+    # el swapfile del servidor (y, de verdad, compilar fuera de la máquina).
+    mem_limit: 512m
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,6 +95,14 @@ services:
         condition: service_completed_successfully
     environment:
       NODE_ENV: production
+      # Techo del montón de V8, deliberadamente POR DEBAJO del mem_limit de
+      # arriba. Sin esto, Node puede intentar crecer más allá del tope del
+      # contenedor y el kernel lo mata en seco, sin dejar nada en el log: un
+      # reinicio misterioso. Con esto, Node lanza antes un "JavaScript heap
+      # out of memory" que sí se lee. Importa especialmente aquí porque no
+      # hay métricas de ningún tipo: un reinicio silencioso no habría manera
+      # de diagnosticarlo.
+      NODE_OPTIONS: --max-old-space-size=384
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER:-pathfinder}
@@ -104,6 +136,35 @@ services:
     # este contenedor por su red interna. El dominio se asigna en el panel.
     expose:
       - '3000'
+    # Sonda de vida. Sin ella, Docker da el contenedor por bueno en cuanto el
+    # proceso EXISTE, y el Traefik de Coolify puede mandarle visitas antes de
+    # que Nest haya terminado de arrancar y abierto el pool contra Postgres.
+    # Eso pasa justo después de desplegar, que es el peor momento posible.
+    #
+    # Usa `node` porque está garantizado en la imagen (alpine no trae curl) y
+    # acepta cualquier respuesta por debajo de 500: el 401 de /api/demo vale
+    # perfectamente, porque lo que se comprueba es "¿hay alguien escuchando y
+    # enrutando?", no "¿tengo permiso?".
+    #
+    # Es una sonda de VIDA, no de PREPARACIÓN: no llega a tocar la base de
+    # datos. El día que exista /api/health, apuntarla ahí añade esa parte.
+    #
+    # Y una limitación que conviene tener presente: Docker a secas NO
+    # reinicia un contenedor por estar unhealthy (eso es cosa de Swarm). Esto
+    # da la señal a Coolify y la deja visible en `docker ps`; no se cura solo.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3000/api/demo', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      # Margen de arranque: durante estos 20s los fallos no cuentan como tal.
+      start_period: 20s
     volumes:
       # Los mapas subidos viven aquí. Si esto no fuera un volumen, se
       # perderían al recrear el contenedor.
