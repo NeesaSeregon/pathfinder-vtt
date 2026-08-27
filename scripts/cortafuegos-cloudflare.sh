@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
-# Restringe los puertos 80 y 443 del ORIGEN a SOLO las IPs de Cloudflare.
+# Restringe los puertos 80 y 443 del ORIGEN a SOLO las IPs de Cloudflare, y
+# cierra a TODO internet el 8000 (panel de Coolify), al que se entra por un
+# túnel SSH.
 #
 # Por qué así: Docker publica esos puertos (coolify-proxy) y se SALTA UFW; la
 # única cadena de iptables que Docker respeta para esto es DOCKER-USER. Aquí
@@ -78,6 +80,22 @@ aplicar() {
   # "-i $WAN" en las CUATRO: solo se filtra lo que llega de fuera (ver cabecera).
   $ipt -I DOCKER-USER -i "$WAN" -p udp --dport 443                  -m comment --comment "$MARCA" -j DROP
   $ipt -I DOCKER-USER -i "$WAN" -p tcp -m multiport --dports 80,443 -m comment --comment "$MARCA" -j DROP
+  # El PANEL DE COOLIFY (8000). No lleva RETURN de nadie: se cierra a todo
+  # internet, sin excepciones. Se entra por un túnel SSH, que entrega su
+  # tráfico por 'lo' y por tanto no pasa por FORWARD ni ve estas reglas:
+  #     ssh -N -L 8000:localhost:8000 root@IP   →   http://localhost:8000
+  #
+  # Es el puerto desde el que se despliega y se leen los secretos, así que
+  # estaba peor expuesto que la propia aplicación: sin Cloudflare delante y
+  # sin cortafuegos, porque las reglas de arriba solo miran 80/443.
+  #
+  # OJO con el puerto: Docker publica el 8000 del host contra el 8080 DEL
+  # CONTENEDOR, y cuando el paquete llega a DOCKER-USER la traducción YA se
+  # ha hecho (nat/PREROUTING va antes que filter/FORWARD). Un `--dport 8000`
+  # aquí no casaría con nada y no daría ningún error: creerías tenerlo
+  # cerrado. Por eso se pregunta a conntrack por el destino ORIGINAL, que
+  # además no se rompe si Coolify cambia su puerto interno.
+  $ipt -I DOCKER-USER -i "$WAN" -p tcp -m conntrack --ctorigdstport 8000 -m comment --comment "$MARCA" -j DROP
   while read -r rango; do
     [ -z "$rango" ] && continue
     # El -i aquí es redundante (un contenedor nunca tendrá IP de Cloudflare),
@@ -91,7 +109,7 @@ aplicar() {
 aplicar iptables  "$V4"
 aplicar ip6tables "$V6"
 
-echo "[$(date +%F' '%T)] Cortafuegos Cloudflare aplicado en $WAN: 80/443 solo desde Cloudflare."
+echo "[$(date +%F' '%T)] Cortafuegos aplicado en $WAN: 80/443 solo desde Cloudflare, 8000 cerrado."
 
 # COMPROBACIÓN: ¿los contenedores conservan salida a internet? Es la mitad del
 # cortafuegos que no se ve —la web puede seguir cargando perfectamente mientras
