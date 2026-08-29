@@ -19,13 +19,20 @@ Hay **tres niveles**, y elegir mal no da error: se ve mal y ya.
 
 | Nivel | Fichero | Para qué |
 |---|---|---|
-| Global | `src/styles.scss` | El tema (variables), los elementos desnudos (`button`, `input`, `h1`), y patrones que usa **toda** la app: `.boton-primario`, `.boton-enlace`, `.overlay`, `.modal`, `.pestanas`, `.panel`, `.pagina-estrecha`, `.acceso__error`, `.acceso__alternativa` |
+| Global | `src/styles.scss` | El tema (variables), los elementos desnudos (`button`, `input`, `h1`), y patrones que usa **toda** la app: `.boton-primario`, `.boton-enlace`, `.overlay`, `.modal`, `.pestanas`, `.panel`, `.pagina-estrecha`, `.acceso__error`, `.acceso__alternativa`, `.ver-contrasena` |
 | Compartido de una zona | `_mesa-comun.scss` | Vocabulario que usan **varios componentes de una misma pantalla** pero cuyo nombre es demasiado genérico para el ámbito global: `.rotulo`, `.tarjeta`, `.boton`, `.ficha`, `.marca`, `.pg`, `.pgbar`, `.vital` |
 | Propio | `mesa-tablero.scss`, … | Lo que solo existe en ese componente |
 
 **El criterio**: ¿lo usa otro componente? Si sí, y su nombre es genérico, va
 al parcial. Si sí, y es un patrón de toda la app, va al global. Si no, se
 queda en casa.
+
+Hay un cuarto caso que obliga al global aunque el criterio dijera otra cosa:
+**el contenido proyectado**. `.ver-contrasena` envuelve un `<input>` que le
+llega por `<ng-content>`, y ese input lleva el atributo de encapsulación de
+la **página que lo escribe**, no el del componente que lo envuelve — así que
+desde la hoja de `VerContrasena` no hay forma de darle el `flex: 1`. Si un
+componente necesita medir lo que le proyectan, sus reglas van arriba.
 
 ### La trampa que ya ha mordido dos veces
 

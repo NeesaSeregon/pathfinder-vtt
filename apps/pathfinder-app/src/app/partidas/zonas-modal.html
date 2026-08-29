@@ -20,8 +20,8 @@
     </header>
 
     <p class="zonas__ayuda">
-      Para dibujar una zona nueva, cierra esto y arrastra sobre el tablero
-      con la herramienta del rectángulo. El terreno es un
+      Para dibujar otra zona, cierra esto y arrastra sobre el tablero con la
+      herramienta del rectángulo. El terreno es un
       <strong>recordatorio</strong>: no cambia el movimiento de nadie.
     </p>
 
@@ -33,15 +33,29 @@
     } @else {
       <ul class="zonas">
         @for (zona of borrador(); track zona.id) {
-          <li class="zonas__fila">
-            <span
-              [class]="'zonas__muestra zona ' + claseTerreno(zona.terreno)"
-              aria-hidden="true"
-            ></span>
+          <li class="zonas__fila" [class.zonas__fila--nueva]="esNueva(zona)">
+            <!-- El tablero en pequeño, con ESTA zona marcada y las demás
+                 apagadas detrás. Es la respuesta a "¿cuál de las tres salas
+                 es?": el tablero no tiene coordenadas a la vista, así que un
+                 "desde (3, 4)" no le diría nada a nadie. Se coloca con la
+                 misma rejilla y el mismo areaEnRejilla() que el tablero de
+                 verdad, y el relleno sale de las mismas clases de terreno:
+                 si un día divergen, divergen a la vez. -->
+            <span class="zonas__mapa" aria-hidden="true">
+              @for (otra of borrador(); track otra.id) {
+                <span
+                  [class]="'zonas__pieza zona ' + claseTerreno(otra.terreno)"
+                  [class.zonas__pieza--esta]="otra.id === zona.id"
+                  [class.zonas__pieza--otra]="otra.id !== zona.id"
+                  [style.grid-area]="areaEnRejilla(otra)"
+                ></span>
+              }
+            </span>
 
             <label class="zonas__campo zonas__campo--nombre">
               <span>Nombre</span>
               <input
+                #campoNombre
                 type="text"
                 [maxlength]="nombreMax"
                 placeholder="Pasillo norte"
@@ -64,8 +78,13 @@
               </select>
             </label>
 
+            <!-- La fila nueva se marca con el borde Y con palabras: el
+                 color nunca va solo (ESTILOS.md §7). -->
             <span class="zonas__medidas">
               {{ zona.ancho }} × {{ zona.alto }} casillas
+              @if (esNueva(zona)) {
+                · recién dibujada
+              }
             </span>
 
             <!-- Sin niebla de guerra: una zona no revelada sencillamente no

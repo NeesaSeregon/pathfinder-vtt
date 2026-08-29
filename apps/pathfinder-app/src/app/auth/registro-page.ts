@@ -3,11 +3,12 @@ import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthApi } from './auth-api';
 import { SesionStore } from './sesion-store';
+import { VerContrasena } from './ver-contrasena';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
 @Component({
   selector: 'app-registro-page',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, VerContrasena],
   templateUrl: './registro-page.html',
 })
 export class RegistroPage {

@@ -19,13 +19,15 @@
       </label>
       <label>
         Contraseña
-        <input
-          type="password"
-          name="password"
-          autocomplete="current-password"
-          required
-          [(ngModel)]="password"
-        />
+        <app-ver-contrasena>
+          <input
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            required
+            [(ngModel)]="password"
+          />
+        </app-ver-contrasena>
       </label>
       <button
         type="submit"

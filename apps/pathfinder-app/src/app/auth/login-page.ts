@@ -3,11 +3,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthApi } from './auth-api';
 import { SesionStore } from './sesion-store';
+import { VerContrasena } from './ver-contrasena';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
 @Component({
   selector: 'app-login-page',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, VerContrasena],
   templateUrl: './login-page.html',
   styleUrl: './login-page.scss',
 })

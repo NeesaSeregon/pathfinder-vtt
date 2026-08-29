@@ -833,10 +833,24 @@ describe('partidas', () => {
           });
         });
 
-        // Y el nombre se pone en la lista, no sobre el tablero
-        abrirMenuMaster();
-        cy.contains('.menu__opcion', 'Zonas del tablero').click();
+        // El nombre se pone en la LISTA, no sobre el tablero — pero la
+        // lista se abre SOLA al soltar el rectángulo, con la fila nueva
+        // marcada y el cursor ya puesto en su nombre. Dibujar y nombrar
+        // quedaron encadenados: antes la zona nacía en blanco y había que
+        // ir a buscarla al menú del máster, y cuatro salas seguidas dejaban
+        // cuatro filas idénticas y vacías.
         cy.get('.zonas__fila').should('have.length', 1);
+        cy.get('.zonas__fila').should('have.class', 'zonas__fila--nueva');
+        cy.get('.zonas__fila').should('contain', 'recién dibujada');
+        cy.get('.zonas__fila input[type="text"]').should('be.focused');
+
+        // Y cada fila lleva el tablero en miniatura con su zona marcada,
+        // que es lo que responde a "¿cuál de las tres salas es?".
+        cy.get('.zonas__fila .zonas__mapa .zonas__pieza--esta').should(
+          'have.length',
+          1,
+        );
+
         cy.get('.zonas__fila input[type="text"]').type('Sala del trono');
         cy.get('.zonas__fila select').select('Terreno difícil');
         cy.contains('button', 'Guardar zonas').click();

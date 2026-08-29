@@ -23,16 +23,64 @@
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: 0.5rem;
+
+    /* La que se acaba de dibujar. El borde no va solo: la fila lo dice
+       también con palabras junto a las medidas. */
+    &--nueva {
+      border-color: var(--accent);
+      box-shadow: var(--glow);
+    }
   }
 
-  /* Lleva también la clase .zona, así que el color, el borde y la trama
-     salen del MISMO sitio que en el tablero (_mesa-comun). Sin eso hay que
-     adivinar cuál de la lista es cuál del tablero. Aquí solo el tamaño. */
-  &__muestra {
-    width: 2rem;
-    height: 2rem;
+  /* El tablero en miniatura con la zona de esta fila marcada.
+
+     Es la MISMA rejilla que el tablero de verdad y las zonas se colocan con
+     el mismo areaEnRejilla(), así que la miniatura no puede mentir sobre
+     dónde está la sala. Sustituyó a una muestra de color de 2rem, que decía
+     el terreno pero no cuál de las tres salas era — y el tablero no tiene
+     coordenadas a la vista, así que unos números tampoco lo dirían.
+
+     OJO: estos números son TABLERO_ANCHO y TABLERO_ALTO de libs/shared,
+     como en mesa-tablero.scss. El CSS no puede leerlos, así que si cambian
+     allí hay que cambiarlos en los dos sitios. */
+  &__mapa {
+    /* Bloque contenedor de las piezas, que van absolutas (ver más abajo). */
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    grid-template-rows: repeat(30, 1fr);
+    aspect-ratio: 24 / 30;
+    height: 3.4rem;
     flex-shrink: 0;
     align-self: center;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 0.35rem;
+    padding: 1px;
+
+    /* Los hijos VAN ABSOLUTOS, igual que en el tablero: un hijo de la
+       rejilla con posición explícita reserva su hueco y empuja a los
+       demás. Aquí no hay 720 casillas que descolocar, pero sí las otras
+       zonas — y una sala de 6×5 las movería a todas. */
+    .zona {
+      position: absolute;
+      inset: 0;
+      border-radius: 0.1rem;
+      /* A este tamaño el borde de 2px del tablero se come la zona entera. */
+      border-width: 1px;
+      box-shadow: none;
+    }
+  }
+
+  /* Las otras zonas se ven apagadas: dan el contexto (dónde cae esta
+     respecto al resto del mapa) sin competir con la que la fila describe. */
+  &__pieza--otra {
+    opacity: 0.35;
+  }
+
+  &__pieza--esta {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
   }
 
   &__campo {

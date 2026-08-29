@@ -277,7 +277,15 @@ legend {
       padding: 0.5rem 0.65rem;
     }
 
-    button {
+    /* HIJO DIRECTO, no cualquier botón de dentro. Esta regla habla del
+       botón DEL FORMULARIO ("Entrar", "Crear cuenta"), y por eso le pone un
+       align-self: los botones que viven dentro de un campo no lo quieren.
+       Sin el ">", el ojo de .ver-contrasena heredaba el relleno de un botón
+       de acción y un align-self: flex-start que lo descolgaba del campo —y
+       ganaba, porque `.panel form button` (0,1,2) tiene más peso que
+       `.ver-contrasena__ojo` (0,1,0). Todos los botones que había en estos
+       formularios ya eran hijos directos: acotarlo no cambia ninguno. */
+    > button {
       padding: 0.55rem 1rem;
       align-self: flex-start;
     }
@@ -342,6 +350,53 @@ legend {
   margin: 1.25rem 0 0;
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+/* El campo de contraseña con su ojo (componente VerContrasena).
+
+   Va en el GLOBAL y no en una hoja de componente por una razón concreta: el
+   <input> le llega a VerContrasena PROYECTADO, así que lleva el atributo de
+   encapsulación de la página que lo escribe y las reglas del componente no
+   lo alcanzarían. Desde aquí sí, y de paso vale igual para las dos maquetas
+   que conviven — el campo dentro del <label> de los accesos y el campo
+   suelto bajo su <label for> de /cuenta.
+
+   Aquí solo se reparte el ancho: el campo lo sigue pintando la regla global
+   de input y su relleno lo pone la pantalla, como manda ESTILOS.md §3. */
+.ver-contrasena {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+
+  /* min-width:0 porque un input tiene ancho intrínseco y sin esto se niega
+     a encogerse: el ojo se salía del panel en pantallas estrechas. */
+  input {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__ojo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0 0.6rem;
+    color: var(--text-muted);
+
+    &:hover:not(:disabled) {
+      color: var(--text);
+    }
+
+    svg {
+      width: 1.15rem;
+      height: 1.15rem;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+  }
 }
 
 /* Pestañas. También estaban copiadas en cada página que las usa. */

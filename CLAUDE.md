@@ -461,6 +461,29 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   contraseña por correo en /recuperar y /restablecer (ambas públicas), con
   enlace desde /entrar. Añadido el 2026-08-03, cuando la app dejó de ser
   solo del círculo cercano.
+- VER LA CONTRASEÑA ESCRITA (2026-08-28). Los NUEVE campos de contraseña de
+  las cuatro pantallas (/entrar, /registro, /restablecer y los cuatro de
+  /cuenta) llevan un ojo para comprobar lo tecleado. Hacía falta sobre todo
+  donde hay que escribirla DOS VECES a ciegas: sin verla, "no coinciden" no
+  dice cuál de las dos ha bailado.
+  El componente es VerContrasena (auth/ver-contrasena.ts) y ENVUELVE al
+  campo POR PROYECCIÓN (<ng-content/>), no lo sustituye. Es la decisión que
+  sostiene todo lo demás: el <input> se queda escrito en su formulario con
+  su name, su autocomplete, su required y su ngModel, así que no hace falta
+  un ControlValueAccessor, las dos maquetas que conviven siguen valiendo
+  (el campo dentro del <label> de los accesos y el campo suelto bajo su
+  <label for> de /cuenta) y los selectores del e2e, que van por
+  input[name="…"], no se enteran. Lo único que toca del campo es el `type`.
+  Tres cosas que no son adorno:
+  · Arranca SIEMPRE oculta. Enseñarla es una decisión de quien está delante
+    de la pantalla, nunca el estado por defecto.
+  · Devuelve el foco y la selección al campo tras alternar. El ojo se pulsa
+    a mitad de escribir, y sin eso hay que volver a hacer clic para seguir.
+  · El estado va en aria-pressed y en el aria-label (que cambia), no solo en
+    el dibujo del icono.
+  Sus estilos van en styles.scss Y NO en una hoja de componente: el input le
+  llega proyectado, con el atributo de encapsulación de la PÁGINA, así que
+  las reglas del componente no lo alcanzarían.
 - La home tiene DOS caras y ya no hay nada "en construcción" en ella:
   · SIN sesión, PORTADA (.home, 64rem): el hero y tres tarjetas
     informativas, con entrar/registrarse. No hace NI UNA petición a la API.
@@ -555,6 +578,35 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
     casilla) y ponerle nombre es escribir. Un formulario flotando sobre el
     tablero rompería la regla de que nada opaco tapa casillas. Además, la
     lista es la única vía CON TECLADO a algo que si no sería solo de ratón.
+  · SEPARADAS PERO ENCADENADAS (2026-08-28). Los dos gestos siguen siendo
+    dos, pero ya no hay que acordarse de dar el segundo: al soltar el
+    rectángulo, dibujarZona lo GUARDA y acto seguido abre la lista con la
+    fila nueva marcada y el foco puesto en su nombre. Antes la zona nacía en
+    blanco y sin terreno y ahí se quedaba: quien dibujaba cuatro salas
+    seguidas se encontraba cuatro filas idénticas y vacías, sin forma de
+    saber cuál era cuál. Dos detalles de implementación que no son gratuitos:
+    – Se guarda ANTES de abrir, no al aceptar la lista. Así el rectángulo
+      está a salvo aunque el máster cierre sin escribir nada, y se conserva
+      la propiedad de que dibujar no puede perderse.
+    – guardarZonas lleva el parámetro `abrirLista` porque llegan DOS caminos
+      a la misma función y quieren lo contrario: guardar desde la lista la
+      cierra (ya está hecho lo que se venía a hacer) y dibujar la abre. Sin
+      el parámetro, el next() cerraba la modal que acabábamos de pedir.
+    Y la página LIMPIA zonaNueva al cerrar y al fallar el guardado: si no,
+    la siguiente apertura desde el menú del máster buscaría el foco en una
+    fila que ya no existe.
+  · CADA FILA LLEVA EL TABLERO EN MINIATURA con su zona marcada y las demás
+    apagadas detrás (.zonas__mapa, con .zonas__pieza--esta/--otra).
+    Sustituye a la muestra de color de 2rem, que decía el TERRENO pero no
+    CUÁL de las tres salas era. Se descartó poner coordenadas ("desde
+    (3, 4)"): el tablero no tiene ejes ni números a la vista, así que no le
+    dirían nada a nadie. La miniatura usa la MISMA rejilla de 24×30 y el
+    MISMO areaEnRejilla() que el tablero de verdad —y las mismas clases de
+    terreno—, así que no puede mentir sobre dónde cae la sala; hereda por
+    tanto la regla del position:absolute (ver más arriba: un hijo colocado
+    que reserve hueco descoloca a los demás). OJO: el 24×30 vuelve a estar
+    escrito a mano en zonas-modal.scss, que es el TERCER sitio con esos
+    números (mesa-tablero.scss y libs/shared son los otros dos).
   · SE PINTAN EN LA MISMA REJILLA CSS que las casillas, con grid-area. Ni
     capa SVG ni píxeles: encajan solas con el hueco de 2px. Van al fondo
     (z-index 0; el token está en el 2) y con pointer-events: none, así que

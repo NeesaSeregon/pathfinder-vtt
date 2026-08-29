@@ -1,0 +1,22 @@
+<!-- El campo lo pone quien nos usa: aquí solo se proyecta y se le añade el
+     ojo. Así el <input> conserva su name, su autocomplete y su ngModel. -->
+<ng-content />
+
+<button
+  type="button"
+  class="ver-contrasena__ojo"
+  [attr.aria-pressed]="visible()"
+  [attr.aria-label]="etiqueta()"
+  [title]="etiqueta()"
+  (click)="alternar()"
+>
+  <!-- El estado no se dice solo con el icono: va también en aria-pressed y
+       en la etiqueta, que cambia con él. -->
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
+    <circle cx="12" cy="12" r="2.75" />
+    @if (visible()) {
+      <path d="M4 4l16 16" />
+    }
+  </svg>
+</button>

@@ -17,24 +17,28 @@
       <form (ngSubmit)="guardar()">
         <label>
           Contraseña nueva
-          <input
-            type="password"
-            name="password"
-            autocomplete="new-password"
-            required
-            [attr.minlength]="minimo"
-            [(ngModel)]="password"
-          />
+          <app-ver-contrasena>
+            <input
+              type="password"
+              name="password"
+              autocomplete="new-password"
+              required
+              [attr.minlength]="minimo"
+              [(ngModel)]="password"
+            />
+          </app-ver-contrasena>
         </label>
         <label>
           Repite la contraseña nueva
-          <input
-            type="password"
-            name="password2"
-            autocomplete="new-password"
-            required
-            [(ngModel)]="password2"
-          />
+          <app-ver-contrasena>
+            <input
+              type="password"
+              name="password2"
+              autocomplete="new-password"
+              required
+              [(ngModel)]="password2"
+            />
+          </app-ver-contrasena>
         </label>
         @if (password() && !bastanteLarga()) {
           <p class="acceso__error" role="alert">

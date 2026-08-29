@@ -60,34 +60,40 @@
       } @else {
         <form class="cuenta__confirmar" (ngSubmit)="cambiarPassword()">
           <label for="password-actual">Contraseña actual</label>
-          <input
-            id="password-actual"
-            name="passwordActual"
-            type="password"
-            autocomplete="current-password"
-            [ngModel]="passwordActual()"
-            (ngModelChange)="passwordActual.set($event)"
-          />
+          <app-ver-contrasena>
+            <input
+              id="password-actual"
+              name="passwordActual"
+              type="password"
+              autocomplete="current-password"
+              [ngModel]="passwordActual()"
+              (ngModelChange)="passwordActual.set($event)"
+            />
+          </app-ver-contrasena>
 
           <label for="password-nueva">Contraseña nueva</label>
-          <input
-            id="password-nueva"
-            name="passwordNueva"
-            type="password"
-            autocomplete="new-password"
-            [ngModel]="passwordNueva()"
-            (ngModelChange)="passwordNueva.set($event)"
-          />
+          <app-ver-contrasena>
+            <input
+              id="password-nueva"
+              name="passwordNueva"
+              type="password"
+              autocomplete="new-password"
+              [ngModel]="passwordNueva()"
+              (ngModelChange)="passwordNueva.set($event)"
+            />
+          </app-ver-contrasena>
 
           <label for="password-repetida">Repite la nueva</label>
-          <input
-            id="password-repetida"
-            name="passwordRepetida"
-            type="password"
-            autocomplete="new-password"
-            [ngModel]="passwordRepetida()"
-            (ngModelChange)="passwordRepetida.set($event)"
-          />
+          <app-ver-contrasena>
+            <input
+              id="password-repetida"
+              name="passwordRepetida"
+              type="password"
+              autocomplete="new-password"
+              [ngModel]="passwordRepetida()"
+              (ngModelChange)="passwordRepetida.set($event)"
+            />
+          </app-ver-contrasena>
 
           @if (errorPassword(); as mensaje) {
             <p class="cuenta__error" role="alert">{{ mensaje }}</p>
@@ -151,14 +157,16 @@
           <label for="password-borrado">
             Escribe tu contraseña para confirmar
           </label>
-          <input
-            id="password-borrado"
-            name="password"
-            type="password"
-            autocomplete="current-password"
-            [ngModel]="password()"
-            (ngModelChange)="password.set($event)"
-          />
+          <app-ver-contrasena>
+            <input
+              id="password-borrado"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              [ngModel]="password()"
+              (ngModelChange)="password.set($event)"
+            />
+          </app-ver-contrasena>
 
           @if (errorBorrado(); as mensaje) {
             <p class="cuenta__error" role="alert">{{ mensaje }}</p>

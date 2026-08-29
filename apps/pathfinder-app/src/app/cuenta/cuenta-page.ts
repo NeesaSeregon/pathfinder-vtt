@@ -5,11 +5,12 @@ import { CuentaDetalle } from '@pathfinder/shared';
 import { CuentaApi } from './cuenta-api';
 import { AuthApi } from '../auth/auth-api';
 import { SesionStore } from '../auth/sesion-store';
+import { VerContrasena } from '../auth/ver-contrasena';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
 @Component({
   selector: 'app-cuenta-page',
-  imports: [FormsModule],
+  imports: [FormsModule, VerContrasena],
   templateUrl: './cuenta-page.html',
   styleUrl: './cuenta-page.scss',
 })

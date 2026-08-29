@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { PASSWORD_MIN_LONGITUD } from '@pathfinder/shared';
 import { AuthApi } from './auth-api';
+import { VerContrasena } from './ver-contrasena';
 import { mensajeDeError } from '../characters/mensaje-de-error';
 
 /**
@@ -19,7 +20,7 @@ import { mensajeDeError } from '../characters/mensaje-de-error';
  */
 @Component({
   selector: 'app-restablecer-page',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, VerContrasena],
   templateUrl: './restablecer-page.html',
   styleUrl: './login-page.scss',
 })

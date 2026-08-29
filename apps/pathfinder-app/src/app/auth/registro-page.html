@@ -26,24 +26,28 @@
       </label>
       <label>
         Contraseña
-        <input
-          type="password"
-          name="password"
-          autocomplete="new-password"
-          required
-          minlength="8"
-          [(ngModel)]="password"
-        />
+        <app-ver-contrasena>
+          <input
+            type="password"
+            name="password"
+            autocomplete="new-password"
+            required
+            minlength="8"
+            [(ngModel)]="password"
+          />
+        </app-ver-contrasena>
       </label>
       <label>
         Repite la contraseña
-        <input
-          type="password"
-          name="password2"
-          autocomplete="new-password"
-          required
-          [(ngModel)]="password2"
-        />
+        <app-ver-contrasena>
+          <input
+            type="password"
+            name="password2"
+            autocomplete="new-password"
+            required
+            [(ngModel)]="password2"
+          />
+        </app-ver-contrasena>
       </label>
       @if (password2() && !contrasenasCoinciden()) {
         <p class="acceso__error" role="alert">Las contraseñas no coinciden</p>

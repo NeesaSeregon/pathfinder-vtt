@@ -108,10 +108,13 @@
   @if (zonasAbiertas() && partida(); as p) {
     <app-zonas-modal
       [zonas]="p.zonas"
+      [recienCreada]="zonaNueva()"
       [guardando]="guardandoZonas()"
       [error]="errorZonas()"
       (guardar)="guardarZonas($event)"
-      (cerrar)="zonasAbiertas.set(false); errorZonas.set(null)"
+      (cerrar)="
+        zonasAbiertas.set(false); errorZonas.set(null); zonaNueva.set(null)
+      "
     />
   }
 

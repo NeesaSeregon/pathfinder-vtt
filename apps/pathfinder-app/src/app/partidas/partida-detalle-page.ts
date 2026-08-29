@@ -83,6 +83,12 @@ export class PartidaDetallePage {
   protected readonly zonasAbiertas = signal(false);
   protected readonly guardandoZonas = signal(false);
   protected readonly errorZonas = signal<string | null>(null);
+  /**
+   * La zona que se acaba de dibujar, para que la lista la abra con el foco
+   * puesto en su nombre. Se limpia al cerrar: al volver a abrir la lista
+   * desde el menú del máster no hay ninguna "recién hecha" que destacar.
+   */
+  protected readonly zonaNueva = signal<string | null>(null);
 
   /**
    * Siembra de PNJ (solo el máster). Aquí solo queda lo que la mesa necesita
@@ -215,9 +221,17 @@ export class PartidaDetallePage {
 
   /**
    * El máster ha arrastrado un rectángulo sobre el tablero: nace una zona
-   * sin nombre y sin terreno, YA VISIBLE, y se guarda en el acto. Ponerle
-   * nombre es después y en la lista — dibujar y escribir son dos gestos
-   * distintos y no deben pedirse a la vez.
+   * sin nombre y sin terreno, YA VISIBLE, y se guarda en el acto.
+   *
+   * Y ENSEGUIDA SE ABRE LA LISTA con el foco en su nombre. Dibujar y
+   * escribir siguen siendo dos gestos distintos —el formulario no flota
+   * sobre el tablero, que es la regla que protege las casillas—, pero
+   * ahora van ENCADENADOS: antes la zona se quedaba en blanco y sin
+   * terreno, y quien dibujaba cuatro salas seguidas se encontraba luego
+   * cuatro filas idénticas y vacías que no había forma de distinguir.
+   *
+   * Se guarda ANTES de abrir, no después: así el rectángulo ya está a
+   * salvo aunque el máster cierre la lista sin escribir nada.
    */
   protected dibujarZona(rectangulo: RectanguloDibujado): void {
     const p = this.partida();
@@ -231,26 +245,40 @@ export class PartidaDetallePage {
       visible: true,
       ...rectangulo,
     };
-    this.guardarZonas([...p.zonas, zona]);
+    this.zonaNueva.set(zona.id);
+    this.guardarZonas([...p.zonas, zona], true);
   }
 
-  /** Guarda la lista ENTERA de zonas; el servidor se queda con esto y ya. */
-  protected guardarZonas(zonas: ZonaTablero[]): void {
+  /**
+   * Guarda la lista ENTERA de zonas; el servidor se queda con esto y ya.
+   *
+   * `abrirLista` es lo que distingue los dos caminos que llegan aquí:
+   * guardar DESDE la lista la cierra (ya está hecho lo que se venía a
+   * hacer), y dibujar en el tablero la abre para ponerle nombre.
+   */
+  protected guardarZonas(zonas: ZonaTablero[], abrirLista = false): void {
     this.errorZonas.set(null);
     this.guardandoZonas.set(true);
     this.api.guardarZonas(this.partidaId, zonas).subscribe({
       next: (partida) => {
         this.partida.set(partida);
         this.guardandoZonas.set(false);
-        this.zonasAbiertas.set(false);
+        this.zonasAbiertas.set(abrirLista);
+        if (!abrirLista) {
+          this.zonaNueva.set(null);
+        }
       },
       error: (err) => {
         this.guardandoZonas.set(false);
+        // La zona no llegó a guardarse: no hay ninguna recién hecha que
+        // destacar, y dejarlo puesto haría que la próxima apertura de la
+        // lista buscara el foco en una fila que no existe.
+        this.zonaNueva.set(null);
         this.errorZonas.set(
           `No se pudieron guardar las zonas: ${mensajeDeError(err)}`,
         );
-        // Dibujar no abre la lista, así que si falla ahí el error no se
-        // vería: se dice también arriba, donde se ven los de la mesa.
+        // Si el fallo fue al dibujar, la lista no está abierta y el error no
+        // se vería: se dice también arriba, donde se ven los de la mesa.
         if (!this.zonasAbiertas()) {
           this.error.set(this.errorZonas());
         }
