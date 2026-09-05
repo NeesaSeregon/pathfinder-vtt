@@ -67,6 +67,14 @@
     </button>
   </header>
 
+  <!-- Lo que ves al mirar al personaje. Va antes que el estado de combate
+       porque es identidad, no mecánica, y lo lee TODA la mesa: el servidor
+       lo manda a todo el mundo a propósito. La historia no sale de la
+       ficha, así que aquí no aparece. -->
+  @if (sel.descripcion; as descripcion) {
+    <p class="insp__descripcion">{{ descripcion }}</p>
+  }
+
   <section class="bloque">
     <p class="bloque__rotulo">Puntos de golpe</p>
     @if (sel.pgActuales !== undefined) {

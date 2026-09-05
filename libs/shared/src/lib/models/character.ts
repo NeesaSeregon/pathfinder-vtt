@@ -958,7 +958,69 @@ export interface CharacterSheetData {
   peso?: string;
   cabello?: string;
   ojos?: string;
+  /**
+   * Apariencia en prosa: lo que ven los demás al mirar al personaje.
+   * COMPLEMENTA las casillas de altura/peso/cabello/ojos, no las sustituye:
+   * aquéllas son datos consultables, esto es texto para leer en la mesa.
+   *
+   * PÚBLICO: es el único trozo de ficha que viaja a TODA la mesa, dentro
+   * de PersonajeEnPartidaResumen. Escóndelo y estarías escondiendo lo que
+   * cualquiera vería mirando al personaje.
+   */
+  descripcion?: string;
+  /**
+   * Trasfondo del personaje. PRIVADO: lo leen su dueño y el máster de una
+   * mesa donde esté sentado (los dos casos de CharactersService.leer) y
+   * nadie más. Es la mitad del trasfondo que guarda secretos, así que NO
+   * se añade al resumen de la mesa junto a descripcion.
+   */
+  historia?: string;
   [key: string]: unknown;
+}
+
+/**
+ * Topes de los dos campos de texto libre del trasfondo. Viven aquí para
+ * que el maxlength del formulario y la validación del servidor sean
+ * literalmente el mismo número.
+ */
+export const LIMITE_DESCRIPCION = 500;
+export const LIMITE_HISTORIA = 4000;
+
+/**
+ * Tope del documento entero. El límite real de hoy es el del body de
+ * Express (100 kB por defecto), que devolvería un 413 sin explicación;
+ * cortar antes deja un 400 con mensaje. Holgado de sobra para una ficha
+ * llena: la más cargada ronda los 6 kB.
+ */
+export const LIMITE_SHEET_DATA = 64 * 1024;
+
+/**
+ * Valida el texto libre de una ficha. Devuelve el mensaje del primer
+ * problema encontrado, o null si está bien. Función pura y compartida: la
+ * usa el DTO de la API, que es el único sitio donde el límite se puede
+ * hacer cumplir (el maxlength del HTML lo salta cualquiera).
+ */
+export function errorDeSheetData(sheet: unknown): string | null {
+  if (typeof sheet !== 'object' || sheet === null || Array.isArray(sheet)) {
+    return 'sheetData debe ser un objeto';
+  }
+  const { descripcion, historia } = sheet as CharacterSheetData;
+  if (
+    typeof descripcion === 'string' &&
+    descripcion.length > LIMITE_DESCRIPCION
+  ) {
+    return `La descripción no puede pasar de ${LIMITE_DESCRIPCION} caracteres`;
+  }
+  if (typeof historia === 'string' && historia.length > LIMITE_HISTORIA) {
+    return `La historia no puede pasar de ${LIMITE_HISTORIA} caracteres`;
+  }
+  // Se mide en BYTES, no en caracteres: el límite que importa (el del body
+  // de Express) también, y una ficha en español va llena de acentos.
+  const bytes = new TextEncoder().encode(JSON.stringify(sheet)).length;
+  if (bytes > LIMITE_SHEET_DATA) {
+    return 'La ficha es demasiado grande';
+  }
+  return null;
 }
 
 /**

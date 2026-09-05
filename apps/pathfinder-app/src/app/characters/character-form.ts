@@ -51,6 +51,8 @@ import {
   conSigno,
   formatearModificador,
   iniciativa,
+  LIMITE_DESCRIPCION,
+  LIMITE_HISTORIA,
   Maniobrabilidad,
   MANIOBRABILIDADES,
   modificadorDeAtributo,
@@ -373,7 +375,14 @@ export class CharacterForm {
     peso: signal(''),
     cabello: signal(''),
     ojos: signal(''),
+    descripcion: signal(''),
+    historia: signal(''),
   };
+
+  // El maxlength de los textarea sale de la misma constante que valida el
+  // servidor: si un día sube el tope, sube en los dos sitios a la vez.
+  protected readonly limiteDescripcion = LIMITE_DESCRIPCION;
+  protected readonly limiteHistoria = LIMITE_HISTORIA;
 
   /**
    * Totales derivados EN VIVO: buildSheetData() lee señales, así que estos
@@ -599,6 +608,8 @@ export class CharacterForm {
       peso: texto(this.form.peso()),
       cabello: texto(this.form.cabello()),
       ojos: texto(this.form.ojos()),
+      descripcion: texto(this.form.descripcion()),
+      historia: texto(this.form.historia()),
     };
 
     for (const [key, value] of Object.entries(campos)) {
@@ -973,6 +984,8 @@ export class CharacterForm {
     this.form.peso.set(sheet.peso ?? '');
     this.form.cabello.set(sheet.cabello ?? '');
     this.form.ojos.set(sheet.ojos ?? '');
+    this.form.descripcion.set(sheet.descripcion ?? '');
+    this.form.historia.set(sheet.historia ?? '');
     for (const atributo of ATRIBUTOS) {
       const valor = sheet.atributos?.[atributo];
       this.form.atributos[atributo].puntuacion.set(valor?.puntuacion ?? null);

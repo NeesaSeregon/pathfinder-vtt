@@ -1,5 +1,9 @@
 import {
   ALINEAMIENTOS,
+  errorDeSheetData,
+  LIMITE_DESCRIPCION,
+  LIMITE_HISTORIA,
+  LIMITE_SHEET_DATA,
   casillasQueOcupa,
   huellasSeSolapan,
   bmc,
@@ -649,5 +653,45 @@ describe('huella en el tablero (tamaño)', () => {
     expect(huellasSeSolapan(0, 0, 2, 2, 2, 1)).toBe(false);
     // Dos medianos adyacentes no se pisan
     expect(huellasSeSolapan(3, 3, 1, 4, 3, 1)).toBe(false);
+  });
+});
+
+describe('límites del texto libre de la ficha', () => {
+  it('acepta una ficha vacía y una con trasfondo normal', () => {
+    expect(errorDeSheetData({})).toBeNull();
+    expect(
+      errorDeSheetData({
+        descripcion: 'Enano pelirrojo con una cicatriz en la ceja.',
+        historia: 'Nació en Janderhoff.\n\nHuyó a los quince.',
+      }),
+    ).toBeNull();
+  });
+
+  it('acepta el texto justo en el límite y rechaza el que se pasa', () => {
+    expect(
+      errorDeSheetData({ descripcion: 'a'.repeat(LIMITE_DESCRIPCION) }),
+    ).toBeNull();
+    expect(
+      errorDeSheetData({ descripcion: 'a'.repeat(LIMITE_DESCRIPCION + 1) }),
+    ).toMatch(/descripción/);
+    expect(
+      errorDeSheetData({ historia: 'a'.repeat(LIMITE_HISTORIA) }),
+    ).toBeNull();
+    expect(
+      errorDeSheetData({ historia: 'a'.repeat(LIMITE_HISTORIA + 1) }),
+    ).toMatch(/historia/);
+  });
+
+  it('rechaza un documento demasiado grande aunque cada campo quepa', () => {
+    // Un campo sin tipar (la firma [key: string]) puede engordar la ficha
+    // sin pasar por ninguno de los dos límites de arriba.
+    const gorda = { relleno: 'a'.repeat(LIMITE_SHEET_DATA) };
+    expect(errorDeSheetData(gorda)).toMatch(/grande/);
+  });
+
+  it('rechaza lo que no es un objeto', () => {
+    expect(errorDeSheetData(null)).not.toBeNull();
+    expect(errorDeSheetData('una ficha')).not.toBeNull();
+    expect(errorDeSheetData([])).not.toBeNull();
   });
 });

@@ -97,15 +97,26 @@
     Velocidad: {{ velocidadResumen(character()).join(' · ') }}
   </p>
 }
-@if (sheetEntries(character()).length > 0) {
-  <dl class="characters__modal-sheet">
-    @for (entry of sheetEntries(character()); track entry.label) {
-      <div>
-        <dt>{{ entry.label }}</dt>
-        <dd>{{ entry.value }}</dd>
-      </div>
-    }
-  </dl>
+@if (sheetEntries(character()).length > 0 || tieneTrasfondo(character())) {
+  @if (sheetEntries(character()).length > 0) {
+    <dl class="characters__modal-sheet">
+      @for (entry of sheetEntries(character()); track entry.label) {
+        <div>
+          <dt>{{ entry.label }}</dt>
+          <dd>{{ entry.value }}</dd>
+        </div>
+      }
+    </dl>
+  }
+  <!-- Prosa, no una fila más del dl: va justo detrás de cabello y ojos,
+       que es donde acaba la lista de aspecto. -->
+  @if (character().sheetData.descripcion; as descripcion) {
+    <p class="characters__modal-prosa">{{ descripcion }}</p>
+  }
+  @if (character().sheetData.historia; as historia) {
+    <h4 class="characters__modal-prosa-titulo">Historia</h4>
+    <p class="characters__modal-prosa">{{ historia }}</p>
+  }
 } @else {
   <p>La ficha está vacía.</p>
 }

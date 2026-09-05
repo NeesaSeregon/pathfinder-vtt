@@ -232,6 +232,14 @@ export interface PersonajeEnPartidaResumen {
   iniciativa: number | null;
   /** Modificador de iniciativa de la ficha, derivado por el SERVIDOR. */
   iniciativaMod: number;
+  /**
+   * La apariencia de la ficha (sheetData.descripcion), y el único trozo de
+   * ficha que se comparte con TODA la mesa: es lo que verías al mirar al
+   * personaje, así que esconderlo a los demás jugadores no tendría sentido.
+   * La historia NO viaja por aquí ni por ningún otro sitio: sigue siendo
+   * del dueño y su máster (CharactersService.leer).
+   */
+  descripcion?: string;
   /** ¿El personaje es del usuario que pregunta? (para permitir moverlo) */
   esMio: boolean;
   /** 'pnj' pinta el token por actitud y lo trata como criatura del máster. */

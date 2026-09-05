@@ -830,6 +830,11 @@ export class PartidasService {
       characterId: pep.characterId,
       nombre: pep.character?.name ?? '',
       jugador: pep.character?.sheetData?.jugador,
+      // Lo ÚNICO de la ficha que se comparte con toda la mesa. No pasa por
+      // soloLoPublico a propósito: es público también en el PNJ, que es
+      // justo lo que un jugador ve al mirar al bicho. Los ocultos no se
+      // libran de nada por esto: su asiento entero se filtra en detalle().
+      descripcion: sheet.descripcion,
       nivel: pep.character?.level ?? 1,
       // El servidor deriva la CA con LAS MISMAS reglas que el formulario,
       // ya con el efecto de las condiciones activas (sistema de efectos).

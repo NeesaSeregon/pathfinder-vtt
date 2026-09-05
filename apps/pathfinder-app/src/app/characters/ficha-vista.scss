@@ -78,3 +78,19 @@
     margin: 0;
   }
 }
+
+// Texto libre del trasfondo. pre-wrap: el jugador escribe párrafos en un
+// textarea y sus saltos de línea son parte del texto; sin esto llegan
+// aquí aplastados en un solo bloque.
+.characters__modal-prosa {
+  white-space: pre-wrap;
+  color: var(--text-muted);
+  margin: 0 0 1rem;
+  max-width: 48rem;
+}
+
+.characters__modal-prosa-titulo {
+  font-size: 0.85rem;
+  color: var(--text-faint);
+  margin: 0 0 0.25rem;
+}

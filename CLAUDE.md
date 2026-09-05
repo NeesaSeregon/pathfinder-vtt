@@ -106,12 +106,14 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   found"), tumbando el despliegue. Regla: NADA que la fase build comparta con
   migrate puede depender de tener las devDependencies podadas.
 - La base de datos NO publica puertos en prod: solo la ve la red interna.
-- COPIAS DE SEGURIDAD: pendientes, y pasan a ser urgentes el día del
-  despliegue. Hay que salvar el volumen pgdata (pg_dump). Desde que el
-  tablero no admite mapas subidos (ver ZONAS DEL TABLERO) ya no hay nada de
-  usuario fuera de la base de datos, así que el volumen de uploads dejó de
-  llevar nada que salvar. Comandos concretos en DESPLIEGUE.md §6;
-  automatizar con cron cuando haya datos reales.
+- COPIAS DE SEGURIDAD: HECHAS (scripts/backup.sh + cron a las 3:00; pasos
+  en DESPLIEGUE.md §7). Salva el volumen pgdata con pg_dump y archiva
+  uploads, y borra lo más viejo que RETENER_DIAS. Desde que el tablero no
+  admite mapas subidos (ver ZONAS DEL TABLERO) ya no hay nada de usuario
+  fuera de la base de datos, así que uploads dejó de llevar nada que
+  salvar; se sigue archivando porque compartir imágenes puede volver.
+  LO QUE FALTA: esas copias VIVEN EN EL PROPIO VPS, así que no protegen del
+  caso "el VPS muere". Sacarlas fuera está en Mejoras futuras.
 
 
 ## Convenciones
@@ -339,8 +341,207 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
     cambio de un PNJ: mover un ogro no tiene nada privado y haría recargar
     la mesa entera a los cinco clientes.
   No hay migración: estadoVital es derivado, como la CA o la iniciativa.
+- EL TRASFONDO SON DOS CAMPOS, NO UNO (2026-09-05). sheetData.descripcion
+  (500 caracteres) y sheetData.historia (4000) en vez de una "biografía"
+  única, porque su público es opuesto:
+  · descripcion es lo que verías al mirar al personaje, así que viaja a
+    TODA la mesa en PersonajeEnPartidaResumen (lo pone aPersonajeResumen y
+    NO lo recorta soloLoPublico) y sale en el panel de Selección. Es el
+    único trozo de ficha que se comparte con los demás jugadores.
+  · historia se queda donde estaba todo lo demás: la lee su dueño y el
+    máster de la mesa donde esté sentada (CharactersService.leer) y nadie
+    más, porque suele guardar lo que el jugador solo le cuenta al máster.
+  Partirlo en dos DESDE EL PRINCIPIO evita tener que trocear biografías ya
+  escritas cuando se decida compartir la apariencia. Sin migración (JSONB)
+  y sin difusión nueva: avisarASusMesas() ya emite mesa-cambiada al guardar
+  una ficha, así que la descripción nueva llega sola a los demás clientes.
+- LAS CASILLAS DE ASPECTO SE QUEDAN (2026-09-05). Edad, altura, peso,
+  cabello y ojos NO se sustituyen por la descripción: son datos
+  consultables (y algún día filtrables o pintables en el token) y están en
+  la ficha de papel de PF1e, que este formulario sigue casilla por casilla.
+  Además borrarlas dejaría basura: buildSheetData() parte de una copia del
+  sheetData original y conserva lo que el formulario no conoce, así que los
+  valores ya escritos seguirían en el JSONB —y visibles en ficha-vista, que
+  los pinta por su cuenta— sin que nadie pudiera editarlos.
+- sheetData YA NO ENTRA SIN MIRAR (2026-09-05). Sigue sin validarse campo a
+  campo a propósito (añadir una casilla a la ficha no debe tocar la API),
+  pero el DTO le pasa errorDeSheetData(): largo de los dos textos libres y
+  tamaño del documento (64 kB). El maxlength del formulario es cliente y no
+  frena a quien hable con la API a pelo; sin esto el único tope era el del
+  body de Express, que responde 413 sin explicar nada. Los límites viven en
+  libs/shared para que formulario y servidor usen el MISMO número.
 
 ## Mejoras futuras
+
+ORDENADAS POR IMPACTO/COSTE (revisado el 2026-08-28). Arriba, lo que da
+mucho por poco: es de donde hay que coger lo siguiente. Abajo no está lo
+malo, sino lo caro o lo que todavía no molesta. Al terminar algo se
+reescribe como "(HECHO el fecha: …)" y se baja al final: el porqué de lo
+hecho vale tanto como la lista de lo que falta.
+
+Dos cosas que NO están aquí: las decisiones de diseño ya tomadas (sección
+propia más arriba) y los efectos temporales, que tienen su propia sección
+por lo largo del diseño.
+
+### 1. Coger ya — mucho valor, poco coste
+
+- ¿MANDA CORREOS LA PRODUCCIÓN? Comprobar en el panel de Coolify que
+  MAIL_HOST esté relleno. Si no lo está, CorreoModule cae en
+  EnviadorConsola y la recuperación de contraseña NO MANDA NADA: quien la
+  olvide se queda fuera, y el único rastro es un ERROR en el log (el
+  módulo lo deja a propósito, por ser el fallo más difícil de
+  diagnosticar). El código lleva listo desde el 2026-08-03; lo que falta
+  es el alta en el proveedor y los registros DNS, que no son código.
+  Es lo más barato con más consecuencias de toda esta lista.
+- COPIAS DE SEGURIDAD FUERA DEL VPS. Ya hay copia nocturna
+  (scripts/backup.sh + cron a las 3:00, ver DESPLIEGUE.md §7), pero VIVE
+  EN EL PROPIO VPS: si el servidor muere, mueren con él. Falta sacarlas a
+  otro sitio (un bucket, o un scp programado desde casa). Es la diferencia
+  entre "se cayó el VPS" y "se perdieron las partidas".
+- SWAP EN EL VPS. DESPLIEGUE.md pide 2 vCPU y 4 GB; el VPS real es de
+  1 vCPU y 3,8 GiB SIN SWAP. Compilar el front es lo que más memoria pide
+  del despliegue, así que un pico deja el build muerto sin explicación.
+  Un fichero de swap de 2 GB es un comando y compra margen.
+- INICIAR COMBATE QUE TIRE LA INICIATIVA DE LOS PNJ, y que los jugadores
+  se enteren de que hay que tirar. Hoy iniciarCombate() exige que alguien
+  haya tirado ya ("Nadie ha tirado iniciativa todavía"), así que el máster
+  va uno por uno seleccionando cada ogro en el panel. La mitad de servidor
+  es un bucle sobre los asientos tipo='pnj' con iniciativa null aplicando
+  lo mismo que tirarIniciativa() — son todos suyos, no hay permiso que
+  comprobar. Para AVISAR no hace falta evento nuevo: iniciarCombate ya
+  emite mesa-cambiada, así que basta con que la tarjeta de tu personaje
+  saque un botón grande "Tira iniciativa" cuando enCombate() y tu
+  iniciativa sea null. Estaba ya apuntado como pendiente del rediseño.
+- TIRAR INICIATIVA DESDE "TU PERSONAJE" (MesaPersonas). Hoy la iniciativa
+  solo se tira desde el panel de selección, así que hay que buscarse a uno
+  mismo en el tablero o en la lista antes de poder tirar. Todo el conducto
+  existe (output → tirarIniciativa(pep) → POST :id/personajes/:pepId/
+  iniciativa, que ya autoriza al dueño): es un output y un botón. Va JUNTO
+  a la mejora de arriba, que es su otra mitad.
+- BOTÓN "CERRAR SESIÓN EN TODOS LOS DISPOSITIVOS" en /cuenta. La
+  fontanería YA ESTÁ HECHA: basta un endpoint que incremente
+  users.tokenVersion (lo mismo que hace actualizarPassword, pero sin tocar
+  el hash) y reponer la cookie de quien lo pulsa, igual que en el cambio
+  de contraseña — si no, se expulsaría a sí mismo. Es la respuesta a "creo
+  que alguien ha entrado en mi cuenta" SIN obligar a cambiar la
+  contraseña. Debería pedir la contraseña (reautenticar), como el resto de
+  acciones delicadas de esa página.
+- LIMPIAR DE GOLPE LOS PNJ MUERTOS al terminar el combate. Hoy hay que
+  sacarlos uno a uno; terminarCombate() es el sitio natural y ya sabe
+  quién está a 0 PG. Ojo con la regla de sacar(): un PJ o una PLANTILLA no
+  se borran jamás por esa vía, solo las INSTANCIAS.
+
+### 2. Vale la pena, pero cuesta un día o más
+
+- ARRASTRE CON POINTER EVENTS, Y DESPUÉS RETIRAR LOS DOS CLICS. Mover un
+  token tiene hoy dos vías: seleccionar + pulsar casilla (clickCelda) y
+  arrastrar. La segunda es HTML5 nativo (draggable + dragstart/drop), que
+  NO EXISTE EN TÁCTIL, y las casillas son <button>, así que los dos clics
+  son además la única vía con teclado. Por eso el orden importa: primero
+  reescribir el arrastre con Pointer Events (vale para ratón y dedo; ya
+  están casillaEn(), empezarAgarre y el umbral de 5px) y SOLO DESPUÉS
+  quitar el clic. Al revés, la mesa se queda sin forma de mover un token
+  en tablet. Desbloquea además la vista de tablet, más abajo.
+  Aparte, hay una molestia REAL que no se arregla quitando el clic sino
+  desarmando la selección: seleccionar es CONSULTAR, pero deja el tablero
+  armado (hayDestino pinta los destinos) y el siguiente clic teletransporta
+  al que estabas mirando.
+- VISTA DE TABLET CON HOJA INFERIOR. Pendiente del rediseño. A ≤85rem hoy
+  se vuelve al flujo normal y las Personas caen bajo el tablero; en tablet
+  eso deja la mesa usable pero no cómoda. Depende del punto anterior: sin
+  arrastre táctil, una vista de tablet no puede mover tokens.
+- AYUDA DEL FORMULARIO DE PERSONAJE ("cómo creo mi primer PJ"). El
+  formulario son ~800 líneas y CATORCE secciones <details> sin una sola
+  línea de ayuda. Un tour guiado con globos es un subsistema entero
+  (posicionar sobre secciones que se pliegan, foco, redimensionado, móvil,
+  recordar que ya se vio) y envejece mal a cada cambio del formulario. El
+  80% del valor por el 10% del coste es OTRA COSA: una (i) por <summary>
+  con dos o tres frases, más una página estática "Primeros pasos" con el
+  orden de creación. Los <details> ya son la estructura del tutorial.
+  OJO CON LA LICENCIA, igual que en condiciones y dotes: el texto tiene
+  que ser PROPIO. Lo OGL es el inglés; la traducción de Devir tiene
+  copyright.
+- CONTRASEÑAS FILTRADAS al registrarse y al cambiarla. Hoy la única regla
+  es PASSWORD_MIN_LONGITUD (8). NIST SP 800-63B desaconseja las reglas de
+  composición ("una mayúscula y un símbolo") y recomienda EN SU LUGAR
+  comprobar la contraseña contra listas de contraseñas comprometidas: sube
+  mucho más la seguridad real. Se puede hacer sin enviar la contraseña, con
+  la API de HaveIBeenPwned por k-anonymity (se manda solo los 5 primeros
+  caracteres del SHA-1 y se busca el resto en la respuesta). Vigilar dos
+  cosas: que un fallo o una caída de ese servicio NO impida registrarse
+  (ante la duda, dejar pasar) y que el aviso al usuario sea comprensible
+  ("esa contraseña aparece en filtraciones conocidas, elige otra").
+  Afectaría a los tres sitios a la vez: registro, /cuenta y restablecer.
+- PNJ, SEGUNDA VUELTA: ataques y daño en el bloque corto. Hoy el PNJ solo
+  lleva lo que el tablero enseña (CA, PG, iniciativa y tamaño) y lo demás
+  se rellena editando la ficha completa, que en mitad de un combate no se
+  hace. Su sitio es la zona de SELECCIÓN, que es donde vive todo lo del
+  token elegido.
+- ZOOM DEL TABLERO. Pendiente del rediseño, y la barra de herramientas ya
+  le dejó hueco a propósito (ver el comentario de .utiles). Cuidado con la
+  invariante: se pierden filas, nunca columnas.
+- EL TABLERO CON TECLADO: 720 casillas en el orden de tabulación. Son
+  24×30 <button>, así que atravesarlo son 720 paradas. La salida es un
+  solo contenedor focalizable con roving tabindex y flechas. Es la primera
+  de las deudas de accesibilidad de ESTILOS.md §7.
+
+### 3. Cuando toque — caro, o todavía no molesta
+
+- CATÁLOGO DE DOTES CON AUTOCOMPLETAR: importar un JSON de dotes del
+  contenido OGL de PF1e (nombre, tipo, prerrequisitos, beneficio; fuentes
+  candidatas: compendios del sistema PF1 de Foundry u otros datasets OGL de
+  GitHub) para rellenar las entradas DoteValores en vez de escribirlas a
+  mano. Requisitos: página de créditos con la licencia OGL 1.0a; el texto
+  OGL es el inglés (la traducción de Devir tiene copyright — usar tabla
+  propia de nombres traducidos). Mantener siempre la entrada libre para
+  dotes fuera del catálogo. NO automatizar efectos mecánicos de las dotes
+  (decidido el 2026-07-16: demasiado heterogéneos).
+- PESTAÑA DE SUCESOS. Pendiente del rediseño. Hoy las tiradas son
+  EFÍMERAS (registro en memoria del cliente): quien entra tarde no las ve.
+  Un registro de sucesos que persista es otra decisión, no solo otra
+  pestaña.
+- FRENO DE RECUPERACIÓN Y DE LOGIN EN REDIS. Los dos viven en memoria y
+  valen para UNA instancia; el día que haya varias detrás de un
+  balanceador, hay que mudarlos a la vez. Hoy no molesta: hay una sola.
+- EL BANQUILLO FLOTA SOBRE EL TABLERO abajo a la izquierda, con el mismo
+  problema que tuvo la barra de herramientas (tapa casillas). Es
+  transitorio —solo existe con fichas sin colocar— y el tablero ya está
+  recortado por abajo, así que aguanta. Si molesta: plegarlo, o subirlo a
+  la cabecera.
+- LAS DOS DEUDAS MENORES DE ACCESIBILIDAD de ESTILOS.md §7: role="grid"
+  sin roles de fila ni de celda, y la regla de medir, que se pinta pero no
+  se anuncia.
+
+### Decidido que NO
+
+- Correo de recuperación cuando el email NO tiene cuenta ("alguien ha
+  pedido restablecer, pero aquí no hay cuenta con este correo"). OWASP lo
+  sugiere para que el usuario no se quede esperando un correo que no va a
+  llegar. No se hizo: convierte el formulario en una forma de mandar correo
+  a direcciones arbitrarias, y con la mesa que somos el texto de la
+  pantalla ("si hay una cuenta con ese correo…") ya lo explica.
+- LA ETIQUETA "EN VIVO" NO ES ADORNO y no hay que tocarla (revisado el
+  2026-08-28). Está atada a PartidaSocket.conectado y YA se apaga sola: si
+  el socket cae se convierte en el botón "Sin conexión · actualizar".
+  Sustituyó al botón "Actualizar" permanente con el criterio de que
+  recargar a mano solo se ofrece cuando sirve de algo. Lo único mejorable
+  es cosmético: dice que el SOCKET está vivo, no que la API responda, y
+  mientras Socket.IO reintenta no lo cuenta ("Reconectando…").
+
+### Hechas
+
+- (HECHO el 2026-08-28: VER LA CONTRASEÑA ESCRITA en los nueve campos de
+  las cuatro pantallas. Ver la entrada de VerContrasena en Estado actual;
+  la decisión que lo sostiene es envolver el campo POR PROYECCIÓN en vez
+  de sustituirlo. De paso salió una regla global demasiado ancha:
+  `.panel form button` pegaba a CUALQUIER botón de dentro del formulario,
+  y ahora es `> button`.)
+- (HECHO el 2026-08-28: CREAR ZONA Y NOMBRARLA DE UNA. Al soltar el
+  rectángulo se guarda y se abre la lista con la fila nueva marcada y el
+  foco en su nombre; y cada fila lleva el tablero en miniatura con su zona
+  marcada. Ver ZONAS DEL TABLERO en Estado actual. El e2e cazó el cambio
+  de flujo: el test abría la lista a mano y el velo de la modal ya tapaba
+  el menú del máster.)
 - (HECHO el 2026-08-25: LA BARRA DE HERRAMIENTAS YA NO TAPA EL TABLERO. Iba
   en position:absolute con fondo opaco sobre la esquina superior izquierda
   del marco, y las casillas de debajo no se podían pulsar ni recibir un
@@ -353,59 +554,15 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   deja sitio horizontal para el zoom y el "centrar en el turno". El e2e
   vuelve a colocar en la casilla (0,0) A PROPÓSITO, para que avise si
   alguien pone algo flotando ahí otra vez; MesaTablero tiene además un test
-  de que .utiles es HERMANA del marco y no hija.
-  El BANQUILLO sigue flotando abajo a la izquierda con el mismo problema,
-  pero es transitorio —solo existe con fichas sin colocar— y el tablero ya
-  está recortado por abajo. Si molesta: plegarlo, o subirlo a esa cabecera.)
+  de que .utiles es HERMANA del marco y no hija.)
 - (HECHO el 2026-08-24: PARTIR LA MESA EN COMPONENTES. Ver la sección
   "La mesa, por dentro" del Estado actual. El presupuesto anyComponentStyle
   volvió a 10/16 kB, que es donde estaba antes del rediseño.)
-- PNJ: pendientes de una segunda vuelta si hacen falta en mesa — ataques y
-  daño en el bloque corto (hoy solo lo que el tablero muestra: CA, PG,
-  iniciativa y tamaño; lo demás se rellena editando la ficha completa) y
-  limpiar de golpe los PNJ muertos al terminar el combate.
 - (HECHO el 2026-08-03: recuperar contraseña por correo y cerrar las demás
   sesiones al cambiarla. Ver la sección Autenticación. Se hicieron juntas
   porque comparten toda la fontanería y porque un restablecimiento que no
-  echa al intruso no sirve de mucho.)
-- BOTÓN "CERRAR SESIÓN EN TODOS LOS DISPOSITIVOS" en /cuenta. La fontanería
-  YA ESTÁ HECHA: basta un endpoint que incremente users.tokenVersion (lo
-  mismo que hace actualizarPassword, pero sin tocar el hash) y reponer la
-  cookie de quien lo pulsa, igual que en el cambio de contraseña — si no,
-  se expulsaría a sí mismo. Es la respuesta a "creo que alguien ha entrado
-  en mi cuenta" SIN obligar a cambiar la contraseña, y es de las mejoras
-  más baratas que quedan. Debería pedir la contraseña (reautenticar), como
-  el resto de acciones delicadas de esa página.
-- CONTRASEÑAS FILTRADAS al registrarse y al cambiarla. Hoy la única regla
-  es PASSWORD_MIN_LONGITUD (8). NIST SP 800-63B desaconseja las reglas de
-  composición ("una mayúscula y un símbolo") y recomienda EN SU LUGAR
-  comprobar la contraseña contra listas de contraseñas comprometidas: sube
-  mucho más la seguridad real. Se puede hacer sin enviar la contraseña, con
-  la API de HaveIBeenPwned por k-anonymity (se manda solo los 5 primeros
-  caracteres del SHA-1 y se busca el resto en la respuesta). Vigilar dos
-  cosas: que un fallo o una caída de ese servicio NO impida registrarse
-  (ante la duda, dejar pasar) y que el aviso al usuario sea comprensible
-  ("esa contraseña aparece en filtraciones conocidas, elige otra").
-  Afectaría a los tres sitios a la vez: registro, /cuenta y restablecer.
-- Correo de recuperación cuando el email NO tiene cuenta ("alguien ha
-  pedido restablecer, pero aquí no hay cuenta con este correo"). OWASP lo
-  sugiere para que el usuario no se quede esperando un correo que no va a
-  llegar. No se hizo: convierte el formulario en una forma de mandar correo
-  a direcciones arbitrarias, y con la mesa que somos el texto de la
-  pantalla ("si hay una cuenta con ese correo…") ya lo explica.
-- Freno de recuperación y de login EN REDIS. Los dos viven en memoria y
-  valen para UNA instancia; el día que haya varias detrás de un
-  balanceador, hay que mudarlos a la vez.
-- Catálogo de dotes con autocompletar: importar un JSON de dotes del
-  contenido OGL de PF1e (nombre, tipo, prerrequisitos, beneficio; fuentes
-  candidatas: compendios del sistema PF1 de Foundry u otros datasets OGL de
-  GitHub) para rellenar las entradas DoteValores en vez de escribirlas a
-  mano. Requisitos: página de créditos con la licencia OGL 1.0a; el texto
-  OGL es el inglés (la traducción de Devir tiene copyright — usar tabla
-  propia de nombres traducidos). Mantener siempre la entrada libre para
-  dotes fuera del catálogo. NO automatizar efectos mecánicos de las dotes
-  (decidido el 2026-07-16: demasiado heterogéneos).
-
+  echa al intruso no sirve de mucho. OJO: en producción no sirve de nada
+  mientras no haya MAIL_HOST — ver el primer punto de esta lista.)
 ## Mejoras futuras (efectos)
 - Sistema de buffs/efectos temporales que CAMBIAN características (y con él,
   las condiciones tipo fatigado/exhausto/enredado que hoy solo se describen).
@@ -851,8 +1008,9 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   anyComponentStyle vuelve a su 10/16 kB sin un solo aviso.
   PENDIENTE del rediseño: el zoom, la pestaña de Sucesos, tirar la
   iniciativa de los PNJ sola al iniciar combate y la vista de tablet con
-  hoja inferior. La barra de herramientas y Medir YA ESTÁN (con el defecto
-  de que tapa la esquina; ver Mejoras futuras).
+  hoja inferior (esta última depende del arrastre táctil: ver Mejoras
+  futuras). La barra de herramientas y Medir YA ESTÁN, y desde el
+  2026-08-25 la barra tampoco tapa ya la esquina.
 - Zonas del tablero: PUT /partidas/:id/zonas con la lista entera, solo el
   máster. Ver ZONAS DEL TABLERO más arriba para las decisiones de diseño.
 - Mover tokens: dos clics (token → casilla) Y arrastrar (drag & drop nativo;
@@ -914,3 +1072,17 @@ en un tablero virtual compartido. Dos roles por partida: máster y jugadores.
   tirada y la retransmite por el socket (EVENTO_TIRADA_DADOS). Son EFÍMERAS:
   no se persisten (registro en memoria del cliente); quien entre tarde no
   las ve. El cliente deduplica por id (respuesta HTTP + eco del socket).
+- Trasfondo del personaje (2026-09-05): dos cajas de texto libre en la
+  ficha, con el reparto de visibilidad que explica "Decisiones de diseño".
+  · Descripción (500) en "Datos del personaje", detrás de las cinco
+    casillas de aspecto y a ancho completo del grid. Va en el resumen de la
+    mesa y la pinta el panel de Selección (mesa-seleccion) al elegir un
+    token, PJ o PNJ: es lo que ves al mirar a alguien.
+  · Historia (4000) en su propia sección "Trasfondo", cerrada por defecto.
+    Solo sale en la ficha completa, que es dueño + máster.
+  Los dos se guardan recortados y vaciar la caja BORRA la clave del JSONB,
+  como el resto del texto libre. En ficha-vista van como párrafos con
+  white-space: pre-wrap (los saltos de línea del textarea son parte del
+  texto), no como filas del dl, que es de una línea por campo.
+  Aprovechando la reordenación, Nivel subió junto a Nombre y Clase: estaba
+  el último de la rejilla, detrás de Ojos.

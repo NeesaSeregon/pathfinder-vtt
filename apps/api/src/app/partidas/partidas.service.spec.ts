@@ -1146,6 +1146,29 @@ describe('PartidasService', () => {
       expect(ogro?.estadoVital).toBe('herido');
     });
 
+    // La descripción es lo que verías al mirar al personaje: esconderla a
+    // los demás jugadores no tendría sentido. La historia es lo contrario.
+    it('la descripción llega a toda la mesa; la historia, a nadie', async () => {
+      const mesa = mesaConOgro();
+      Object.assign(mesa.personajes[0].character.sheetData, {
+        descripcion: 'Alto, rubio, con la nariz partida.',
+        historia: 'Traicionó a su hermano en Absalom.',
+      });
+      Object.assign(mesa.personajes[1].character.sheetData, {
+        descripcion: 'Dos cabezas de altura, apesta a carroña.',
+      });
+      partidasRepo.findOne.mockResolvedValue(mesa);
+
+      const detalle = await service.detalle('partida-1', 'jugador');
+      const pj = detalle.personajes.find((p) => p.id === 'pep-pj');
+      expect(pj?.descripcion).toBe('Alto, rubio, con la nariz partida.');
+      expect(pj).not.toHaveProperty('historia');
+      // También la del PNJ: mirar al ogro es mirar al ogro
+      expect(ogroDe(detalle)?.descripcion).toBe(
+        'Dos cabezas de altura, apesta a carroña.',
+      );
+    });
+
     // La mesa comparte su propio estado: recortar aquí sería otra decisión.
     it('los PG de un PJ le siguen llegando a todo el mundo', async () => {
       partidasRepo.findOne.mockResolvedValue(mesaConOgro());

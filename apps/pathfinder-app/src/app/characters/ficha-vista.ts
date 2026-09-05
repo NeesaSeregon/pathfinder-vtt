@@ -320,6 +320,16 @@ export class FichaVista {
     });
   }
 
+  /**
+   * ¿Hay algo de trasfondo escrito? La descripción y la historia no son
+   * filas del dl (son párrafos), así que no cuentan en sheetEntries: sin
+   * esto, una ficha con solo trasfondo diría "La ficha está vacía".
+   */
+  protected tieneTrasfondo(character: Character): boolean {
+    const sheet = character.sheetData;
+    return Boolean(sheet.descripcion || sheet.historia);
+  }
+
   /** Campos de la ficha que el personaje tiene rellenos, con su etiqueta. */
   protected sheetEntries(
     character: Character,

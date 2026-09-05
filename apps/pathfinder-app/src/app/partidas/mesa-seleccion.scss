@@ -44,6 +44,16 @@
     color: var(--text-muted);
   }
 
+  /* Prosa de la ficha: pre-wrap porque los saltos de línea que escribió
+     su dueño en el textarea son parte del texto. */
+  &__descripcion {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+  }
+
   /* Lo que deriva el servidor (CA con condiciones, mod de iniciativa) */
   &__derivado {
     color: var(--accent);

@@ -52,6 +52,8 @@ type CharacterFormInterno = {
       porDia: { set(v: number | null): void };
       anotados: { set(v: string): void };
     }[];
+    descripcion: { set(v: string): void };
+    historia: { set(v: string): void };
   };
   cdDeNivel(nivel: number): string;
   adicionalesDeNivel(nivel: number): string;
@@ -133,6 +135,32 @@ describe('CharacterForm', () => {
     expect(emitido?.sheetData.atributos).toEqual({
       fuerza: { puntuacion: 12 },
     });
+  });
+
+  it('guarda descripción e historia, y las vacía si se borran', async () => {
+    interno.form.name.set('Valeros');
+    interno.form.descripcion.set('  Alto, rubio, con la nariz partida.  ');
+    interno.form.historia.set('Segundo hijo de un herrero.');
+    interno.submit();
+
+    // El texto se guarda recortado, como el resto de campos de texto
+    expect(emitido?.sheetData.descripcion).toBe(
+      'Alto, rubio, con la nariz partida.',
+    );
+    expect(emitido?.sheetData.historia).toBe('Segundo hijo de un herrero.');
+
+    // Vaciar la caja BORRA la clave, no deja una cadena vacía en el JSONB
+    fixture.componentRef.setInput(
+      'initial',
+      personaje({ descripcion: 'Alto', historia: 'Larga' }),
+    );
+    await fixture.whenStable();
+    interno.form.descripcion.set('');
+    interno.form.historia.set('   ');
+    interno.submit();
+
+    expect(emitido?.sheetData).not.toHaveProperty('descripcion');
+    expect(emitido?.sheetData).not.toHaveProperty('historia');
   });
 
   it('conserva campos de la ficha que este formulario no gestiona', async () => {

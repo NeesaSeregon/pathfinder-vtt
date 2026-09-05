@@ -55,6 +55,20 @@ describe('MesaSeleccion', () => {
     expect(component).toBeTruthy();
   });
 
+  it('muestra la descripción cuando la ficha la trae', async () => {
+    await montar(asiento({ descripcion: 'Alto, rubio, nariz partida.' }));
+    expect(fixture.nativeElement.textContent).toContain(
+      'Alto, rubio, nariz partida.',
+    );
+  });
+
+  it('no deja hueco si la ficha no tiene descripción', async () => {
+    await montar();
+    expect(
+      fixture.nativeElement.querySelector('.insp__descripcion'),
+    ).toBeNull();
+  });
+
   it('encabeza con nombre, iniciales y las cifras de la ficha', async () => {
     await montar();
     const texto = fixture.nativeElement.textContent;

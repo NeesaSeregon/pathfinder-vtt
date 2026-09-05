@@ -19,6 +19,7 @@
   }
 
   &__datos,
+  &__trasfondo,
   &__atributos,
   &__pg {
     &[open] > summary {
@@ -44,6 +45,37 @@
     grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
     gap: 0.75rem;
     align-items: end;
+  }
+
+  /* Una caja que ocupa toda la fila del grid: la descripción es prosa y
+     en una columna de 10rem no se puede escribir. */
+  &__datos-ancho {
+    grid-column: 1 / -1;
+  }
+
+  &__trasfondo {
+    grid-column: 1 / -1;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+
+    summary {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      padding: 0 0.25rem;
+    }
+  }
+
+  &__nota {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-faint);
+  }
+
+  /* Dentro de un label la separa el gap del flex; como párrafo suelto
+     (la nota del trasfondo) tiene que separarse ella. */
+  p.character-form__nota {
+    margin-top: 0.5rem;
   }
 
   label {
