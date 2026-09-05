@@ -127,6 +127,7 @@
     >
       <div
         class="modal"
+        [class.modal--ficha]="!editandoFicha()"
         [class.modal--editando]="editandoFicha()"
         role="dialog"
         aria-modal="true"

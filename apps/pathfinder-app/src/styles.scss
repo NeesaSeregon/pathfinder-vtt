@@ -330,6 +330,19 @@ legend {
   }
 }
 
+/* La modal que enseña una ficha en LECTURA (FichaVista). Va en el global y
+   no en una hoja de página porque la abren DOS pantallas —/personajes y la
+   mesa— y hasta ahora cada una la abría de un ancho distinto: 54rem allí,
+   las 42rem de serie aquí. La misma ficha se leía peor en la mesa sin que
+   nadie lo hubiera decidido.
+   El número sale de la rejilla de atributos: son SEIS columnas, y por
+   debajo de esto el modificador se pega al rótulo. Editando manda
+   .modal--editando (68rem), que es más ancha porque ahí cabe el formulario
+   entero. */
+.modal--ficha {
+  max-width: 56rem;
+}
+
 /* El mensaje de error bajo un formulario. Estaba copiado en cuatro hojas con
    TRES rojos distintos: #b00020 en /entrar (y de rebote en /recuperar y
    /restablecer, que comparten su .scss por styleUrl), #ff6b6b en el panel de

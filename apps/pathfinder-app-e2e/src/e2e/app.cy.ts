@@ -1,3 +1,28 @@
+// -- Lectura de la ficha (FichaVista) ---------------------------------------
+// La ficha ya no es una pila de párrafos: es una franja de cuatro piezas
+// vitales, los atributos como piezas y bloques con rótulo. Estos tres
+// ayudantes buscan cada dato POR SU ETIQUETA y nunca por su posición, que
+// es lo que hacía que reordenar la ficha rompiera el e2e.
+// Son declaraciones de función a propósito: se izan, así que valen aunque
+// el test que las usa esté seiscientas líneas más abajo.
+
+/** La pieza de la franja vital que lleva ese rótulo ("Iniciativa"). */
+function pieza(rotulo: string) {
+  return cy.contains('app-ficha-vista .tile__rotulo', rotulo).parent();
+}
+
+/** La pieza del atributo con esa clave corta ("Fue", "Des"). */
+function atributo(clave: string) {
+  return cy.contains('app-ficha-vista .atr__nombre', clave).parent();
+}
+
+/** El valor del par etiqueta/guía/valor ("BMC" → "+9"). */
+function par(etiqueta: string) {
+  return cy
+    .contains('app-ficha-vista .par__et', etiqueta)
+    .siblings('.par__v');
+}
+
 describe('autenticación', () => {
   it('sin sesión, /personajes redirige a /entrar', () => {
     cy.visit('/personajes');
@@ -437,9 +462,11 @@ describe('partidas', () => {
             cy.visit(`/partidas/${partidaId}`);
             cy.get('.fila').first().click();
             cy.contains('.insp__acciones button', 'Ver ficha').click();
-            cy.get('.modal')
-              .should('contain', 'Explorador')
-              .and('contain', 'PG 28');
+            // La clase va con el nivel en la cabecera; los PG, en su pieza
+            // de la franja vital (la ficha guarda el TOTAL: los puntos
+            // actuales son estado de la mesa, no de la hoja).
+            cy.get('.ficha-vista__cabecera').should('contain', 'Explorador 4');
+            pieza('Puntos de golpe').should('contain', '28');
           });
       });
   });
@@ -1250,94 +1277,120 @@ describe('pathfinder-app-e2e', () => {
     // Recargamos: lo que se muestre ahora viene de PostgreSQL
     cy.reload();
     cy.contains('li', name).contains('button', 'Ver ficha').click();
-    cy.get('.characters__modal').should('contain', 'legal bueno');
-    cy.get('.characters__modal').should('contain', 'Elfo');
-    cy.get('.characters__modal').should('contain', 'Mediano');
+    // La identidad va en la línea de cabecera, junto al nombre, no
+    // repartida por la rejilla de datos.
+    cy.get('.ficha-vista__cabecera')
+      .should('contain', 'legal bueno')
+      .should('contain', 'Elfo')
+      .should('contain', 'Mediano');
 
-    // Atributos: FUE 18 (+4) con ajuste +4 → modif. temporal +6;
-    // Destreza élfica: 9 base +2 racial → +0
-    cy.contains('.characters__modal-atributos tr', 'Fuerza')
-      .should('contain', '18')
-      .should('contain', '+4')
-      .should('contain', '+6');
-    cy.contains('.characters__modal-atributos tr', 'Destreza')
-      .should('contain', '9')
-      .should('contain', '+2')
-      .should('contain', '+0');
-
-    // Totales de combate derivados de lo guardado, más PG y RD
-    cy.get('.characters__modal-combate')
-      .should('contain', 'CA 17')
+    // La franja vital: cuatro piezas, siempre las cuatro y siempre en el
+    // mismo orden. Lo que antes era una sola frase ("CA 17 (toque 10,
+    // desprevenido 17) · Iniciativa +2 · PG 45").
+    pieza('Clase de armadura')
+      .should('contain', '17')
       .should('contain', 'toque 10')
-      .should('contain', 'desprevenido 17')
-      .should('contain', 'Iniciativa +2')
-      .should('contain', 'PG 45')
+      .should('contain', 'desprevenido 17');
+    pieza('Puntos de golpe')
+      .should('contain', '45')
       .should('contain', 'RD 5/hierro frío');
+    pieza('Iniciativa').should('contain', '+2');
+    pieza('Velocidad')
+      .should('contain', '30')
+      .should('contain', '6 casillas · 9 m');
 
-    // Velocidad guardada en pies, mostrada con sus derivados
-    cy.get('.characters__modal-velocidad').should(
-      'contain',
-      'Base 30 pies (6 cas. / 9 m)',
-    );
+    // Atributos: lo GRANDE es el modificador. FUE 18 con ajuste temporal
+    // +4 → 22 (+6), y la pieza se marca; la Destreza élfica desglosa su
+    // bonificador racial (9 base + 2 = 11 → +0).
+    atributo('Fue')
+      .should('have.class', 'atr--temp')
+      .should('contain', '+6')
+      .should('contain', '22')
+      .should('contain', 'temp +4 (18)');
+    atributo('Des')
+      .should('contain', '+0')
+      .should('contain', '11')
+      .should('contain', '9 base · +2 racial');
 
-    // Salvaciones derivadas de lo guardado
-    cy.get('.characters__modal').should('contain', 'Reflejos +4');
+    // Salvaciones derivadas de lo guardado, cada una en su pieza
+    cy.contains('app-ficha-vista .salva', 'Reflejos').should('contain', '+4');
 
     // Bloque ofensivo derivado de lo guardado
-    cy.get('.characters__modal')
-      .should('contain', 'Ataque base +3')
-      .should('contain', 'BMC +9')
-      .should('contain', 'DMC 19');
+    par('Ataque base').should('have.text', '+3');
+    par('BMC').should('have.text', '+9');
+    par('DMC').should('have.text', '19');
 
-    // Habilidades derivadas de lo guardado, con especialidad e idiomas
+    // Habilidades derivadas de lo guardado, con especialidad.
     // Artesanía es +5: 1 rango + 4 de INT final 18 (16 + 2 de elfo)
-    cy.get('.characters__modal')
-      .should('contain', 'Acrobacias +6')
-      .should('contain', 'Artesanía (Herrería) +5')
-      .should('contain', 'Idiomas: común, élfico');
+    par('Acrobacias').should('have.text', '+6');
+    par('Artesanía (Herrería)').should('have.text', '+5');
 
-    // El arma guardada como array en el JSONB
-    cy.get('.characters__modal-armas')
-      .should('contain', 'Espada larga')
-      .should('contain', 'ataque +9/+4')
-      .should('contain', 'daño 1d8+4');
+    // Los idiomas son un dato del personaje, no una línea suelta
+    cy.contains('app-ficha-vista .dato__et', 'Idiomas')
+      .siblings('.dato__v')
+      .should('have.text', 'común, élfico');
+
+    // El arma guardada como array en el JSONB, repartida en columnas para
+    // poder compararla con la de al lado
+    cy.contains('app-ficha-vista .arma__nombre', 'Espada larga')
+      .parent()
+      .find('.arma__v')
+      .then(($v) => {
+        expect($v.eq(0).text().trim()).to.equal('+9/+4');
+        expect($v.eq(1).text().trim()).to.equal('1d8+4');
+      });
 
     // Equipo con carga derivada, y dotes
-    cy.get('.characters__modal')
-      .should('contain', 'peso total 2')
-      .should('contain', 'carga ligera')
-      .should('contain', 'Soltura con el arma');
+    par('Peso total').should('have.text', '2');
+    par('Carga').should('have.text', 'ligera');
+    cy.get('app-ficha-vista .dote').should('contain', 'Soltura con el arma');
 
-    // Dinero y experiencia derivados de lo guardado
-    cy.get('.characters__modal')
-      .should('contain', 'total 15 po')
-      .should('contain', 'PX 3400 / 5000 (faltan 1600)');
+    // Dinero y experiencia: el total va en el rótulo de su bloque y lo que
+    // falta de PX, en la barra de la cabecera
+    cy.contains('app-ficha-vista .bloque__cab', 'Dinero').should(
+      'contain',
+      '15 po en total',
+    );
+    cy.get('app-ficha-vista .px')
+      .should('contain', 'PX 3400 / 5000')
+      .should('contain', 'faltan 1600');
 
-    // Conjuros: CD derivada de INT final 18 (16 + 2 racial) → 10+1+4 = 15
-    cy.get('.characters__modal')
-      .should('contain', 'Nivel 1: CD 15 · 2/día · +1 adicionales')
-      .should('contain', 'proyectil mágico');
+    // Conjuros: CD derivada de INT final 18 (16 + 2 racial) → 10+1+4 = 15,
+    // y un adicional por ese mismo modificador. Los conocidos no se
+    // anotaron, así que su celda es una raya.
+    cy.contains('app-ficha-vista .conjuro', 'Nivel 1')
+      .find('.conjuro__d')
+      .then(($d) => {
+        expect($d.eq(0).text().trim()).to.equal('—');
+        expect($d.eq(1).text().trim()).to.equal('2');
+        expect($d.eq(2).text().trim()).to.equal('+1');
+        expect($d.eq(3).text().trim()).to.equal('15');
+      });
+    cy.get('app-ficha-vista').should('contain', 'proyectil mágico');
 
     // Edición: cambiamos raza y nivel, el resto no se toca
-    cy.get('.characters__modal').contains('button', 'Editar').click();
-    cy.get('.characters__modal select[name="raza"]').select('Enano');
-    cy.get('.characters__modal input[name="level"]').clear();
-    cy.get('.characters__modal input[name="level"]').type('8');
-    cy.get('.characters__modal').contains('button', 'Guardar').click();
+    cy.get('.modal').contains('button', 'Editar').click();
+    cy.get('.modal select[name="raza"]').select('Enano');
+    cy.get('.modal input[name="level"]').clear();
+    cy.get('.modal input[name="level"]').type('8');
+    cy.get('.modal').contains('button', 'Guardar').click();
 
-    // Vuelve al modo vista con los datos nuevos
-    cy.get('.characters__modal').should('contain', 'Enano');
-    cy.get('.characters__modal').should('contain', 'Nivel 8');
+    // Vuelve al modo vista con los datos nuevos. La cabecera junta clase y
+    // nivel ("Pícaro 8"): son la misma respuesta a "quién es este".
+    cy.get('.ficha-vista__cabecera')
+      .should('contain', 'Enano')
+      .should('contain', 'Pícaro 8');
 
     // Tras recargar, el cambio persiste y los campos NO editados siguen ahí
     cy.reload();
     cy.contains('li', name).contains('button', 'Ver ficha').click();
-    cy.get('.characters__modal').should('contain', 'Enano');
-    cy.get('.characters__modal').should('contain', 'legal bueno');
-    cy.get('.characters__modal').should('contain', 'Luis');
+    cy.get('.ficha-vista__cabecera')
+      .should('contain', 'Enano')
+      .should('contain', 'legal bueno')
+      .should('contain', 'Luis');
 
     // Cerrar modal y borrar
-    cy.get('.characters__modal header button').click();
+    cy.get('.modal header button').click();
     cy.contains('li', name).contains('button', 'Borrar').click();
     cy.contains('li', name).should('not.exist');
   });
@@ -1348,16 +1401,16 @@ describe('pathfinder-app-e2e', () => {
     cy.visit('/personajes');
 
     cy.contains('li', name).contains('button', 'Ver ficha').click();
-    cy.get('.characters__modal').contains('button', 'Editar').click();
-    cy.get('.characters__modal input[name="level"]').clear();
-    cy.get('.characters__modal input[name="level"]').type('5');
+    cy.get('.modal').contains('button', 'Editar').click();
+    cy.get('.modal input[name="level"]').clear();
+    cy.get('.modal input[name="level"]').type('5');
 
     // El usuario cancela el aviso → la ventana sigue abierta y no se pierde nada.
     // Clic en el borde izquierdo del fondo (fuera del modal y del navbar).
     cy.on('window:confirm', () => false);
     cy.get('.overlay').click('left');
-    cy.get('.characters__modal').should('exist');
-    cy.get('.characters__modal input[name="level"]').should('have.value', '5');
+    cy.get('.modal').should('exist');
+    cy.get('.modal input[name="level"]').should('have.value', '5');
   });
 });
 

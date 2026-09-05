@@ -141,6 +141,21 @@ describe('MesaSeleccion', () => {
     expect(fixture.nativeElement.textContent).toContain('Revelar');
   });
 
+  /**
+   * "Ver ficha" solo a quien la API se la va a dar. CharactersService.leer()
+   * autoriza al dueño O al máster de la mesa —la misma condición que
+   * puedeEditar—, así que a los demás el botón les prometía algo que
+   * terminaba en un 404 y una banda roja. Seleccionar sigue siendo de
+   * todos: consultar el panel no es leer la hoja.
+   */
+  it('"Ver ficha" solo se ofrece a quien puede leerla', async () => {
+    await montar(asiento({ esMio: false }), false, false);
+    expect(fixture.nativeElement.textContent).not.toContain('Ver ficha');
+
+    await montar(asiento({ esMio: true }), true, false);
+    expect(fixture.nativeElement.textContent).toContain('Ver ficha');
+  });
+
   it('el aspa quita la selección', async () => {
     await montar();
     let cerrado = 0;

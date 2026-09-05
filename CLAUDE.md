@@ -1038,6 +1038,51 @@ por lo largo del diseño.
   SOLO LECTURA de una ficha (todos los derivados vía funciones puras). Se
   usa en el modal "Ver ficha" de /personajes Y en la mesa (el máster abre
   la ficha de cualquier jugador; el jugador, la suya).
+- LA FICHA SE LEE POR JERARQUÍA, NO POR EL ORDEN DE LA HOJA DE PAPEL
+  (2026-09-05). FichaVista eran ~25 párrafos apilados donde todo pesaba
+  igual y los separadores eran puntos medios: el estado de combate cabía en
+  una frase ("CA 17 (toque 10, desprevenido 17) · Iniciativa +2 · PG 45"),
+  las veinte habilidades eran UNA línea, y la tabla de atributos —lo único
+  maquetado— estaba al final, detrás del trasfondo. Lo que manda ahora:
+  · FRANJA VITAL de cuatro piezas arriba (CA, PG, iniciativa, velocidad).
+    SIEMPRE las cuatro y siempre en el mismo orden; si el dato falta se
+    pinta una raya y se dice por qué (.tile--hueco). Es la invariante: lo
+    que permite mirar dos fichas seguidas es que el dato esté DONDE SE
+    ESPERA, no que esté. Hay un test que lo defiende.
+    OJO: la pieza de PG enseña el TOTAL y la RD, no una barra ni un tramo
+    vital. Los puntos ACTUALES son estado de sesión (PersonajeEnPartida) y
+    viven en el panel de Selección; la hoja no los tiene.
+  · ATRIBUTOS en seis piezas, y lo GRANDE es el modificador —que es lo que
+    se tira—, con la puntuación debajo. Un ajuste temporal se ve sin leer:
+    la pieza se marca con --token-2, el mismo naranja que "herido". El
+    ajuste tapa al desglose racial (es lo urgente) y el title lleva los dos.
+  · El resto en BLOQUES con rótulo en versales, cada uno solo si tiene
+    datos. Las cajas "Modificadores" de la ficha de papel van como PIE de
+    su bloque (.nota), no como párrafos sueltos lejos de lo que modifican.
+  · Las etiquetas .visib dicen quién ve qué: es la única pantalla donde se
+    cuenta que descripcion viaja a toda la mesa y historia no.
+  La modal se ensancha con .modal--ficha (56rem, GLOBAL porque la abren dos
+  pantallas). Antes /personajes la abría a 54rem y la mesa a las 42rem de
+  serie: la misma ficha se leía peor en la mesa sin que nadie lo hubiera
+  decidido. Editando sigue mandando .modal--editando (68rem).
+  Se retiraron los selectores .characters__modal-*, que solo seguían vivos
+  para el e2e; ahora entra por app-ficha-vista y busca cada dato POR SU
+  ETIQUETA (ayudantes pieza/atributo/par en app.cy.ts), no por su posición,
+  que es lo que hacía que reordenar la ficha rompiera el test. Las
+  derivaciones se cubren en ficha-vista.spec.ts: estaban solo en un e2e de
+  doscientas líneas donde un fallo no decía cuál de los veinte valores era.
+- "VER FICHA" SOLO A QUIEN LA API SE LA VA A DAR (2026-09-05). El botón del
+  panel de Selección estaba fuera del @if (puedeEditar()), así que se le
+  ofrecía a todo el mundo — y CharactersService.leer() autoriza al dueño O
+  al máster, que es la MISMA condición que puedeMover. Un jugador que
+  seleccionaba el token de otro (o un PNJ) y lo pulsaba se comía un 404 y
+  una banda roja de error. Seleccionar sigue siendo de todos: consultar el
+  panel no es leer la hoja.
+  Por eso NO hacen falta dos vistas de ficha (una para /personajes y otra
+  para la mesa): el trasfondo y el dinero de otro jugador no se ocultan por
+  CSS, es que NUNCA LLEGAN a su navegador. Partirlo en dos duplicaría el
+  reparto de visibilidad en el cliente, donde no es una garantía, y dejaría
+  al máster sin datos que hoy usa a propósito.
 - Condiciones estructuradas: catálogo oficial de PF1e en libs/shared
   (condiciones.ts: id ascii estable + nombre + efecto, descripciones
   propias porque la traducción de Devir tiene copyright). La columna

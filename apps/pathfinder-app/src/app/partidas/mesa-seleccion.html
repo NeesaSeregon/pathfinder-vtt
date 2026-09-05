@@ -214,10 +214,15 @@
   </section>
 
   <footer class="insp__acciones">
-    <button type="button" class="boton" (click)="verFicha.emit()">
-      Ver ficha
-    </button>
+    <!-- "Ver ficha" solo a quien la API se la va a dar: CharactersService.
+         leer() autoriza al dueño O al máster de la mesa, que es la MISMA
+         condición que puedeEditar. Ofrecérselo a los demás era prometer
+         algo que acababa en un 404 y una banda roja de error. Seleccionar
+         sigue siendo de todos: consultar el panel no es leer la hoja. -->
     @if (puedeEditar()) {
+      <button type="button" class="boton" (click)="verFicha.emit()">
+        Ver ficha
+      </button>
       <!-- Revelar es cosa del máster: es SU emboscada -->
       @if (esMaster() && sel.tipo === 'pnj') {
         <button type="button" class="boton" (click)="alternarOculto.emit()">

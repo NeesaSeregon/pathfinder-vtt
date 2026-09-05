@@ -23,6 +23,7 @@ import {
   bonificadorRacial,
   formatearModificador,
   iniciativa,
+  modificadorDeAtributo,
   piesAMetros,
   puntuacionFinal,
   SALVACION_LABELS,
@@ -31,27 +32,79 @@ import {
   tiradaDeSalvacion,
 } from '@pathfinder/shared';
 
-// Orden y etiqueta con la que se muestra cada campo de la ficha.
-const ETIQUETAS_FICHA: [keyof CharacterSheetData & string, string][] = [
-  ['jugador', 'Jugador'],
-  ['clase', 'Clase'],
-  ['alineamiento', 'Alineamiento'],
+/**
+ * Campos que van en la REJILLA de datos. Clase, raza, alineamiento, tamaño
+ * y jugador no están aquí: son identidad y se leen en la línea de cabecera,
+ * junto al nombre, que es donde se buscan.
+ */
+const ETIQUETAS_DATOS: [keyof CharacterSheetData & string, string][] = [
   ['paisNatal', 'País natal'],
   ['dios', 'Dios'],
-  ['raza', 'Raza'],
-  ['tamano', 'Tamaño'],
   ['edad', 'Edad'],
+  ['idiomas', 'Idiomas'],
   ['altura', 'Altura'],
   ['peso', 'Peso'],
   ['cabello', 'Cabello'],
   ['ojos', 'Ojos'],
 ];
 
+/** Una pieza de la franja vital: cifra grande, pie y si es un hueco. */
+export interface PiezaVital {
+  rotulo: string;
+  valor: string;
+  unidad: string;
+  pie: string;
+  /** Sin dato. La pieza NO desaparece: se pone una raya y se dice por qué. */
+  hueco: boolean;
+}
+
+/** Etiqueta + valor con guía de puntos. Ofensiva, habilidades y equipo. */
+export interface Par {
+  etiqueta: string;
+  valor: string;
+}
+
+export interface AtributoPieza {
+  /** "Fue", "Des"… lo que cabe en la pieza. */
+  clave: string;
+  /** "Fuerza". Va en el title, con el desglose entero. */
+  titulo: string;
+  modificador: string;
+  puntuacion: string;
+  /** "14 base · +2 racial". Vacío si no hay nada que desglosar. */
+  desglose: string;
+  /** "temp −4 (14)". Vacío si no hay ajuste temporal. */
+  temporal: string;
+}
+
+export interface ArmaFila {
+  nombre: string;
+  /** "cortante · alcance 80 pies · 20 virotes" */
+  extra: string;
+  ataque: string;
+  dano: string;
+  critico: string;
+}
+
+export interface ConjuroFila {
+  nivel: string;
+  conocidos: string;
+  porDia: string;
+  adicionales: string;
+  cd: string;
+  anotados: string;
+}
+
 /**
  * Vista de SOLO LECTURA de una ficha de personaje. Se reutiliza en la
  * lista de personajes (modal "Ver ficha") y en la mesa (el máster consulta
  * las hojas de sus jugadores). Todos los valores derivados se calculan con
  * las funciones puras de @pathfinder/shared: aquí no se persiste nada.
+ *
+ * La maqueta la manda la JERARQUÍA, no el orden de la ficha de papel:
+ * arriba las cuatro cifras que se miran en mitad de un turno (CA, PG,
+ * iniciativa, velocidad), después los atributos, y el trasfondo al final.
+ * Cada bloque se pinta solo si tiene datos; la franja vital, siempre.
  */
 @Component({
   selector: 'app-ficha-vista',
@@ -62,190 +115,119 @@ const ETIQUETAS_FICHA: [keyof CharacterSheetData & string, string][] = [
 export class FichaVista {
   readonly character = input.required<Character>();
 
-  protected readonly modificador = formatearModificador;
-  protected readonly ca = claseDeArmadura;
-  protected readonly caToque = caDeToque;
-  protected readonly caDesprevenido = caDesprevenido;
-
-  protected iniciativaDe(character: Character): string {
-    return conSigno(iniciativa(character.sheetData));
-  }
-
-  /** Solo mostramos el resumen de combate si hay algún dato que lo alimente. */
-  protected tieneCombate(character: Character): boolean {
-    return Boolean(
-      character.sheetData.combate || character.sheetData.atributos?.destreza,
-    );
-  }
-
-  /** "Ataque base +3 · RC 13 · BMC +9 · DMC 18" si hay bloque ofensivo. */
-  protected ofensivoResumen(character: Character): string {
-    const ofensivo = character.sheetData.ofensivo;
-    if (!ofensivo) {
-      return '';
+  /** "Paladín 5 · Humano · legal bueno · Mediano · Jugador: Luis" */
+  protected cabecera(character: Character): string[] {
+    const sheet = character.sheetData;
+    const partes: string[] = [
+      sheet.clase ? `${sheet.clase} ${character.level}` : `Nivel ${character.level}`,
+    ];
+    if (sheet.raza) {
+      partes.push(sheet.raza);
     }
-    const partes: string[] = [];
-    if (ofensivo.ataqueBase !== undefined) {
-      partes.push(`Ataque base ${conSigno(ofensivo.ataqueBase)}`);
+    if (sheet.alineamiento) {
+      partes.push(sheet.alineamiento);
     }
-    if (ofensivo.resistenciaConjuros !== undefined) {
-      partes.push(`RC ${ofensivo.resistenciaConjuros}`);
+    if (sheet.tamano) {
+      partes.push(TAMANO_LABELS[sheet.tamano] ?? sheet.tamano);
     }
-    partes.push(`BMC ${conSigno(bmc(character.sheetData))}`);
-    partes.push(`DMC ${dmc(character.sheetData)}`);
-    return partes.join(' · ');
+    if (sheet.jugador) {
+      partes.push(`Jugador: ${sheet.jugador}`);
+    }
+    return partes;
   }
 
-  /** "Fortaleza +9 · Reflejos -1 · Voluntad +1" si hay datos de salvación. */
-  protected salvacionesResumen(character: Character): string {
-    if (!character.sheetData.salvaciones) {
-      return '';
-    }
-    return SALVACIONES.map(
-      (salvacion) =>
-        `${SALVACION_LABELS[salvacion]} ${conSigno(
-          tiradaDeSalvacion(character.sheetData, salvacion),
-        )}`,
-    ).join(' · ');
-  }
-
-  /** Una línea por arma: "Espada larga — ataque +9/+4 · daño 1d8+4 · ...". */
-  protected armasDe(character: Character): string[] {
-    return (character.sheetData.armas ?? []).map((arma) => {
-      const detalles = [
-        arma.bonifAtaque && `ataque ${arma.bonifAtaque}`,
-        arma.dano && `daño ${arma.dano}`,
-        arma.critico && `crítico ${arma.critico}`,
-        arma.tipo && `tipo ${arma.tipo}`,
-        arma.alcance && `alcance ${arma.alcance}`,
-        arma.municion && `munición ${arma.municion}`,
-      ].filter(Boolean);
-      return `${arma.nombre ?? 'Arma sin nombre'} — ${detalles.join(' · ')}`;
-    });
-  }
-
-  /** Líneas de conjuros por nivel con CD y adicionales derivados. */
-  protected conjurosDe(character: Character): string[] {
-    const conjuros = character.sheetData.conjuros;
-    if (!conjuros?.niveles) {
-      return [];
-    }
-    return Object.entries(conjuros.niveles).map(([nivel, valores]) => {
-      const n = Number(nivel);
-      const partes = [
-        valores.conocidos !== undefined && `${valores.conocidos} conocidos`,
-        cdConjuro(character.sheetData, n) !== null &&
-          `CD ${cdConjuro(character.sheetData, n)}`,
-        valores.porDia !== undefined && `${valores.porDia}/día`,
-        (conjurosAdicionales(character.sheetData, n) ?? 0) > 0 &&
-          `+${conjurosAdicionales(character.sheetData, n)} adicionales`,
-        valores.anotados,
-      ].filter(Boolean);
-      return `Nivel ${nivel}: ${partes.join(' · ')}`;
-    });
-  }
-
-  /** "12 po, 5 pp (total 12,5 po)" para la modal. */
-  protected dineroResumen(character: Character): string {
-    const dinero = character.sheetData.dinero;
-    if (!dinero) {
-      return '';
-    }
-    const monedas = [
-      dinero.ppr !== undefined && `${dinero.ppr} ppr`,
-      dinero.po !== undefined && `${dinero.po} po`,
-      dinero.pp !== undefined && `${dinero.pp} pp`,
-      dinero.pc !== undefined && `${dinero.pc} pc`,
-    ].filter(Boolean);
-    return `${monedas.join(', ')} (total ${totalEnOro(character.sheetData)} po)`;
-  }
-
-  /** "PX 3400 / 5000 (faltan 1600)" para la modal. */
-  protected experienciaResumen(character: Character): string {
+  /** La experiencia deja de ser un párrafo: cifras y una barra. */
+  protected experiencia(
+    character: Character,
+  ): { texto: string; faltan: string; fraccion: number | null } | null {
     const experiencia = character.sheetData.experiencia;
     if (!experiencia) {
-      return '';
+      return null;
     }
-    const partes = [`PX ${experiencia.actual ?? '—'}`];
-    if (experiencia.siguienteNivel !== undefined) {
-      partes.push(`/ ${experiencia.siguienteNivel}`);
-      const faltan = experienciaFaltante(character.sheetData);
-      if (faltan !== null) {
-        partes.push(`(faltan ${faltan})`);
-      }
+    const actual = experiencia.actual ?? 0;
+    const siguiente = experiencia.siguienteNivel;
+    if (siguiente === undefined) {
+      return { texto: `PX ${actual}`, faltan: '', fraccion: null };
     }
-    return partes.join(' ');
+    const faltan = experienciaFaltante(character.sheetData);
+    return {
+      texto: `PX ${actual} / ${siguiente}`,
+      faltan: faltan === null ? '' : `faltan ${faltan}`,
+      // Tope al 100%: un personaje puede pasarse del umbral sin subir aún.
+      fraccion: siguiente > 0 ? Math.min(actual / siguiente, 1) : null,
+    };
   }
 
-  /** "Cota de mallas +6 · Escudo +2" para la modal. */
-  protected objetosCaDe(character: Character): string {
-    return (character.sheetData.objetosCa ?? [])
-      .map((objeto) =>
-        [objeto.nombre ?? 'Objeto', objeto.bonif !== undefined && `+${objeto.bonif}`]
-          .filter(Boolean)
-          .join(' '),
-      )
-      .join(' · ');
+  /**
+   * Las CUATRO piezas de la franja vital, SIEMPRE las cuatro y siempre en
+   * el mismo orden: lo que permite leer una ficha de un vistazo es que el
+   * dato esté donde se espera, no que esté.
+   *
+   * OJO con los PG: la ficha guarda el TOTAL y la RD, no los puntos
+   * actuales. Los actuales son estado de sesión (PersonajeEnPartida) y se
+   * llevan en el panel de Selección, con su barra y su tramo vital.
+   */
+  protected vitales(character: Character): PiezaVital[] {
+    const sheet = character.sheetData;
+    const hayCombate = this.tieneCombate(character);
+    const pg = sheet.pg;
+    const velocidad = sheet.velocidad;
+    const conArmadura = velocidad?.conArmadura;
+    const pies = conArmadura ?? velocidad?.base;
+
+    const pieVelocidad =
+      pies === undefined
+        ? 'sin anotar'
+        : [
+            `${casillas(pies)} casillas`,
+            `${piesAMetros(pies)} m`,
+            conArmadura !== undefined ? 'con armadura' : '',
+          ]
+            .filter(Boolean)
+            .join(' · ');
+
+    return [
+      {
+        rotulo: 'Clase de armadura',
+        valor: hayCombate ? `${claseDeArmadura(sheet)}` : '—',
+        unidad: '',
+        pie: hayCombate
+          ? `toque ${caDeToque(sheet)} · desprevenido ${caDesprevenido(sheet)}`
+          : 'sin anotar',
+        hueco: !hayCombate,
+      },
+      {
+        rotulo: 'Puntos de golpe',
+        valor: pg?.total !== undefined ? `${pg.total}` : '—',
+        unidad: '',
+        pie: pg?.rd ? `RD ${pg.rd}` : pg?.total !== undefined ? 'total' : 'sin anotar',
+        hueco: pg?.total === undefined,
+      },
+      {
+        rotulo: 'Iniciativa',
+        valor: hayCombate ? conSigno(iniciativa(sheet)) : '—',
+        unidad: '',
+        pie: hayCombate
+          ? `Destreza ${conSigno(modificadorDeAtributo(sheet, 'destreza'))}`
+          : 'sin Destreza anotada',
+        hueco: !hayCombate,
+      },
+      {
+        rotulo: 'Velocidad',
+        valor: pies === undefined ? '—' : `${pies}`,
+        unidad: pies === undefined ? '' : 'pies',
+        pie: pieVelocidad,
+        hueco: pies === undefined,
+      },
+    ];
   }
 
-  /** "5 objetos · peso total 52 (carga media)" para la modal. */
-  protected equipoResumen(character: Character): string {
-    const cantidad = character.sheetData.equipo?.length ?? 0;
-    if (cantidad === 0 && !character.sheetData.objetosCa?.length) {
-      return '';
-    }
-    const peso = pesoTotal(character.sheetData);
-    const carga = cargaActual(character.sheetData);
-    const partes = [`${cantidad} objetos de equipo`, `peso total ${peso}`];
-    if (carga) {
-      partes.push(`carga ${carga}`);
-    }
-    return partes.join(' · ');
-  }
-
-  /** "Esquiva · Soltura con el arma" para la modal; admite fichas antiguas. */
-  protected dotesResumen(character: Character): string {
-    return normalizarDotes(character.sheetData.dotes)
-      .map((dote) => dote.nombre)
-      .filter(Boolean)
-      .join(' · ');
-  }
-
-  /** Habilidades con datos, con su bonificador total derivado. */
-  protected habilidadesDe(character: Character): string[] {
-    const habilidades = character.sheetData.habilidades;
-    if (!habilidades) {
-      return [];
-    }
-    return HABILIDADES.filter((def) => habilidades[def.id]).map((def) => {
-      const especialidad = habilidades[def.id]?.especialidad;
-      const nombre = especialidad
-        ? `${def.label} (${especialidad})`
-        : def.label;
-      return `${nombre} ${conSigno(
-        bonificadorHabilidad(character.sheetData, def.id),
-      )}`;
-    });
-  }
-
-  /** "PG 45 · RD 5/hierro frío", o solo la parte que exista. */
-  protected pgResumen(character: Character): string {
-    const pg = character.sheetData.pg;
-    if (!pg) {
-      return '';
-    }
-    const partes: string[] = [];
-    if (pg.total !== undefined) {
-      partes.push(`PG ${pg.total}`);
-    }
-    if (pg.rd) {
-      partes.push(`RD ${pg.rd}`);
-    }
-    return partes.join(' · ');
-  }
-
-  /** Resumen de velocidades para la modal: solo los modos rellenos. */
-  protected velocidadResumen(character: Character): string[] {
+  /**
+   * Los modos de movimiento que no caben en la pieza (volar, nadar, trepar,
+   * excavar, los temporales) y la velocidad base cuando la pieza muestra la
+   * de con armadura.
+   */
+  protected velocidadExtra(character: Character): string[] {
     const velocidad = character.sheetData.velocidad;
     if (!velocidad) {
       return [];
@@ -254,11 +236,8 @@ export class FichaVista {
       `${n} pies (${casillas(n)} cas. / ${piesAMetros(n)} m)`;
 
     const partes: string[] = [];
-    if (velocidad.base !== undefined) {
+    if (velocidad.conArmadura !== undefined && velocidad.base !== undefined) {
       partes.push(`Base ${pies(velocidad.base)}`);
-    }
-    if (velocidad.conArmadura !== undefined) {
-      partes.push(`Con armadura ${pies(velocidad.conArmadura)}`);
     }
     if (velocidad.volar !== undefined) {
       const grado = velocidad.maniobrabilidad
@@ -281,15 +260,20 @@ export class FichaVista {
     return partes;
   }
 
-  /** Filas de atributos que el personaje tiene rellenas, para la modal. */
-  protected atributosDe(character: Character): {
-    label: string;
-    puntuacion: number | null;
-    racial: string;
-    modificador: string;
-    ajusteTemporal: string;
-    modTemporal: string;
-  }[] {
+  /** Solo mostramos el resumen de combate si hay algún dato que lo alimente. */
+  protected tieneCombate(character: Character): boolean {
+    return Boolean(
+      character.sheetData.combate || character.sheetData.atributos?.destreza,
+    );
+  }
+
+  /**
+   * Atributos que el personaje tiene rellenos. Lo GRANDE es el modificador,
+   * que es lo que se tira; la puntuación y su desglose van debajo. El
+   * ajuste temporal manda sobre el desglose racial —es lo urgente— y el
+   * title lleva las dos cosas para quien quiera el detalle.
+   */
+  protected atributos(character: Character): AtributoPieza[] {
     const sheet = character.sheetData;
     const atributos = sheet.atributos;
     if (!atributos && !sheet.raza) {
@@ -299,51 +283,212 @@ export class FichaVista {
       (atributo) =>
         atributos?.[atributo] || bonificadorRacial(sheet, atributo) !== 0,
     ).map((atributo) => {
+      const label = ATRIBUTO_LABELS[atributo];
       const valor = atributos?.[atributo];
+      const base = valor?.puntuacion;
       const ajuste = valor?.ajusteTemporal;
       const racial = bonificadorRacial(sheet, atributo);
-      const base = valor?.puntuacion;
+      const final = puntuacionFinal(sheet, atributo);
+      const sinTemporal = (base ?? 10) + racial;
+
+      const desglose =
+        racial !== 0 && base !== undefined
+          ? `${base} base · ${conSigno(racial)} racial`
+          : '';
+      const temporal =
+        ajuste !== undefined ? `temp ${conSigno(ajuste)} (${sinTemporal})` : '';
+
       return {
-        label: ATRIBUTO_LABELS[atributo],
-        puntuacion: base ?? null,
-        racial: racial === 0 ? '—' : conSigno(racial),
+        // Las tres primeras letras de la etiqueta: Fue, Des, Con, Int,
+        // Sab, Car. La etiqueta entera va en el title.
+        clave: label.slice(0, 3),
+        titulo: [label, desglose, temporal].filter(Boolean).join(' · '),
         modificador:
-          base === undefined && racial === 0
+          base === undefined && racial === 0 && ajuste === undefined
             ? '—'
-            : formatearModificador((base ?? 10) + racial),
-        ajusteTemporal: ajuste !== undefined ? conSigno(ajuste) : '—',
-        modTemporal:
-          ajuste !== undefined
-            ? formatearModificador(puntuacionFinal(sheet, atributo))
-            : '—',
+            : formatearModificador(final ?? 10),
+        puntuacion: final !== undefined ? `${final}` : '—',
+        desglose,
+        temporal,
       };
     });
   }
 
-  /**
-   * ¿Hay algo de trasfondo escrito? La descripción y la historia no son
-   * filas del dl (son párrafos), así que no cuentan en sheetEntries: sin
-   * esto, una ficha con solo trasfondo diría "La ficha está vacía".
-   */
-  protected tieneTrasfondo(character: Character): boolean {
-    const sheet = character.sheetData;
-    return Boolean(sheet.descripcion || sheet.historia);
+  /** Las tres salvaciones con su total derivado. */
+  protected salvaciones(character: Character): Par[] {
+    if (!character.sheetData.salvaciones) {
+      return [];
+    }
+    return SALVACIONES.map((salvacion) => ({
+      etiqueta: SALVACION_LABELS[salvacion],
+      valor: conSigno(tiradaDeSalvacion(character.sheetData, salvacion)),
+    }));
   }
 
-  /** Campos de la ficha que el personaje tiene rellenos, con su etiqueta. */
-  protected sheetEntries(
-    character: Character,
-  ): { label: string; value: unknown }[] {
-    return ETIQUETAS_FICHA.filter(([key]) => {
+  /** Ataque base, RC, BMC y DMC como pares, no como una frase con puntos. */
+  protected ofensivo(character: Character): Par[] {
+    const ofensivo = character.sheetData.ofensivo;
+    if (!ofensivo) {
+      return [];
+    }
+    const pares: Par[] = [];
+    if (ofensivo.ataqueBase !== undefined) {
+      pares.push({
+        etiqueta: 'Ataque base',
+        valor: conSigno(ofensivo.ataqueBase),
+      });
+    }
+    pares.push({ etiqueta: 'BMC', valor: conSigno(bmc(character.sheetData)) });
+    pares.push({ etiqueta: 'DMC', valor: `${dmc(character.sheetData)}` });
+    if (ofensivo.resistenciaConjuros !== undefined) {
+      pares.push({
+        etiqueta: 'Resistencia a conjuros',
+        valor: `${ofensivo.resistenciaConjuros}`,
+      });
+    }
+    return pares;
+  }
+
+  /** Una fila por arma, con sus columnas separadas para poder compararlas. */
+  protected armas(character: Character): ArmaFila[] {
+    return (character.sheetData.armas ?? []).map((arma) => ({
+      nombre: arma.nombre ?? 'Arma sin nombre',
+      extra: [
+        arma.tipo,
+        arma.alcance && `alcance ${arma.alcance}`,
+        arma.municion && `munición ${arma.municion}`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      ataque: arma.bonifAtaque || '—',
+      dano: arma.dano || '—',
+      critico: arma.critico || '—',
+    }));
+  }
+
+  /** Habilidades con datos, con su bonificador total derivado. */
+  protected habilidades(character: Character): Par[] {
+    const habilidades = character.sheetData.habilidades;
+    if (!habilidades) {
+      return [];
+    }
+    return HABILIDADES.filter((def) => habilidades[def.id]).map((def) => {
+      const especialidad = habilidades[def.id]?.especialidad;
+      return {
+        etiqueta: especialidad ? `${def.label} (${especialidad})` : def.label,
+        valor: conSigno(bonificadorHabilidad(character.sheetData, def.id)),
+      };
+    });
+  }
+
+  /** Nombres de las dotes; admite fichas antiguas que las guardan como texto. */
+  protected dotes(character: Character): string[] {
+    return normalizarDotes(character.sheetData.dotes)
+      .map((dote) => dote.nombre)
+      .filter((nombre): nombre is string => Boolean(nombre));
+  }
+
+  /** Una fila por nivel de conjuros, con la CD y los adicionales derivados. */
+  protected conjuros(character: Character): ConjuroFila[] {
+    const conjuros = character.sheetData.conjuros;
+    if (!conjuros?.niveles) {
+      return [];
+    }
+    return Object.entries(conjuros.niveles).map(([nivel, valores]) => {
+      const n = Number(nivel);
+      const cd = cdConjuro(character.sheetData, n);
+      const adicionales = conjurosAdicionales(character.sheetData, n) ?? 0;
+      return {
+        nivel: `Nivel ${nivel}`,
+        conocidos: valores.conocidos !== undefined ? `${valores.conocidos}` : '—',
+        porDia: valores.porDia !== undefined ? `${valores.porDia}` : '—',
+        adicionales: adicionales > 0 ? `+${adicionales}` : '—',
+        cd: cd === null ? '—' : `${cd}`,
+        anotados: valores.anotados ?? '',
+      };
+    });
+  }
+
+  /** Objetos que dan CA, peso total y carga: pares, no una frase. */
+  protected equipo(character: Character): Par[] {
+    const sheet = character.sheetData;
+    const objetos = sheet.objetosCa ?? [];
+    const cantidad = sheet.equipo?.length ?? 0;
+    if (cantidad === 0 && objetos.length === 0) {
+      return [];
+    }
+    const pares: Par[] = objetos.map((objeto) => ({
+      etiqueta: objeto.nombre ?? 'Objeto',
+      valor: objeto.bonif !== undefined ? `CA ${conSigno(objeto.bonif)}` : '—',
+    }));
+    pares.push({ etiqueta: 'Peso total', valor: `${pesoTotal(sheet)}` });
+    const carga = cargaActual(sheet);
+    if (carga) {
+      pares.push({ etiqueta: 'Carga', valor: carga });
+    }
+    return pares;
+  }
+
+  /** Cuántos objetos de equipo hay, para el resumen del bloque. */
+  protected cuantosObjetos(character: Character): number {
+    return character.sheetData.equipo?.length ?? 0;
+  }
+
+  /** Las monedas que tenga anotadas, una por par. */
+  protected dinero(character: Character): Par[] {
+    const dinero = character.sheetData.dinero;
+    if (!dinero) {
+      return [];
+    }
+    return (
+      [
+        ['Platino', dinero.ppr],
+        ['Oro', dinero.po],
+        ['Plata', dinero.pp],
+        ['Cobre', dinero.pc],
+      ] as [string, number | undefined][]
+    )
+      .filter(([, valor]) => valor !== undefined)
+      .map(([etiqueta, valor]) => ({ etiqueta, valor: `${valor}` }));
+  }
+
+  /** "42,63 po" para el resumen del bloque de dinero. */
+  protected dineroTotal(character: Character): string {
+    return `${totalEnOro(character.sheetData)} po`;
+  }
+
+  /** Campos de la rejilla de datos que el personaje tiene rellenos. */
+  protected datos(character: Character): Par[] {
+    return ETIQUETAS_DATOS.filter(([key]) => {
       const value = character.sheetData[key];
       return value !== undefined && value !== null && value !== '';
-    }).map(([key, label]) => {
-      const value = character.sheetData[key];
-      // El tamaño se guarda como clave interna; se muestra con su etiqueta
-      if (key === 'tamano' && typeof value === 'string') {
-        return { label, value: TAMANO_LABELS[value as never] ?? value };
-      }
-      return { label, value };
-    });
+    }).map(([key, etiqueta]) => ({
+      etiqueta,
+      valor: `${character.sheetData[key]}`,
+    }));
+  }
+
+  /**
+   * ¿Hay algo más que la franja vital y la identidad? La franja se pinta
+   * siempre, así que sin esto una ficha recién creada saldría con cuatro
+   * rayas y ninguna explicación.
+   */
+  protected fichaVacia(character: Character): boolean {
+    const sheet = character.sheetData;
+    return (
+      this.atributos(character).length === 0 &&
+      this.salvaciones(character).length === 0 &&
+      this.ofensivo(character).length === 0 &&
+      this.armas(character).length === 0 &&
+      this.habilidades(character).length === 0 &&
+      this.dotes(character).length === 0 &&
+      this.conjuros(character).length === 0 &&
+      this.equipo(character).length === 0 &&
+      this.dinero(character).length === 0 &&
+      this.datos(character).length === 0 &&
+      !sheet.aptitudesEspeciales &&
+      !sheet.descripcion &&
+      !sheet.historia
+    );
   }
 }

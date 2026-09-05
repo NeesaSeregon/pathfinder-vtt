@@ -264,6 +264,28 @@ mueva ni un píxel** al pintar una zona. Esa última se mide relativa a
 > dejaban de verse. Regla general: **la base va siempre antes que sus
 > modificadores en el CSS compilado**, y con `@use` eso significa el parcial.
 
+### La franja vital de la ficha son siempre cuatro piezas
+
+En [ficha-vista.html](apps/pathfinder-app/src/app/characters/ficha-vista.html)
+las cuatro piezas de arriba —CA, PG, iniciativa y velocidad— **se pintan
+siempre, y siempre en ese orden**, aunque la ficha esté recién creada. El
+dato que falta no quita la pieza: le pone una raya y dice por qué
+(`.tile--hueco`).
+
+Parece un derroche y es justo lo contrario. Lo que permite leer una ficha de
+un vistazo —y comparar dos seguidas, que es lo que se hace en una mesa— no
+es que el dato **esté**, es que esté **donde se espera**. Si las piezas
+aparecen y desaparecen, la CA cambia de sitio según lo rellena que esté cada
+personaje y hay que volver a buscarla cada vez.
+
+Los bloques de debajo sí van al revés: **sin datos no se pintan**. La
+diferencia es que ninguno es un ancla; se buscan por su rótulo, no por su
+posición.
+
+Hay un test que lo defiende (`ficha-vista.spec.ts`, «pinta las cuatro piezas
+vitales incluso con la ficha vacía»). Si alguien "limpia" la vista quitando
+las piezas vacías, se entera ahí.
+
 ### Los cortes
 
 - **≤ 85rem** — no caben tres zonas sin ahogar el tablero: Personas baja a

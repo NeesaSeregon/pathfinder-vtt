@@ -108,7 +108,15 @@
       (keyup.escape)="intentarCerrar()"
       role="presentation"
     >
-      <div class="modal characters__modal" role="dialog" aria-modal="true">
+      <!-- Dos anchos, uno por modo: leyendo manda .modal--ficha (global,
+           el mismo que en la mesa) y editando, el de esta página. -->
+      <div
+        class="modal"
+        [class.modal--ficha]="!editing()"
+        [class.characters__modal]="editing()"
+        role="dialog"
+        aria-modal="true"
+      >
         <header>
           <h2>{{ character.name }}</h2>
           <button type="button" aria-label="Cerrar" (click)="intentarCerrar()">

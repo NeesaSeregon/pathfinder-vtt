@@ -1,96 +1,518 @@
 // Estilos de la vista de ficha (solo lectura). Viven aquí porque el
 // componente FichaVista es su dueño; se reutilizan en la lista de
-// personajes y en la mesa. Conservan el prefijo characters__modal- para
-// no romper selectores del e2e.
-.characters__modal-summary {
+// personajes y en la mesa.
+//
+// La jerarquía es toda la maqueta: una FRANJA VITAL de cuatro piezas
+// arriba, los atributos como piezas debajo, y el resto en BLOQUES con
+// rótulo en versales. Antes esto eran veinticinco párrafos apilados con
+// puntos medios de separador: todo pesaba lo mismo y no destacaba nada.
+//
+// Los selectores .characters__modal-* que había aquí se han retirado: el
+// e2e ahora entra por app-ficha-vista y por las clases de este fichero.
+
+:host {
+  display: block;
+}
+
+// -- Cabecera ---------------------------------------------------------------
+// El nombre lo pinta la modal (su <header> con el <h2>). Aquí empieza la
+// línea de identidad: clase y nivel, raza, alineamiento, tamaño y jugador.
+.ficha-vista__cabecera {
+  margin: 0;
   color: var(--text-muted);
-  margin-top: 0;
+  font-size: 0.85rem;
 }
 
-.characters__modal-combate {
-  font-weight: 600;
-  color: var(--text);
-}
+// La experiencia deja de ser un párrafo ("PX 3400 / 5000 (faltan 1600)") y
+// pasa a ser dos cifras y una barra: se ve cuánto falta sin restar.
+.px {
+  margin: 0.5rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 
-.characters__modal-velocidad {
-  color: var(--text-muted);
-}
+  &__barra {
+    flex: 0 1 14rem;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
 
-.characters__modal-armas {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 0.75rem;
-  color: var(--text);
+  &__relleno {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent-2);
+  }
 
-  li {
-    padding: 0.15rem 0;
+  &__cifra {
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
   }
 }
 
-.characters__modal-atributos {
-  border-collapse: collapse;
-  margin-bottom: 1rem;
+// -- La franja vital --------------------------------------------------------
+// CA, PG, iniciativa y velocidad: lo que se mira en mitad de un turno.
+// Antes vivían dentro de una frase corrida.
+.vitales {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
 
-  th,
-  td {
-    padding: 0.25rem 0.75rem;
-    text-align: center;
-    border-bottom: 1px solid var(--border);
+.tile {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  &__rotulo {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+    font-weight: 650;
   }
 
-  thead th {
-    font-size: 0.75rem;
+  &__cifra {
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+  }
+
+  &__unidad {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  &__pie {
+    font-size: 0.72rem;
     color: var(--text-faint);
   }
 
-  tbody th {
-    text-align: left;
-    color: var(--text-muted);
-  }
-
-  td:nth-child(3),
-  td:nth-child(5) {
-    font-weight: 600;
+  // El hueco tiene el mismo sitio que el dato: la cifra se sustituye por
+  // una raya, la pieza NO desaparece. Es lo que permite mirar dos fichas
+  // seguidas sin releer dónde está cada cosa.
+  &--hueco &__cifra {
+    color: var(--text-faint);
+    font-weight: 400;
   }
 }
 
-.characters__modal-sheet {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: 0.25rem 1rem;
-  margin: 0 0 1rem;
+// -- Bloques ----------------------------------------------------------------
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  margin-top: 0.95rem;
+}
 
-  div {
+.bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &__cab {
     display: flex;
+    align-items: baseline;
     gap: 0.5rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
   }
 
-  dt {
-    font-weight: 600;
-    color: var(--text-muted);
-
-    &::after {
-      content: ':';
-    }
-  }
-
-  dd {
+  &__rotulo {
     margin: 0;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    font-weight: 650;
+  }
+
+  &__resumen {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-left: auto;
   }
 }
 
-// Texto libre del trasfondo. pre-wrap: el jugador escribe párrafos en un
-// textarea y sus saltos de línea son parte del texto; sin esto llegan
-// aquí aplastados en un solo bloque.
-.characters__modal-prosa {
-  white-space: pre-wrap;
-  color: var(--text-muted);
-  margin: 0 0 1rem;
-  max-width: 48rem;
+// Dos bloques hermanos a lo ancho (salvaciones/ofensiva, dotes/aptitudes,
+// equipo/dinero). align-items: start para que el más corto no se estire.
+.dos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.95rem;
+  align-items: start;
 }
 
-.characters__modal-prosa-titulo {
+// La caja "Modificadores" de la ficha de papel. Antes salía como un párrafo
+// suelto ("Modificadores ofensivos: …") lejos de aquello que modifica;
+// ahora es el pie de SU bloque.
+.nota {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-faint);
+  padding-left: 0.6rem;
+  border-left: 2px solid var(--border-strong);
+
+  strong {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+}
+
+// Quién ve este bloque. Misma gramática que .marca--oculto de la mesa: es
+// el único sitio donde se dice que la descripción la lee toda la mesa y el
+// trasfondo no.
+.visib {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px dashed var(--text-faint);
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+.vacio {
+  margin: 0.9rem 0 0;
   font-size: 0.85rem;
   color: var(--text-faint);
-  margin: 0 0 0.25rem;
+}
+
+// -- Atributos --------------------------------------------------------------
+// Lo GRANDE es el modificador, que es lo que se tira; la puntuación y su
+// desglose van debajo. La tabla anterior tenía seis columnas donde el
+// modificador pesaba lo mismo que el ajuste temporal.
+.atributos {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.atr {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+
+  &__nombre {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+    font-weight: 650;
+  }
+
+  &__mod {
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+
+  &__punt {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__desglose {
+    font-size: 0.65rem;
+    color: var(--text-faint);
+  }
+
+  // Un ajuste temporal se ve SIN leer. El naranja es --token-2, el mismo
+  // que "herido" en la barra de PG: en esta app significa "esto no es lo
+  // normal, mira aquí".
+  &--temp {
+    border-color: var(--token-2);
+  }
+
+  &--temp &__mod {
+    color: var(--token-2);
+  }
+
+  &__temp {
+    font-size: 0.65rem;
+    color: var(--token-2);
+    font-weight: 600;
+  }
+}
+
+// -- Salvaciones ------------------------------------------------------------
+.salvas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.salva {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+
+  &__nombre {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+    font-weight: 650;
+  }
+
+  &__valor {
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+}
+
+// -- Etiqueta, guía de puntos y valor ---------------------------------------
+// El patrón de la hoja de papel, y funciona porque los valores quedan
+// alineados en columna: se comparan de arriba abajo sin leer las etiquetas.
+// Lo usan ofensiva, habilidades y equipo/dinero; solo cambia el número de
+// columnas del contenedor.
+.pares {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.32rem 0.9rem;
+}
+
+.habilidades {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.2rem 1.1rem;
+}
+
+.par {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+
+  &__et {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  &__lead {
+    flex: 1;
+    border-bottom: 1px dotted var(--border-strong);
+    min-width: 0.5rem;
+  }
+
+  &__v {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+}
+
+// -- Armas ------------------------------------------------------------------
+// Rejilla con cabecera. Antes era una frase por arma con seis datos
+// separados por puntos medios, imposible de comparar entre sí.
+.armas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.arma {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem 6rem 6.5rem;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.35rem;
+  background: var(--surface-2);
+
+  &--cab {
+    background: none;
+    padding: 0 0.6rem 0.15rem;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+    font-weight: 650;
+  }
+
+  &__nombre {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  &__extra {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-faint);
+  }
+
+  &__v {
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+}
+
+// -- Conjuros ---------------------------------------------------------------
+.conjuros {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.conjuro {
+  display: grid;
+  grid-template-columns: 5rem repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.35rem;
+  background: var(--surface-2);
+  font-size: 0.8rem;
+
+  &--cab {
+    background: none;
+    padding: 0 0.6rem 0.15rem;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-faint);
+    font-weight: 650;
+  }
+
+  &__nivel {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  &__d {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// -- Dotes ------------------------------------------------------------------
+// Misma forma que .chip del panel de Selección, pero NO es la misma pieza y
+// por eso no se comparte: aquella lleva dentro un botón de quitar y vive en
+// otra zona (el parcial _mesa-comun no llega hasta characters/).
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dote {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.3rem;
+  background: var(--surface-2);
+  border-left: 2px solid var(--accent);
+  color: var(--text);
+}
+
+// -- Datos del personaje ----------------------------------------------------
+// Etiqueta encima y valor debajo: en un dl de una línea por campo los
+// nombres y los valores se mezclaban en la misma lectura.
+.datos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem 0.9rem;
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+
+  &__et {
+    font-size: 0.64rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    font-weight: 650;
+  }
+
+  &__v {
+    font-size: 0.88rem;
+    color: var(--text);
+  }
+}
+
+// -- Prosa ------------------------------------------------------------------
+// pre-wrap: el jugador escribe párrafos en un textarea y sus saltos de
+// línea son parte del texto; sin esto llegan aquí aplastados en un bloque.
+.prosa {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+// -- Pantallas estrechas ----------------------------------------------------
+// La modal ocupa el 100% del ancho disponible por debajo de sus 56rem, así
+// que las rejillas de seis y cuatro columnas hay que partirlas o los
+// números se aplastan contra los rótulos.
+@media (max-width: 48rem) {
+  .vitales,
+  .datos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .atributos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .habilidades,
+  .pares,
+  .dos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  // Se estrechan las columnas fijas, NO se quitan: si la rejilla pierde una
+  // columna, la cabecera y las filas dejan de cuadrar y el crítico salta de
+  // renglón.
+  .arma {
+    grid-template-columns: minmax(0, 1fr) 3.6rem 4rem 4.4rem;
+    gap: 0.35rem;
+  }
+
+  .conjuro {
+    grid-template-columns: 3.6rem repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
 }

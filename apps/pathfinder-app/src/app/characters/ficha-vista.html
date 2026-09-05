@@ -1,148 +1,309 @@
-<p class="characters__modal-summary">
-  Nivel {{ character().level }}
-  @if (character().sheetData.clase) {
-    · {{ character().sheetData.clase }}
-  }
-</p>
-@if (tieneCombate(character())) {
-  <p class="characters__modal-combate">
-    CA {{ ca(character().sheetData) }} (toque
-    {{ caToque(character().sheetData) }}, desprevenido
-    {{ caDesprevenido(character().sheetData) }}) · Iniciativa
-    {{ iniciativaDe(character()) }}
-    @if (pgResumen(character())) {
-      · {{ pgResumen(character()) }}
+<!-- La ficha se lee UNA vez: así los @if estrechan el tipo y la plantilla
+     deja de repetir character() en cada línea. -->
+@let ficha = character();
+
+<p class="ficha-vista__cabecera">{{ cabecera(ficha).join(' · ') }}</p>
+
+@if (experiencia(ficha); as px) {
+  <p class="px">
+    <span class="px__cifra">{{ px.texto }}</span>
+    @if (px.fraccion !== null) {
+      <span class="px__barra">
+        <i class="px__relleno" [style.width.%]="px.fraccion * 100"></i>
+      </span>
+    }
+    @if (px.faltan) {
+      <span class="px__cifra">{{ px.faltan }}</span>
     }
   </p>
-  @if (character().sheetData.combate?.notas; as notas) {
-    <p class="characters__modal-velocidad">
-      Modificadores: {{ notas }}
-    </p>
-  }
-  @if (ofensivoResumen(character()); as ofensivo) {
-    <p class="characters__modal-combate">{{ ofensivo }}</p>
-  }
-  @if (character().sheetData.ofensivo?.notas; as notasOfensivo) {
-    <p class="characters__modal-velocidad">
-      Modificadores ofensivos: {{ notasOfensivo }}
-    </p>
-  }
-  @if (salvacionesResumen(character()); as salvaciones) {
-    <p class="characters__modal-combate">{{ salvaciones }}</p>
-  }
-  @if (character().sheetData.salvaciones?.notas; as notasSalvaciones) {
-    <p class="characters__modal-velocidad">
-      Modificadores de salvación: {{ notasSalvaciones }}
-    </p>
-  }
-  @if (armasDe(character()).length > 0) {
-    <ul class="characters__modal-armas">
-      @for (arma of armasDe(character()); track arma) {
-        <li>{{ arma }}</li>
-      }
-    </ul>
-  }
-  @if (habilidadesDe(character()).length > 0) {
-    <p class="characters__modal-velocidad">
-      Habilidades: {{ habilidadesDe(character()).join(' · ') }}
-    </p>
-  }
-  @if (character().sheetData.habilidadesNotas; as notasHabilidades) {
-    <p class="characters__modal-velocidad">
-      Modificadores condicionales: {{ notasHabilidades }}
-    </p>
-  }
-  @if (character().sheetData.idiomas; as idiomas) {
-    <p class="characters__modal-velocidad">Idiomas: {{ idiomas }}</p>
-  }
-  @if (objetosCaDe(character()); as objetosCa) {
-    <p class="characters__modal-velocidad">
-      Objetos CA: {{ objetosCa }}
-    </p>
-  }
-  @if (equipoResumen(character()); as equipo) {
-    <p class="characters__modal-velocidad">Equipo: {{ equipo }}</p>
-  }
-  @if (dotesResumen(character()); as dotes) {
-    <p class="characters__modal-velocidad">Dotes: {{ dotes }}</p>
-  }
-  @if (character().sheetData.aptitudesEspeciales; as aptitudes) {
-    <p class="characters__modal-velocidad">
-      Aptitudes especiales: {{ aptitudes }}
-    </p>
-  }
-  @if (dineroResumen(character()); as dinero) {
-    <p class="characters__modal-velocidad">Dinero: {{ dinero }}</p>
-  }
-  @if (experienciaResumen(character()); as experiencia) {
-    <p class="characters__modal-velocidad">{{ experiencia }}</p>
-  }
-  @if (conjurosDe(character()).length > 0) {
-    <ul class="characters__modal-armas">
-      @for (linea of conjurosDe(character()); track linea) {
-        <li>{{ linea }}</li>
-      }
-    </ul>
-  }
-  @if (character().sheetData.conjuros?.dominiosEscuela; as dominios) {
-    <p class="characters__modal-velocidad">
-      Dominios/escuela: {{ dominios }}
-    </p>
-  }
-} @else if (pgResumen(character())) {
-  <p class="characters__modal-combate">{{ pgResumen(character()) }}</p>
 }
-@if (velocidadResumen(character()).length > 0) {
-  <p class="characters__modal-velocidad">
-    Velocidad: {{ velocidadResumen(character()).join(' · ') }}
+
+<!-- La franja vital: las cuatro cifras que se miran en mitad de un turno,
+     SIEMPRE las cuatro y siempre en el mismo orden. Si falta el dato se
+     pone una raya y se dice por qué: lo que hace que una ficha se lea de
+     un vistazo es que el dato esté donde se espera, no que esté. -->
+<section class="vitales">
+  @for (pieza of vitales(ficha); track pieza.rotulo) {
+    <div class="tile" [class.tile--hueco]="pieza.hueco">
+      <span class="tile__rotulo">{{ pieza.rotulo }}</span>
+      <span class="tile__cifra">
+        {{ pieza.valor }}
+        @if (pieza.unidad) {
+          <span class="tile__unidad">{{ pieza.unidad }}</span>
+        }
+      </span>
+      <span class="tile__pie">{{ pieza.pie }}</span>
+    </div>
+  }
+</section>
+
+@if (velocidadExtra(ficha).length > 0) {
+  <p class="nota">
+    <strong>Otros movimientos:</strong> {{ velocidadExtra(ficha).join(' · ') }}
   </p>
 }
-@if (sheetEntries(character()).length > 0 || tieneTrasfondo(character())) {
-  @if (sheetEntries(character()).length > 0) {
-    <dl class="characters__modal-sheet">
-      @for (entry of sheetEntries(character()); track entry.label) {
-        <div>
-          <dt>{{ entry.label }}</dt>
-          <dd>{{ entry.value }}</dd>
+
+@if (fichaVacia(ficha)) {
+  <p class="vacio">
+    Esta ficha todavía no tiene atributos, salvaciones, armas ni equipo
+    anotados. Los bloques aparecerán solos según se rellenen.
+  </p>
+}
+
+<div class="cuerpo">
+  @if (atributos(ficha).length > 0) {
+    <section class="bloque">
+      <div class="bloque__cab">
+        <h3 class="bloque__rotulo">Atributos</h3>
+        <span class="bloque__resumen">modificador · puntuación</span>
+      </div>
+      <div class="atributos">
+        @for (atributo of atributos(ficha); track atributo.clave) {
+          <div class="atr" [class.atr--temp]="atributo.temporal" [title]="atributo.titulo">
+            <span class="atr__nombre">{{ atributo.clave }}</span>
+            <span class="atr__mod">{{ atributo.modificador }}</span>
+            <span class="atr__punt">{{ atributo.puntuacion }}</span>
+            @if (atributo.temporal) {
+              <span class="atr__temp">{{ atributo.temporal }}</span>
+            } @else if (atributo.desglose) {
+              <span class="atr__desglose">{{ atributo.desglose }}</span>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (salvaciones(ficha).length > 0 || ofensivo(ficha).length > 0) {
+    <div class="dos">
+      @if (salvaciones(ficha).length > 0) {
+        <section class="bloque">
+          <div class="bloque__cab"><h3 class="bloque__rotulo">Salvaciones</h3></div>
+          <div class="salvas">
+            @for (salvacion of salvaciones(ficha); track salvacion.etiqueta) {
+              <div class="salva">
+                <span class="salva__nombre">{{ salvacion.etiqueta }}</span>
+                <span class="salva__valor">{{ salvacion.valor }}</span>
+              </div>
+            }
+          </div>
+          <!-- La caja "Modificadores" de la ficha de papel: va como pie de
+               SU bloque, no como un párrafo suelto lejos de lo que modifica. -->
+          @if (ficha.sheetData.salvaciones?.notas; as notas) {
+            <p class="nota"><strong>Modificadores:</strong> {{ notas }}</p>
+          }
+        </section>
+      }
+
+      @if (ofensivo(ficha).length > 0) {
+        <section class="bloque">
+          <div class="bloque__cab"><h3 class="bloque__rotulo">Ofensiva</h3></div>
+          <div class="pares">
+            @for (par of ofensivo(ficha); track par.etiqueta) {
+              <p class="par">
+                <span class="par__et">{{ par.etiqueta }}</span>
+                <span class="par__lead"></span>
+                <span class="par__v">{{ par.valor }}</span>
+              </p>
+            }
+          </div>
+          @if (ficha.sheetData.ofensivo?.notas; as notas) {
+            <p class="nota"><strong>Modificadores:</strong> {{ notas }}</p>
+          }
+        </section>
+      }
+    </div>
+  }
+
+  @if (ficha.sheetData.combate?.notas; as notas) {
+    <p class="nota"><strong>Modificadores de CA:</strong> {{ notas }}</p>
+  }
+
+  @if (armas(ficha).length > 0) {
+    <section class="bloque">
+      <div class="bloque__cab"><h3 class="bloque__rotulo">Armas</h3></div>
+      <div class="armas">
+        <div class="arma arma--cab">
+          <span>Arma</span>
+          <span>Ataque</span>
+          <span>Daño</span>
+          <span>Crítico</span>
         </div>
+        @for (arma of armas(ficha); track $index) {
+          <div class="arma">
+            <span class="arma__nombre">
+              {{ arma.nombre }}
+              @if (arma.extra) {
+                <span class="arma__extra">{{ arma.extra }}</span>
+              }
+            </span>
+            <span class="arma__v">{{ arma.ataque }}</span>
+            <span class="arma__v">{{ arma.dano }}</span>
+            <span class="arma__v">{{ arma.critico }}</span>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (habilidades(ficha).length > 0) {
+    <section class="bloque">
+      <div class="bloque__cab">
+        <h3 class="bloque__rotulo">Habilidades</h3>
+        <span class="bloque__resumen">
+          {{ habilidades(ficha).length }} con puntos invertidos
+        </span>
+      </div>
+      <div class="habilidades">
+        @for (par of habilidades(ficha); track par.etiqueta) {
+          <p class="par">
+            <span class="par__et">{{ par.etiqueta }}</span>
+            <span class="par__lead"></span>
+            <span class="par__v">{{ par.valor }}</span>
+          </p>
+        }
+      </div>
+      @if (ficha.sheetData.habilidadesNotas; as notas) {
+        <p class="nota">
+          <strong>Modificadores condicionales:</strong> {{ notas }}
+        </p>
       }
-    </dl>
+    </section>
   }
-  <!-- Prosa, no una fila más del dl: va justo detrás de cabello y ojos,
-       que es donde acaba la lista de aspecto. -->
-  @if (character().sheetData.descripcion; as descripcion) {
-    <p class="characters__modal-prosa">{{ descripcion }}</p>
-  }
-  @if (character().sheetData.historia; as historia) {
-    <h4 class="characters__modal-prosa-titulo">Historia</h4>
-    <p class="characters__modal-prosa">{{ historia }}</p>
-  }
-} @else {
-  <p>La ficha está vacía.</p>
-}
-@if (atributosDe(character()).length > 0) {
-  <table class="characters__modal-atributos">
-    <thead>
-      <tr>
-        <th></th>
-        <th>Punt. base</th>
-        <th>Racial</th>
-        <th>Modif.</th>
-        <th>Ajuste temp.</th>
-        <th>Modif. temp.</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (fila of atributosDe(character()); track fila.label) {
-        <tr>
-          <th>{{ fila.label }}</th>
-          <td>{{ fila.puntuacion ?? '—' }}</td>
-          <td>{{ fila.racial }}</td>
-          <td>{{ fila.modificador }}</td>
-          <td>{{ fila.ajusteTemporal }}</td>
-          <td>{{ fila.modTemporal }}</td>
-        </tr>
+
+  @if (dotes(ficha).length > 0 || ficha.sheetData.aptitudesEspeciales) {
+    <div class="dos">
+      @if (dotes(ficha).length > 0) {
+        <section class="bloque">
+          <div class="bloque__cab"><h3 class="bloque__rotulo">Dotes</h3></div>
+          <div class="chips">
+            @for (dote of dotes(ficha); track dote) {
+              <span class="dote">{{ dote }}</span>
+            }
+          </div>
+        </section>
       }
-    </tbody>
-  </table>
-}
+
+      @if (ficha.sheetData.aptitudesEspeciales; as aptitudes) {
+        <section class="bloque">
+          <div class="bloque__cab">
+            <h3 class="bloque__rotulo">Aptitudes especiales</h3>
+          </div>
+          <p class="prosa">{{ aptitudes }}</p>
+        </section>
+      }
+    </div>
+  }
+
+  @if (conjuros(ficha).length > 0) {
+    <section class="bloque">
+      <div class="bloque__cab"><h3 class="bloque__rotulo">Conjuros</h3></div>
+      <div class="conjuros">
+        <div class="conjuro conjuro--cab">
+          <span>Nivel</span>
+          <span>Conocidos</span>
+          <span>Por día</span>
+          <span>Adicionales</span>
+          <span>CD</span>
+        </div>
+        @for (fila of conjuros(ficha); track fila.nivel) {
+          <div class="conjuro">
+            <span class="conjuro__nivel">{{ fila.nivel }}</span>
+            <span class="conjuro__d">{{ fila.conocidos }}</span>
+            <span class="conjuro__d">{{ fila.porDia }}</span>
+            <span class="conjuro__d">{{ fila.adicionales }}</span>
+            <span class="conjuro__d">{{ fila.cd }}</span>
+          </div>
+          @if (fila.anotados) {
+            <p class="nota">{{ fila.anotados }}</p>
+          }
+        }
+      </div>
+      @if (ficha.sheetData.conjuros?.dominiosEscuela; as dominios) {
+        <p class="nota"><strong>Dominios/escuela:</strong> {{ dominios }}</p>
+      }
+    </section>
+  }
+
+  @if (equipo(ficha).length > 0 || dinero(ficha).length > 0) {
+    <div class="dos">
+      @if (equipo(ficha).length > 0) {
+        <section class="bloque">
+          <div class="bloque__cab">
+            <h3 class="bloque__rotulo">Equipo</h3>
+            <span class="bloque__resumen">
+              {{ cuantosObjetos(ficha) }} objetos
+            </span>
+          </div>
+          <div class="pares">
+            @for (par of equipo(ficha); track $index) {
+              <p class="par">
+                <span class="par__et">{{ par.etiqueta }}</span>
+                <span class="par__lead"></span>
+                <span class="par__v">{{ par.valor }}</span>
+              </p>
+            }
+          </div>
+        </section>
+      }
+
+      @if (dinero(ficha).length > 0) {
+        <section class="bloque">
+          <div class="bloque__cab">
+            <h3 class="bloque__rotulo">Dinero</h3>
+            <span class="bloque__resumen">{{ dineroTotal(ficha) }} en total</span>
+          </div>
+          <div class="pares">
+            @for (par of dinero(ficha); track par.etiqueta) {
+              <p class="par">
+                <span class="par__et">{{ par.etiqueta }}</span>
+                <span class="par__lead"></span>
+                <span class="par__v">{{ par.valor }}</span>
+              </p>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  }
+
+  @if (datos(ficha).length > 0) {
+    <section class="bloque">
+      <div class="bloque__cab">
+        <h3 class="bloque__rotulo">Datos del personaje</h3>
+      </div>
+      <div class="datos">
+        @for (dato of datos(ficha); track dato.etiqueta) {
+          <div class="dato">
+            <span class="dato__et">{{ dato.etiqueta }}</span>
+            <span class="dato__v">{{ dato.valor }}</span>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Aspecto y trasfondo al final: son de leer, no de consultar en mitad
+       de un turno. Y llevan su etiqueta de visibilidad, porque la
+       descripción viaja a TODA la mesa dentro del resumen del asiento y la
+       historia solo la ven su dueño y el máster. -->
+  @if (ficha.sheetData.descripcion; as descripcion) {
+    <section class="bloque">
+      <div class="bloque__cab">
+        <h3 class="bloque__rotulo">Aspecto</h3>
+        <span class="visib">lo ve toda la mesa</span>
+      </div>
+      <p class="prosa">{{ descripcion }}</p>
+    </section>
+  }
+
+  @if (ficha.sheetData.historia; as historia) {
+    <section class="bloque">
+      <div class="bloque__cab">
+        <h3 class="bloque__rotulo">Trasfondo</h3>
+        <span class="visib">solo su dueño y el máster</span>
+      </div>
+      <p class="prosa">{{ historia }}</p>
+    </section>
+  }
+</div>
